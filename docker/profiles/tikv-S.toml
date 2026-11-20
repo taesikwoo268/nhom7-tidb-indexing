@@ -1,0 +1,14 @@
+memory-usage-limit = "1250MiB"
+
+[storage.block-cache]
+capacity = "500MiB"
+
+# Leave space for Raft, compactions and allocator overhead on 1.75 GiB nodes.
+[rocksdb.defaultcf]
+write-buffer-size = "8MiB"
+
+[rocksdb.writecf]
+write-buffer-size = "8MiB"
+
+[rocksdb.lockcf]
+write-buffer-size = "4MiB"

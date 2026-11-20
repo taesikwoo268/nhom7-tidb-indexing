@@ -1,0 +1,37 @@
+# Virtual environments, Python caches and local credentials
+/.venv/
+/venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+/.env
+/.env.*
+!/.env.example
+
+# Generated input and machine-local raw artifacts
+/data/*
+!/data/.gitkeep
+*.tsv
+/results/raw/*
+!/results/raw/.gitkeep
+/results/runs/*
+!/results/runs/.gitkeep
+
+# Machine-local acceptance and trial reports
+docs/report/experiments/nghiem_thu_tv2_2026-11-20.md
+
+# CSV results (keep template/example if any)
+*.csv
+!results/README.md
+
+# LaTeX build artifacts
+/report/**/*.aux
+/report/**/*.log
+/report/**/*.toc
+/report/**/*.lof
+/report/**/*.lot
+/report/**/*.out
+/report/**/*.synctex.gz
+/report/**/*.fls
+/report/**/*.fdb_latexmk
+/report/main.pdf

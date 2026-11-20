@@ -1,0 +1,10 @@
+# TiKV Configuration - Profile M (Nhóm 7)
+# storage.block-cache.capacity = 800MiB (3 TiKV nodes = 2,400 MiB total, matching MySQL InnoDB buffer pool)
+
+memory-usage-limit = "2GiB"
+
+[storage.block-cache]
+capacity = "800MiB"
+
+[raftstore]
+sync-log = true

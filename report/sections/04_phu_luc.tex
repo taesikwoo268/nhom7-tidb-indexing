@@ -1,0 +1,245 @@
+% ==============================================================================
+% PHỤ LỤC KỸ THUẬT: CÁC LỆNH ĐO ĐẠC THỰC TẾ & CẤU HÌNH HỆ THỐNG
+% ==============================================================================
+
+\clearpage
+\appendix
+\section*{PHỤ LỤC KỸ THUẬT}
+\addcontentsline{toc}{section}{PHỤ LỤC KỸ THUẬT}
+\renewcommand{\thesubsection}{Phụ lục \Alph{subsection}}
+
+\subsection{Kịch bản Câu lệnh SQL Đo đạc Dung lượng và Trạng thái}
+\label{app:sql_scripts}
+
+\begin{enumerate}
+  \item \textbf{Kiểm tra dung lượng vật lý bảng và chỉ mục trên MySQL 8.0 (Đơn vị MiB):}
+\begin{lstlisting}[language=SQL, caption={Truy vấn dung lượng dữ liệu và chỉ mục trong MySQL InnoDB}]
+SELECT table_name,
+       ROUND(data_length / (1024 * 1024), 2) AS data_size_mib,
+       ROUND(index_length / (1024 * 1024), 2) AS index_size_mib,
+       ROUND((data_length + index_length) / (1024 * 1024), 2) AS total_size_mib
+FROM information_schema.TABLES
+WHERE table_schema = 'sbtest' AND table_name = 'sbtest1';
+\end{lstlisting}
+
+  \item \textbf{Kiểm tra số lượng Region của bảng và của riêng Index \code{k_1} trên TiDB:}
+\begin{lstlisting}[language=SQL, caption={Kiểm tra phân bổ Region trên TiDB Cluster}]
+-- Dem so luong Region cua du lieu bang sbtest1
+SHOW TABLE sbtest1 REGIONS;
+
+-- Dem so luong Region cua rieng chi muc phu k_1
+SHOW TABLE sbtest1 INDEX k_1 REGIONS;
+\end{lstlisting}
+
+  \item \textbf{Đo dung lượng thực tế và số lượng Leader trên từng node TiKV:}
+\begin{lstlisting}[language=SQL, caption={Đo dung lượng đĩa và số Leader trên 3 node TiKV}]
+SELECT STORE_ID, ADDRESS, CAPACITY, AVAILABLE,
+       ROUND((CAPACITY - AVAILABLE) / (1024 * 1024 * 1024), 2) AS USED_GIB,
+       REGION_COUNT, LEADER_COUNT
+FROM INFORMATION_SCHEMA.TIKV_STORE_STATUS;
+\end{lstlisting}
+
+  \item \textbf{Kiểm tra kế hoạch thực thi và thời gian chi tiết của câu lệnh tìm kiếm:}
+\begin{lstlisting}[language=SQL, caption={Phân tích kế hoạch thực thi EXPLAIN ANALYZE}]
+EXPLAIN ANALYZE SELECT * FROM sbtest1 WHERE k = 500000;
+\end{lstlisting}
+\end{enumerate}
+
+\subsection{Script Bash Ghi log Mức Chiếm dụng Tài nguyên Định kỳ}
+\label{app:bash_monitor}
+
+Script bash tự động ghi nhận mức tiêu thụ CPU, RAM và Disk I/O của toàn bộ các container Docker mỗi 2 giây, phục vụ việc phân tích chi phí tính toán:
+
+\begin{lstlisting}[language=bash, caption={Script bash thu thập thông số docker stats liên tục}]
+#!/usr/bin/env bash
+# File: monitor_resources.sh
+echo "Timestamp,Container,CPUPerc,MemUsage,BlockIO" > resource_usage.csv
+while true; do
+  docker stats --no-stream --format "{{.Name}},{{.CPUPerc}},{{.MemUsage}},{{.BlockIO}}" | while read line; do
+    echo "$(date '+%Y-%m-%d %H:%M:%S'),$line" >> resource_usage.csv
+  done
+  sleep 2
+done
+\end{lstlisting}
+
+\subsection{Tệp Cấu hình \code{docker-compose.yml} Chuẩn hóa cho Máy 16GB RAM}
+\label{app:docker_compose}
+
+Toàn văn tệp cấu hình triển khai cụm TiDB đa node (1 PD, 3 TiKV, 1 TiDB Server) và MySQL 8.0 đối chứng với các ràng buộc tài nguyên nghiêm ngặt:
+
+\begin{lstlisting}[language=bash, caption={Tệp cấu hình docker-compose.yml chuẩn hóa}]
+version: '3.8'
+
+services:
+  pd0:
+    image: pingcap/pd:v8.1.0
+    container_name: tidb-pd0
+    ports:
+      - "2379:2379"
+    volumes:
+      - ./data/pd0:/data
+    command:
+      - --name=pd0
+      - --client-urls=http://0.0.0.0:2379
+      - --peer-urls=http://0.0.0.0:2380
+      - --advertise-client-urls=http://pd0:2379
+      - --advertise-peer-urls=http://pd0:2380
+      - --initial-cluster=pd0=http://pd0:2380
+      - --data-dir=/data/pd0
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  tikv0:
+    image: pingcap/tikv:v8.1.0
+    container_name: tidb-tikv0
+    volumes:
+      - ./data/tikv0:/data
+    command:
+      - --addr=0.0.0.0:20160
+      - --advertise-addr=tikv0:20160
+      - --data-dir=/data/tikv0
+      - --pd=pd0:2379
+    depends_on:
+      - pd0
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2G
+
+  tikv1:
+    image: pingcap/tikv:v8.1.0
+    container_name: tidb-tikv1
+    volumes:
+      - ./data/tikv1:/data
+    command:
+      - --addr=0.0.0.0:20160
+      - --advertise-addr=tikv1:20160
+      - --data-dir=/data/tikv1
+      - --pd=pd0:2379
+    depends_on:
+      - pd0
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2G
+
+  tikv2:
+    image: pingcap/tikv:v8.1.0
+    container_name: tidb-tikv2
+    volumes:
+      - ./data/tikv2:/data
+    command:
+      - --addr=0.0.0.0:20160
+      - --advertise-addr=tikv2:20160
+      - --data-dir=/data/tikv2
+      - --pd=pd0:2379
+    depends_on:
+      - pd0
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2G
+
+  tidb0:
+    image: pingcap/tidb:v8.1.0
+    container_name: tidb-server0
+    ports:
+      - "4000:4000"
+      - "10080:10080"
+    command:
+      - --store=tikv
+      - --path=pd0:2379
+    depends_on:
+      - tikv0
+      - tikv1
+      - tikv2
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2G
+
+  mysql-single:
+    image: mysql:8.0
+    container_name: mysql-single
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_DATABASE: "sbtest"
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+    command:
+      - --innodb-buffer-pool-size=4G
+      - --innodb-log-file-size=1G
+      - --innodb-flush-log-at-trx-commit=1
+      - --max-connections=1000
+    deploy:
+      resources:
+        limits:
+          cpus: '6.0'
+          memory: 8G
+\end{lstlisting}
+
+\subsection{Kịch bản Benchmark Sysbench và Chaos Testing Tự động}
+\label{app:benchmark_scripts}
+
+\begin{lstlisting}[language=bash, caption={Script bash chạy Benchmark Sysbench và kích hoạt Chaos Test}]
+#!/usr/bin/env bash
+# 1. Chay Sysbench OLTP Read-Write tren TiDB tai muc 64 threads
+sysbench oltp_read_write \
+  --mysql-host=127.0.0.1 --mysql-port=4000 \
+  --mysql-user=root --mysql-db=sbtest \
+  --tables=1 --table-size=10000000 \
+  --threads=64 --time=180 --report-interval=1 run > tidb_chaos_run.log &
+
+# 2. Dem nguoc 60 giay va kich hoat cuong che danh sap node tikv0
+sleep 60
+echo "[$(date '+%H:%M:%S')] DANH SAP NODE TIKV0..."
+docker kill tidb-tikv0
+
+# 3. Theo doi qua trinh tu phuc hoi cua cum trong 120 giay tiep theo
+wait
+echo "[$(date '+%H:%M:%S')] HOAN TAT KIEM THU CHAOS TEST."
+\end{lstlisting}
+
+\subsection{Bảng Phân chia Công việc và Lộ trình 4 Tuần Thực hiện}
+\label{app:work_breakdown}
+
+\begin{table}[H]
+\centering
+\caption{Bảng phân chia công việc chi tiết cho 3 thành viên trong nhóm}
+\label{tab:work_breakdown_table}
+\bangfont
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{3.8cm}>{\raggedright\arraybackslash}p{4.8cm}Y@{}}
+\toprule
+\textbf{Thành viên} & \textbf{Nội dung Báo cáo Phụ trách} & \textbf{Công việc Thực hành \& Nghiệm thu}\\
+\midrule
+\textbf{Thành viên 1} (Trưởng nhóm --- Lý thuyết \& Toán học) &
+- Viết \textbf{Mục 1 \& 2} (Đặc trưng dữ liệu, 4 trụ cột kiến trúc TiDB: Compute/Storage, RocksDB Table-to-KV, Multi-Raft, PD/TSO).\par
+- Viết \textbf{Mục 4} (Mô hình toán học 10M và 100M dòng trên MySQL B+Tree và TiKV LSM-Tree). &
+- Tổng hợp tài liệu PingCAP, MySQL và luận văn tham khảo.\par
+- Xây dựng bảng tính Excel tự động ước lượng dung lượng lý thuyết.\par
+- Biên tập thống nhất văn phong toàn báo cáo và thiết kế slide thuyết trình.\\
+\midrule
+\textbf{Thành viên 2} (Kỹ sư Hạ tầng \& Thực nghiệm Index) &
+- Viết \textbf{Mục 3} (Quy trình cài đặt cụm TiDB, MySQL đối chứng và TiDB Dashboard).\par
+- Viết \textbf{Mục 5} (Thực nghiệm nạp 10 triệu bản ghi, đo dung lượng thực tế, phân tích RAM/CPU/Disk và \code{EXPLAIN ANALYZE} trước/sau Index). &
+- Thiết lập môi trường Docker Compose chuẩn hóa trên máy 16GB RAM.\par
+- Thực hiện kịch bản nạp 10 triệu dòng (có và không có Index \code{k_1}).\par
+- Chụp ảnh minh chứng Dashboard, trích xuất dữ liệu \code{INFORMATION_SCHEMA}.\\
+\midrule
+\textbf{Thành viên 3} (Kỹ sư Kiểm thử Chịu tải \& Chaos Test) &
+- Viết \textbf{Mục 6} (Phân tích thực nghiệm Scalability 16--512 threads, Scale-out node thứ 4, Chaos Test đánh sập node \code{tikv0}).\par
+- Viết \textbf{Mục 7} (Kết luận \& Khuyến nghị đánh đổi kiến trúc). &
+- Viết script tự động hóa chạy Sysbench qua các mốc luồng và thu thập \code{docker stats}.\par
+- Thực thi kịch bản đánh sập container \code{tikv0} tại giây thứ 60 và vẽ bộ biểu đồ đối sánh chất lượng cao.\\
+\bottomrule
+\end{tabularx}
+\end{table}

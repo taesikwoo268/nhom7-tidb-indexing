@@ -1,0 +1,225 @@
+% !TeX program = xelatex
+\documentclass[a4paper,12pt]{article}
+
+% ==============================================================================
+% 1. KHỔ GIẤY, LỀ TRANG, FONT VÀ ĐỊNH DẠNG VĂN BẢN (CHUẨN BÁO CÁO UET)
+% ==============================================================================
+\usepackage[left=3cm,right=2cm,top=2cm,bottom=2cm,footskip=1cm]{geometry}
+\usepackage{fontspec}
+
+\IfFontExistsTF{Times New Roman}{
+  \setmainfont{Times New Roman}
+}{
+  \IfFileExists{fonts/times.ttf}{
+    \setmainfont{times.ttf}[
+      Path=fonts/,
+      BoldFont=timesbd.ttf,
+      ItalicFont=timesi.ttf,
+      BoldItalicFont=timesbi.ttf]
+  }{
+    \IfFontExistsTF{TeX Gyre Termes}{
+      \setmainfont{TeX Gyre Termes}
+      \PackageWarningNoLine{MauBaoCao}{Times New Roman unavailable; using TeX Gyre Termes}
+    }{
+      \setmainfont{DejaVu Serif}
+      \PackageWarningNoLine{MauBaoCao}{Times New Roman unavailable; using DejaVu Serif}
+    }
+  }
+}
+
+\usepackage{indentfirst}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows, positioning}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{array,tabularx,booktabs,longtable}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{caption}
+\usepackage{xurl}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[unicode,hidelinks]{hyperref}
+\urlstyle{same}
+
+% Cấu hình kích cỡ font văn bản chuẩn 13pt / 1.5 line spacing
+\renewcommand{\normalsize}{\fontsize{13}{19.5}\selectfont}
+\AtBeginDocument{\normalsize}
+\setlength{\parindent}{0.5cm}
+\setlength{\parskip}{4pt}
+\setlength{\emergencystretch}{2em}
+\raggedbottom
+\setlist{topsep=4pt,itemsep=2pt,parsep=0pt,leftmargin=*}
+
+% ==============================================================================
+% 2. ĐỊNH DẠNG TIÊU ĐỀ CÁC CẤP: 1 / 1.1 / 1.1.1
+% ==============================================================================
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+\renewcommand{\thesection}{\arabic{section}}
+\renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
+\renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}
+
+\titleformat{\section}[hang]
+  {\normalfont\fontsize{15}{19}\selectfont\bfseries}
+  {\thesection.}{0.6em}{}
+\titleformat{\subsection}[hang]
+  {\normalfont\fontsize{13.5}{17}\selectfont\bfseries}
+  {\thesubsection}{0.6em}{}
+\titleformat{\subsubsection}[hang]
+  {\normalfont\fontsize{13}{16}\selectfont\bfseries}
+  {\thesubsubsection}{0.6em}{}
+
+\titlespacing*{\section}{0pt}{14pt}{7pt}
+\titlespacing*{\subsection}{0pt}{10pt}{5pt}
+\titlespacing*{\subsubsection}{0pt}{7pt}{3pt}
+
+% ==============================================================================
+% 3. MỤC LỤC VÀ SỐ TRANG
+% ==============================================================================
+\renewcommand{\contentsname}{MỤC LỤC}
+\renewcommand{\listtablename}{DANH MỤC BẢNG}
+\renewcommand{\listfigurename}{DANH MỤC HÌNH}
+\renewcommand{\refname}{Tài liệu tham khảo}
+
+\renewcommand{\cfttoctitlefont}{\fontsize{16}{20}\selectfont\bfseries}
+\setlength{\cftbeforetoctitleskip}{0pt}
+\setlength{\cftaftertoctitleskip}{18pt}
+\renewcommand{\cftsecfont}{\normalfont\bfseries}
+\renewcommand{\cftsecpagefont}{\normalfont\bfseries}
+\renewcommand{\cftsubsecfont}{\normalfont}
+\renewcommand{\cftsubsubsecfont}{\normalfont}
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+\cftsetindents{section}{0em}{2em}
+\cftsetindents{subsection}{2em}{3em}
+\cftsetindents{subsubsection}{5em}{4em}
+\setlength{\cftbeforesecskip}{6pt}
+
+\makeatletter
+\def\ps@plain{%
+  \let\@oddhead\@empty\let\@evenhead\@empty
+  \def\@oddfoot{\hfil{\normalfont\fontsize{11}{13}\selectfont\thepage}\hfil}%
+  \let\@evenfoot\@oddfoot}
+\makeatother
+\pagestyle{plain}
+
+% ==============================================================================
+% 4. ĐỊNH DẠNG BẢNG BIỂU, HÌNH ẢNH VÀ ĐOẠN MÃ (CODE LISTINGS)
+% ==============================================================================
+\renewcommand{\tablename}{Bảng}
+\renewcommand{\figurename}{Hình}
+\DeclareCaptionFont{reportcaption}{\fontsize{11.5}{14.5}\selectfont}
+\captionsetup{font=reportcaption,labelfont=bf,labelsep=period,
+  justification=centering,skip=6pt}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+\newcommand{\bangfont}{\fontsize{11}{14}\selectfont}
+\newcommand{\code}[1]{\texttt{#1}}
+
+% Cấu hình hiển thị code listing đẹp mắt, có số dòng và ngắt dòng tự động
+\definecolor{codegreen}{rgb}{0,0.55,0}
+\definecolor{codegray}{rgb}{0.45,0.45,0.45}
+\definecolor{codepurple}{rgb}{0.55,0,0.80}
+\definecolor{codeblue}{rgb}{0.1,0.2,0.75}
+\definecolor{backcolour}{rgb}{0.97,0.98,0.99}
+
+\lstdefinestyle{reportstyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen}\itshape,
+    keywordstyle=\color{codeblue}\bfseries,
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\fontsize{9.5}{12.5}\selectfont,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=6pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    frame=single,
+    rulecolor=\color{gray!35},
+    xleftmargin=12pt,
+    framexleftmargin=12pt
+}
+\lstset{style=reportstyle}
+
+% Macro tạo banner phân cách 2 phần A và B nổi bật
+\newcommand{\phanbaocao}[2]{%
+  \clearpage
+  \vspace*{0.5cm}
+  \begin{center}
+    \setlength{\fboxsep}{10pt}
+    \fbox{%
+      \begin{minipage}{0.94\textwidth}
+        \centering
+        {\fontsize{15}{20}\selectfont\bfseries #1\par}
+        \vspace{4pt}
+        {\fontsize{13}{17}\selectfont\bfseries #2\par}
+      \end{minipage}%
+    }
+  \end{center}
+  \addcontentsline{toc}{section}{\textbf{#1: #2}}
+  \vspace{0.6cm}
+}
+
+% ==============================================================================
+% 5. THÔNG TIN ĐỀ TÀI VÀ TRANG BÌA
+% ==============================================================================
+\newcommand{\DonViChuQuan}{ĐẠI HỌC QUỐC GIA HÀ NỘI}
+\newcommand{\TenTruong}{TRƯỜNG ĐẠI HỌC CÔNG NGHỆ}
+\newcommand{\LoaiBaoCao}{BÁO CÁO BÀI TẬP LỚN}
+\newcommand{\TenMonHoc}{HỆ QUẢN TRỊ CƠ SỞ DỮ LIỆU}
+\newcommand{\TenDeTai}{Nghiên cứu kiến trúc NewSQL phân tán và đánh giá thực nghiệm khả năng mở rộng (Scalability) cùng tính sẵn sàng cao (High Availability) giữa TiDB và MySQL}
+\newcommand{\TenDeTaiTiengAnh}{Analyzing Distributed NewSQL Architecture: An Empirical Evaluation of Scalability and High Availability in TiDB Compared to MySQL}
+\newcommand{\GiangVien}{ThS. / TS. Giảng viên hướng dẫn}
+\newcommand{\SoNhom}{Nhóm thực hiện}
+\newcommand{\LopMonHoc}{INT3202}
+\newcommand{\DiaDiemThoiGian}{Hà Nội, Tháng 11/2026}
+
+\hypersetup{
+  pdftitle={\TenDeTai},
+  pdfauthor={\SoNhom},
+  pdfsubject={\TenMonHoc}
+}
+
+% ==============================================================================
+% 6. THÂN VĂN BẢN CHÍNH (MAIN BODY)
+% ==============================================================================
+\begin{document}
+
+% --- Trang bìa chuẩn UET ---
+\input{sections/00_cover.tex}
+
+% --- Mục lục và danh mục bảng/hình ---
+\pagenumbering{roman}
+\tableofcontents
+\clearpage
+\listoftables
+\clearpage
+\listoffigures
+\clearpage
+\pagenumbering{arabic}
+
+% --- PHẦN A: TÌM HIỂU HỆ QUẢN TRỊ PHÂN TÁN TiDB (50% BÁO CÁO) ---
+\input{sections/01_phan_a.tex}
+
+% --- PHẦN B: PHÂN TÍCH LƯU TRỮ VẬT LÝ, INDEX VÀ THỰC NGHIỆM ĐỐI CHỨNG (50% BÁO CÁO) ---
+\input{sections/02_phan_b.tex}
+
+% --- KẾT LUẬN VÀ KHUYẾN NGHỊ ĐÁNH ĐỔI KIẾN TRÚC ---
+\input{sections/03_ket_luan.tex}
+
+% --- TÀI LIỆU THAM KHẢO ---
+\input{sections/tai_lieu_tham_khao.tex}
+
+% --- PHỤ LỤC KỸ THUẬT: LỆNH ĐO ĐẠC & CẤU HÌNH DOCKER ---
+\input{sections/04_phu_luc.tex}
+
+\end{document}

@@ -1,0 +1,16 @@
+services:
+  pd:
+    cpus: 0.5
+    mem_limit: 1024m
+  tidb:
+    cpus: 1.75
+    mem_limit: 1536m
+  tikv:
+    cpus: 1.25
+    mem_limit: 2304m
+  mysql:
+    cpus: 6
+    mem_limit: 4096m
+    command: ["mysqld", "--innodb-buffer-pool-size=2400M"]
+  sysbench:
+    cpus: 3

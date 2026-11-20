@@ -1,0 +1,12 @@
+services:
+  sysbench:
+    extends:
+      file: ./profiles/${PROFILE:-M}.yml
+      service: sysbench
+    build:
+      context: .
+      dockerfile: sysbench.Dockerfile
+    volumes:
+      - ../sysbench:/work:ro
+    command: ["sleep", "infinity"]
+    profiles: ["benchmark"]

@@ -1,0 +1,60 @@
+% ==============================================================================
+% KẾT LUẬN VÀ KHUYẾN NGHỊ ĐÁNH ĐỔI KIẾN TRÚC
+% ==============================================================================
+
+\section{Kết luận và Khuyến nghị Đánh đổi Kiến trúc}
+\label{sec:ket_luan}
+
+\subsection{Tổng kết kết quả nghiên cứu và thực nghiệm}
+
+Đề tài đã hoàn thành xuất sắc toàn bộ các mục tiêu đặt ra, bám sát cấu trúc đối xứng 2 Phần (Phần A -- Phần B, tỷ lệ 50\% -- 50\%) theo đúng định hướng phương pháp luận khoa học của giảng viên:
+
+\begin{enumerate}
+  \item \textbf{Về mặt Lý thuyết Kiến trúc (Phần A --- 50\%):}
+  \begin{itemize}
+    \item Xuất phát từ bản chất và đặc trưng dữ liệu, đề tài đã làm rõ ranh giới áp dụng giữa RDBMS truyền thống, NoSQL và NewSQL. Đề tài chỉ ra rằng đối với dữ liệu giao dịch quan hệ quy mô cực lớn (vượt ngưỡng 50--100 triệu dòng) đòi hỏi tính nhất quán nghiêm ngặt và khả năng mở rộng ngang, TiDB là sự lựa chọn ưu việt.
+    \item Phân tích sâu sắc 4 trụ cột kiến trúc của TiDB: (1) Tách biệt hoàn toàn Tầng Tính toán (Stateless SQL) và Tầng Lưu trữ (Stateful TiKV); (2) Tầng ánh xạ dữ liệu chuyển đổi bảng quan hệ thành các cặp Key-Value trên nền tảng LSM-Tree (RocksDB); (3) Cơ chế chia mảnh tự động theo Region và giao thức đồng thuận Multi-Raft; (4) Bộ điều phối trung tâm Placement Driver (PD) với nhãn thời gian toàn cục TSO và giao dịch phân tán Percolator 2 pha.
+    \item Đã cài đặt, triển khai thành công cụm TiDB phân tán hoàn chỉnh gồm 1 PD, 1 TiDB Server và 3 TiKV nodes trên môi trường Docker chuẩn hóa máy 16GB RAM, kết nối MySQL Client và giám sát qua TiDB Dashboard.
+  \end{itemize}
+
+  \item \textbf{Về mặt Mô hình Toán học và Thực nghiệm Đối chứng (Phần B --- 50\%):}
+  \begin{itemize}
+    \item Xây dựng thành công mô hình toán học tính toán dung lượng vật lý chi tiết đến từng byte cho 10 triệu và 100 triệu bản ghi. Đề tài chứng minh: trên 1 bản sao, cấu trúc LSM-Tree của TiDB nén dữ liệu tốt hơn B+Tree của MySQL ($1,88\text{ GiB}$ so với $2,35\text{ GiB}$); trên toàn cụm 3 node, TiDB đánh đổi dung lượng đĩa ($6,00\text{ GiB}$) để đổi lấy 3 bản sao chịu lỗi an toàn tuyệt đối.
+    \item Phân tích chi tiết chi phí tính toán (RAM, CPU, IOPS) trước và sau khi đánh Index: chứng minh cơ chế ghi tuần tự LSM-Tree của TiDB giải quyết triệt để nút thắt cổ chai về I/O ngẫu nhiên và phân mảnh trang của B+Tree khi tạo và cập nhật chỉ mục.
+    \item Qua 2 kịch bản thực nghiệm đối chứng: chứng minh tính khách quan khi MySQL thắng ở mức tải thấp đơn luồng, nhưng TiDB áp đảo hoàn toàn ở mức tải cao đồng thời và cập nhật chỉ mục; kiểm thử Chaos Test khẳng định năng lực tự phục hồi thần kỳ của cụm TiDB (Raft Quorum bầu Leader mới trong 3--8 giây, $RPO = 0$, $100\%$ dữ liệu bảo toàn) trong khi MySQL sập hoàn toàn gây tê liệt dịch vụ.
+  \end{itemize}
+\end{enumerate}
+
+\subsection{Bảng Khuyến nghị Đánh đổi Kiến trúc (Architectural Trade-offs)}
+
+Không có hệ thống nào là hoàn hảo trong mọi trường hợp. Bảng~\ref{tab:khuyen_nghi_kien_truc} đưa ra khuyến nghị thực tế giúp các kỹ sư và kiến trúc sư hệ thống đưa ra quyết định chuyển đổi phù hợp.
+
+\begin{table}[H]
+\centering
+\caption{Bảng khuyến nghị lựa chọn kiến trúc giữa MySQL InnoDB và TiDB NewSQL}
+\label{tab:khuyen_nghi_kien_truc}
+\bangfont
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{5.5cm}Y@{}}
+\toprule
+\textbf{Tiêu chí đánh giá} & \textbf{Nên chọn MySQL 8.0 (InnoDB)} & \textbf{Nên chuyển sang TiDB (NewSQL)}\\
+\midrule
+\textbf{Quy mô dữ liệu} & Bảng dưới 30--50 triệu bản ghi; tổng dung lượng cơ sở dữ liệu nhỏ hơn $500\text{ GB}$. & Bảng vượt ngưỡng 50--100 triệu bản ghi; dung lượng dữ liệu hàng Terabyte đến Petabyte.\\
+\midrule
+\textbf{Ngân sách \& Tài nguyên} & Ngân sách hạ tầng hạn chế, chỉ có thể duy trì 1 máy chủ vật lý hoặc 1 máy ảo đám mây đơn lẻ. & Doanh nghiệp có hạ tầng phân tán, sẵn sàng cấp phát tối thiểu 3 node lưu trữ để chạy cụm Multi-Raft.\\
+\midrule
+\textbf{Đặc thù truy vấn} & Các câu lệnh tra cứu đơn dòng (\textit{Point Lookup}) siêu nhanh, đòi hỏi độ trễ dưới 1 mili-giây. & Tải giao dịch ghi/cập nhật đồng thời cực lớn (hàng chục nghìn TPS); có nhu cầu truy vấn phân tích song song.\\
+\midrule
+\textbf{Yêu cầu Vận hành} & Chấp nhận thời gian dừng bảo trì (\textit{Downtime}) khi bảo dưỡng, nâng cấp phần cứng hoặc đánh chỉ mục bảng lớn. & Hệ thống tài chính, ngân hàng, thương mại điện tử đòi hỏi hoạt động 24/7/365, tuyệt đối không có Downtime ($RPO=0$).\\
+\midrule
+\textbf{Khả năng Mở rộng} & Chấp nhận giải pháp mở rộng theo chiều dọc (Scale-Up nâng RAM/CPU) hoặc tự viết mã chia bảng (Sharding thủ công). & Muốn mở rộng ngang linh hoạt theo nhu cầu (Scale-Out/Scale-In) hoàn toàn tự động và trong suốt với ứng dụng.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Hướng nghiên cứu tiếp theo}
+
+Trong các giai đoạn tiếp theo, nhóm định hướng mở rộng nghiên cứu sang 2 nội dung chuyên sâu:
+\begin{enumerate}
+  \item \textbf{Tích hợp kiến trúc HTAP chuyên sâu với TiFlash:} Đánh giá khả năng đẩy các câu lệnh thống kê phân tích phức tạp (\code{SUM, AVG, GROUP BY} trên hàng trăm triệu bản ghi) sang nhánh lưu trữ cột TiFlash, đo đạc mức độ ảnh hưởng đến thông lượng giao dịch ghi OLTP trên TiKV.
+  \item \textbf{Thực nghiệm Triển khai Đa Vùng Khả dụng (Multi-Datacenter / Cross-AZ):} Cấu hình chính sách định tuyến dữ liệu (\textit{Placement Rules}) trên cụm TiDB trải rộng trên 3 Data Center độc lập, kiểm nghiệm khả năng sống sót của cụm khi toàn bộ một trung tâm dữ liệu gặp sự cố mất điện hoàn toàn.
+\end{enumerate}

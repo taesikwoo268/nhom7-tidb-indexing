@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nhom7-tidb-mysql-indexing"
+version = "0.1.0"
+description = "Nghiên cứu thực nghiệm chi phí chỉ mục phụ: TiDB v8.5.5 vs MySQL 8.4.11"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mysql-connector-python>=8.0.30",
+    "python-dotenv>=1.0",
+    "filelock>=3.12",
+    "docker>=7.1,<8",
+    "pandas>=2.0.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["bench*", "experiments*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

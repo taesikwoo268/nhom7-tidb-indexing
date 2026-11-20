@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # 1. Placement Driver (PD) - Bộ não điều phối cụm và quản lý metadata
+  pd:
+    image: pingcap/pd:v7.5.0
+    container_name: tidb-pd
+    ports:
+      - "2379:2379"
+    volumes:
+      - pd_data:/data
+    command:
+      - --name=pd
+      - --client-urls=http://0.0.0.0:2379
+      - --peer-urls=http://0.0.0.0:2380
+      - --advertise-client-urls=http://pd:2379
+      - --advertise-peer-urls=http://pd:2380
+      - --initial-cluster=pd=http://pd:2380
+      - --data-dir=/data
+
+  # 2. Node lưu trữ TiKV thứ nhất
+  tikv1:
+    image: pingcap/tikv:v7.5.0
+    container_name: tidb-tikv1
+    volumes:
+      - tikv1_data:/data
+    command:
+      - --addr=0.0.0.0:20160
+      - --advertise-addr=tikv1:20160
+      - --data-dir=/data
+      - --pd-endpoints=pd:2379
+    depends_on:
+      - pd
+
+  # 3. Node lưu trữ TiKV thứ hai
+  tikv2:
+    image: pingcap/tikv:v7.5.0
+    container_name: tidb-tikv2
+    volumes:
+      - tikv2_data:/data
+    command:
+      - --addr=0.0.0.0:20160
+      - --advertise-addr=tikv2:20160
+      - --data-dir=/data
+      - --pd-endpoints=pd:2379
+    depends_on:
+      - pd
+
+  # 4. Node lưu trữ TiKV thứ ba (Để đủ 3 bản sao Raft)
+  tikv3:
+    image: pingcap/tikv:v7.5.0
+    container_name: tidb-tikv3
+    volumes:
+      - tikv3_data:/data
+    command:
+      - --addr=0.0.0.0:20160
+      - --advertise-addr=tikv3:20160
+      - --data-dir=/data
+      - --pd-endpoints=pd:2379
+    depends_on:
+      - pd
+
+  # 5. TiDB Server (Tầng tiếp nhận SQL, xử lý tính toán)
+  tidb:
+    image: pingcap/tidb:v7.5.0
+    container_name: tidb-server
+    ports:
+      - "4000:4000"
+    command:
+      - --store=tikv
+      - --path=pd:2379
+    depends_on:
+      - tikv1
+      - tikv2
+      - tikv3
+
+volumes:
+  pd_data:
+  tikv1_data:
+  tikv2_data:
+  tikv3_data:

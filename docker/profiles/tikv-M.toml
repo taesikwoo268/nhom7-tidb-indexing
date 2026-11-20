@@ -1,0 +1,4 @@
+memory-usage-limit = "2GiB"
+
+[storage.block-cache]
+capacity = "800MiB"

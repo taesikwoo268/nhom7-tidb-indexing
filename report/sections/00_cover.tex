@@ -1,0 +1,70 @@
+% ==============================================================================
+% TRANG BÌA CHUẨN ĐỒ ÁN / BÀI TẬP LỚN ĐẠI HỌC CÔNG NGHỆ - ĐHQGHN
+% ==============================================================================
+\begin{titlepage}
+\thispagestyle{empty}
+
+% Khung viền đôi chuẩn đồ án UET
+\begin{tikzpicture}[remember picture,overlay]
+  \draw[line width=2pt]
+    ([xshift=3cm,yshift=-2cm]current page.north west)
+    rectangle ([xshift=-2cm,yshift=2cm]current page.south east);
+  \draw[line width=0.5pt]
+    ([xshift=3.12cm,yshift=-2.12cm]current page.north west)
+    rectangle ([xshift=-2.12cm,yshift=2.12cm]current page.south east);
+\end{tikzpicture}\par
+
+\centering
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+\vspace*{0.5cm}
+
+{\fontsize{13.5}{17}\selectfont\bfseries\DonViChuQuan\par}
+\vspace{0.15cm}
+{\fontsize{14.5}{19}\selectfont\bfseries\TenTruong\par}
+\vspace{0.25cm}
+\rule{5.5cm}{0.5pt}\par
+\vspace{0.6cm}
+
+% Logo trường ĐH Công nghệ
+\IfFileExists{logo.png}{
+  \includegraphics[width=3.6cm,height=3.6cm,keepaspectratio]{logo.png}
+}{
+  \fbox{\parbox[c][3.4cm][c]{3.4cm}{\centering\fontsize{11}{14}\selectfont LOGO TRƯỜNG}}
+}\par
+\vspace{0.6cm}
+
+{\fontsize{19}{24}\selectfont\bfseries\LoaiBaoCao\par}
+\vspace{0.3cm}
+\begin{minipage}{0.9\textwidth}\centering
+  {\fontsize{14}{18}\selectfont\bfseries MÔN HỌC: \TenMonHoc\par}
+\end{minipage}\par
+\vspace{0.5cm}
+
+{\fontsize{12}{15}\selectfont\bfseries ĐỀ TÀI\par}
+\vspace{0.15cm}
+\begin{minipage}{0.92\textwidth}\centering
+  {\fontsize{15}{20}\selectfont\bfseries\TenDeTai\par}
+  \vspace{0.2cm}
+  {\fontsize{11.5}{15}\selectfont\itshape\TenDeTaiTiengAnh\par}
+\end{minipage}\par
+
+\vspace{0.8cm}
+{\fontsize{12.5}{18}\selectfont
+\renewcommand{\arraystretch}{1.18}
+\begin{tabular}{@{}>{\raggedright\arraybackslash\bfseries}p{4.8cm}>{\raggedright\arraybackslash}p{8.5cm}@{}}
+  Giảng viên hướng dẫn: & \GiangVien\\
+  Lớp môn học:          & \LopMonHoc\\
+  Nhóm thực hiện:       & \SoNhom\\
+  Sinh viên thực hiện:  & \textbf{Thành viên 1} -- MSSV: \dots\dots\dots\dots\ \textbf{(Trưởng nhóm)}\\
+                        & \textit{(Phụ trách: Lý thuyết Kiến trúc \& Mô hình Toán học)}\\[2pt]
+                        & \textbf{Thành viên 2} -- MSSV: \dots\dots\dots\dots\\
+                        & \textit{(Phụ trách: Kỹ sư Hạ tầng, Cài đặt \& Thực nghiệm Index)}\\[2pt]
+                        & \textbf{Thành viên 3} -- MSSV: \dots\dots\dots\dots\\
+                        & \textit{(Phụ trách: Kỹ sư Benchmark, Chaos Test \& Đồ thị)}
+\end{tabular}\par}
+
+\vfill
+{\fontsize{12.5}{16}\selectfont\bfseries\DiaDiemThoiGian\par}
+\vspace*{0.3cm}
+\end{titlepage}
