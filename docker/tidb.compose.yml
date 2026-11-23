@@ -1,7 +1,7 @@
 services:
   pd:
     extends:
-      file: ./profiles/${PROFILE:-M}.yml
+      file: ./profiles/${PROFILE:-XS}.yml
       service: pd
     image: pingcap/pd:v8.5.5
     command:
@@ -19,9 +19,12 @@ services:
 
   tikv1:
     extends:
-      file: ./profiles/${PROFILE:-M}.yml
+      file: ./profiles/${PROFILE:-XS}.yml
       service: tikv
-    image: pingcap/tikv:v8.5.5
+    image: nhom7/tikv:v8.5.5-nodebug
+    build:
+      context: .
+      dockerfile: tikv.Dockerfile
     depends_on: [pd]
     command:
       - --addr=0.0.0.0:20160
@@ -33,13 +36,16 @@ services:
       - --config=/tikv.toml
     volumes:
       - tikv1_data:/data
-      - ./profiles/tikv-${PROFILE:-M}.toml:/tikv.toml:ro
+      - ./profiles/tikv-${PROFILE:-XS}.toml:/tikv.toml:ro
 
   tikv2:
     extends:
-      file: ./profiles/${PROFILE:-M}.yml
+      file: ./profiles/${PROFILE:-XS}.yml
       service: tikv
-    image: pingcap/tikv:v8.5.5
+    image: nhom7/tikv:v8.5.5-nodebug
+    build:
+      context: .
+      dockerfile: tikv.Dockerfile
     depends_on: [pd]
     command:
       - --addr=0.0.0.0:20160
@@ -51,13 +57,16 @@ services:
       - --config=/tikv.toml
     volumes:
       - tikv2_data:/data
-      - ./profiles/tikv-${PROFILE:-M}.toml:/tikv.toml:ro
+      - ./profiles/tikv-${PROFILE:-XS}.toml:/tikv.toml:ro
 
   tikv3:
     extends:
-      file: ./profiles/${PROFILE:-M}.yml
+      file: ./profiles/${PROFILE:-XS}.yml
       service: tikv
-    image: pingcap/tikv:v8.5.5
+    image: nhom7/tikv:v8.5.5-nodebug
+    build:
+      context: .
+      dockerfile: tikv.Dockerfile
     depends_on: [pd]
     command:
       - --addr=0.0.0.0:20160
@@ -69,11 +78,11 @@ services:
       - --config=/tikv.toml
     volumes:
       - tikv3_data:/data
-      - ./profiles/tikv-${PROFILE:-M}.toml:/tikv.toml:ro
+      - ./profiles/tikv-${PROFILE:-XS}.toml:/tikv.toml:ro
 
   tidb:
     extends:
-      file: ./profiles/${PROFILE:-M}.yml
+      file: ./profiles/${PROFILE:-XS}.yml
       service: tidb
     image: pingcap/tidb:v8.5.5
     depends_on: [tikv1, tikv2, tikv3]

@@ -41,7 +41,7 @@ def analyze(conn: Any, table: str = "shipments", *, engine: str | None = None) -
     cursor = conn.cursor()
     try:
         options = ""
-        if engine == "tidb" and get_profile() == "S":
+        if engine == "tidb" and get_profile() in {"S", "XS"}:
             cursor.execute("SET SESSION tidb_build_stats_concurrency=1")
             options = " WITH 2048 SAMPLES"
         cursor.execute(f"ANALYZE TABLE {table}{options};")
@@ -106,6 +106,17 @@ def engine_settings(conn: Any, engine: str) -> dict[str, Any]:
                 raise ValueError(f"Missing or ambiguous PD max-replicas setting: {rows!r}")
             result["max_replicas"] = int(rows[0][3])
 
+            cursor.execute(
+                "SELECT store_state_name FROM information_schema.tikv_store_status;"
+            )
+            result["tikv_stores"] = sum(r[0] == "Up" for r in cursor.fetchall())
+            # C3 and C1 are only defined on three stores (Table A.3.2).
+            result["replica_config"] = (
+                {3: "C3", 1: "C1"}.get(result["max_replicas"], "")
+                if result["tikv_stores"] == 3
+                else ""
+            )
+
             # Extract TiDB version
             cursor.execute("SELECT tidb_version();")
             ver_row = cursor.fetchone()
@@ -130,3 +141,27 @@ def engine_settings(conn: Any, engine: str) -> dict[str, Any]:
         return result
     finally:
         cursor.close()
+
+
+def assert_replicas(conn: Any, expected: int) -> None:
+    """Require three Up stores and exactly `expected` peers in every Region."""
+    settings = engine_settings(conn, "tidb")
+    if settings["max_replicas"] != expected or settings["tikv_stores"] != 3:
+        raise RuntimeError(
+            f"Expected max-replicas={expected} on 3 Up stores, got "
+            f"{settings['max_replicas']} on {settings['tikv_stores']}"
+        )
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT region_id, COUNT(*) AS peers FROM information_schema.tikv_region_peers "
+            "GROUP BY region_id"
+        )
+        rows = cursor.fetchall()
+    finally:
+        cursor.close()
+    wrong = [r for r in rows if int(r[1]) != expected]
+    if not rows or wrong:
+        raise RuntimeError(
+            f"{len(wrong)} of {len(rows)} Regions do not have {expected} peers: {wrong[:5]}"
+        )

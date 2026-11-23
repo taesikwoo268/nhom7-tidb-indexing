@@ -67,7 +67,7 @@ class TestConfig(unittest.TestCase):
             self.assertEqual(get_machine_id(), DEFAULT_MACHINE_ID)
 
     def test_profile_detection(self):
-        """Verify default profile is M and respects PROFILE env var."""
+        """Verify default profile is XS and respects PROFILE env var."""
         with patch.dict(os.environ, {}, clear=True):
             self.assertEqual(get_profile(), DEFAULT_PROFILE)
 
@@ -75,7 +75,7 @@ class TestConfig(unittest.TestCase):
             with patch.dict(os.environ, {"PROFILE": prof}):
                 self.assertEqual(get_profile(), prof)
 
-        # Invalid profile falls back to M
+        # Invalid profile falls back to XS
         with patch.dict(os.environ, {"PROFILE": "UNKNOWN"}):
             self.assertEqual(get_profile(), DEFAULT_PROFILE)
 
@@ -94,6 +94,12 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(prof_s["tidb"]["tikv_nodes"] * 500, 1500)
         self.assertEqual(prof_s["mysql"]["buffer_pool_size"], "1500M")
         self.assertFalse(prof_s["mysql"]["binlog_enabled"])
+
+        prof_xs = PROFILES["XS"]
+        self.assertEqual(prof_xs["tidb"]["tikv_nodes"], 3)
+        self.assertEqual(prof_xs["tidb"]["tikv_nodes"] * 250, 750)
+        self.assertEqual(prof_xs["mysql"]["buffer_pool_size"], "750M")
+        self.assertFalse(prof_xs["mysql"]["binlog_enabled"])
 
 
 if __name__ == "__main__":

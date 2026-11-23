@@ -23,6 +23,8 @@ docs/report/experiments/nghiem_thu_tv2_2026-11-20.md
 # CSV results (keep template/example if any)
 *.csv
 !results/README.md
+!/results/rq4_official*.csv
+!/results/rq1*.csv
 
 # LaTeX build artifacts
 /report/**/*.aux
