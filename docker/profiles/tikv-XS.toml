@@ -1,0 +1,17 @@
+memory-usage-limit = "1000MiB"
+
+[storage]
+# No placeholder file. It reserves about 10 GB per node and is not needed here.
+reserve-space = "0"
+reserve-raft-space = "0"
+
+[storage.block-cache]
+capacity = "250MiB"
+
+[rocksdb.defaultcf]
+write-buffer-size = "32MiB"
+max-write-buffer-number = 2
+
+[rocksdb.writecf]
+write-buffer-size = "32MiB"
+max-write-buffer-number = 2

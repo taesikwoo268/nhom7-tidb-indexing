@@ -45,6 +45,7 @@ class TestDbOffline(unittest.TestCase):
         mock_cursor.fetchall.side_effect = [
             [("tikv", f"tikv{i}:20160", "storage.block-cache.capacity", "800MiB") for i in range(3)],
             [("pd", "127.0.0.1:2379", "replication.max-replicas", "3")],
+            [("Up",)] * 3,
         ]
         mock_cursor.fetchone.return_value = ("Release Version: v8.5.5",)
         mock_conn.cursor.return_value = mock_cursor
@@ -54,6 +55,8 @@ class TestDbOffline(unittest.TestCase):
         self.assertEqual(settings["engine"], "tidb")
         self.assertEqual(settings["block_cache"], "800MiB")
         self.assertEqual(settings["max_replicas"], 3)
+        self.assertEqual(settings["tikv_stores"], 3)
+        self.assertEqual(settings["replica_config"], "C3")
         self.assertIn("v8.5.5", settings["version"])
         self.assertIn("machine", settings)
         self.assertIn("profile", settings)

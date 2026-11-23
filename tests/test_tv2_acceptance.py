@@ -92,3 +92,27 @@ def test_resume_refuses_trials_from_another_configuration(tmp_path):
     assert completed_trials(path, "mysql", "bbb") == set()
     with pytest.raises(ValueError, match="another configuration"):
         completed_trials(path, "tidb", "bbb")
+
+
+@pytest.mark.parametrize(
+    "peers,stores,ok",
+    [
+        ([(1, 3), (2, 3)], 3, True),
+        ([(1, 3), (2, 2)], 3, False),
+        ([], 3, False),
+        ([(1, 3)], 1, False),
+    ],
+)
+def test_assert_replicas_requires_three_stores_and_full_peers(monkeypatch, peers, stores, ok):
+    from bench import db
+
+    monkeypatch.setattr(
+        db, "engine_settings", lambda *a: {"max_replicas": 3, "tikv_stores": stores}
+    )
+    conn = MagicMock()
+    conn.cursor.return_value.fetchall.return_value = peers
+    if ok:
+        db.assert_replicas(conn, 3)
+    else:
+        with pytest.raises(RuntimeError):
+            db.assert_replicas(conn, 3)

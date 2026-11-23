@@ -18,7 +18,7 @@ import docker
 import mysql.connector
 
 from .config import get_engine_config
-from .db import analyze, checksum, connect, engine_settings
+from .db import analyze, assert_replicas, checksum, connect, engine_settings
 from .environment import ROOT, SERVICES, assert_engine, compose
 from .resources import resource_snapshot
 from .schema import RQ4_INDEX_SETS, create_index_sql, shipments_ddl
@@ -273,9 +273,14 @@ def benchmark(args):
             for rf in replica_values:
                 if args.engine == "tidb":
                     set_replicas(conn, rf)
-                for ix, th, mode, rep in product(
-                    args.indexes, args.threads, args.mode, range(1, args.reps + 1)
+                # Repetition is the outer loop so slow drift is not mistaken for an
+                # index effect.
+                for rep, th, mode, ix in product(
+                    range(1, args.reps + 1), args.threads, args.mode, args.indexes
                 ):
+                    # C1 only separates replication cost, at 0 and 5 indexes.
+                    if args.engine == "tidb" and rf == 1 and ix not in (0, 5):
+                        continue
                     trial_key = (args.engine, rf, str(ix), th, mode, rep)
                     if trial_key in completed:
                         print(
@@ -285,10 +290,8 @@ def benchmark(args):
                         continue
                     with measured_table(conn, args.engine, rows, cod, ix) as table:
                         settings = engine_settings(conn, args.engine)
-                        if args.engine == "tidb" and settings["max_replicas"] != rf:
-                            raise RuntimeError(
-                                "Replica setting changed before measurement"
-                            )
+                        if args.engine == "tidb":
+                            assert_replicas(conn, rf)
                         leaders = ""
                         if args.engine == "tidb":
                             cur.execute(
@@ -331,6 +334,8 @@ def benchmark(args):
                             version=settings["version"].splitlines()[0],
                             replicas=rf,
                             max_replicas=settings.get("max_replicas", ""),
+                            tikv_stores=settings.get("tikv_stores", ""),
+                            replica_config=settings.get("replica_config", ""),
                             block_cache=settings.get("block_cache", ""),
                             buffer_pool=settings.get("buffer_pool", ""),
                             baseline_rows=rows,

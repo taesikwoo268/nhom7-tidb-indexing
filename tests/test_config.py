@@ -95,6 +95,12 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(prof_s["mysql"]["buffer_pool_size"], "1500M")
         self.assertFalse(prof_s["mysql"]["binlog_enabled"])
 
+        prof_xs = PROFILES["XS"]
+        self.assertEqual(prof_xs["tidb"]["tikv_nodes"], 3)
+        self.assertEqual(prof_xs["tidb"]["tikv_nodes"] * 250, 750)
+        self.assertEqual(prof_xs["mysql"]["buffer_pool_size"], "750M")
+        self.assertFalse(prof_xs["mysql"]["binlog_enabled"])
+
 
 if __name__ == "__main__":
     unittest.main()

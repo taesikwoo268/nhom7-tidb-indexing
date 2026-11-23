@@ -21,7 +21,10 @@ services:
     extends:
       file: ./profiles/${PROFILE:-M}.yml
       service: tikv
-    image: pingcap/tikv:v8.5.5
+    image: nhom7/tikv:v8.5.5-nodebug
+    build:
+      context: .
+      dockerfile: tikv.Dockerfile
     depends_on: [pd]
     command:
       - --addr=0.0.0.0:20160
@@ -39,7 +42,10 @@ services:
     extends:
       file: ./profiles/${PROFILE:-M}.yml
       service: tikv
-    image: pingcap/tikv:v8.5.5
+    image: nhom7/tikv:v8.5.5-nodebug
+    build:
+      context: .
+      dockerfile: tikv.Dockerfile
     depends_on: [pd]
     command:
       - --addr=0.0.0.0:20160
@@ -57,7 +63,10 @@ services:
     extends:
       file: ./profiles/${PROFILE:-M}.yml
       service: tikv
-    image: pingcap/tikv:v8.5.5
+    image: nhom7/tikv:v8.5.5-nodebug
+    build:
+      context: .
+      dockerfile: tikv.Dockerfile
     depends_on: [pd]
     command:
       - --addr=0.0.0.0:20160

@@ -1,7 +1,7 @@
 """Configuration module for TiDB and MySQL experiments.
 
 Defines connection parameters, machine environment detection (M1, M2, M3),
-and resource profile specifications (Profile M / Profile S) according to
+and resource profile specifications (Profiles M, S and XS) according to
 Appendix A of the project plan.
 """
 
@@ -18,7 +18,7 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
 
 # Valid identifiers
 VALID_MACHINE_IDS = {"M1", "M2", "M3"}
-VALID_PROFILES = {"M", "S"}
+VALID_PROFILES = {"M", "S", "XS"}
 
 # Default machine and profile if not specified in environment
 # Machine M2 is assigned to TV2 (write cost RQ4)
@@ -111,6 +111,33 @@ PROFILES: dict[str, dict[str, Any]] = {
             "cpus": 4.0,
             "memory": "3GiB",
             "buffer_pool_size": "1500M",
+            "flush_log_at_trx_commit": 1,
+            "binlog_enabled": False,
+        },
+    },
+    "XS": {
+        "description": "Default for the 16 GB machines M1 and M2 (largest dataset 3M rows)",
+        "total_db_cpus": 4.0,
+        "sysbench_cpus": 2.0,
+        "max_rows": 3_000_000,
+        "tidb": {
+            "version": "v8.5.5",
+            "pd_cpus": 0.4,
+            "pd_memory": "0.5GiB",
+            "tidb_cpus": 1.2,
+            "tidb_memory": "1GiB",
+            "tikv_nodes": 3,
+            "tikv_cpus_per_node": 0.8,
+            "tikv_memory_per_node": "1.25GiB",
+            "tikv_block_cache": "250MiB",
+            "total_block_cache": "750MiB",
+            "replicas": 3,
+        },
+        "mysql": {
+            "version": "8.4.11",
+            "cpus": 4.0,
+            "memory": "2GiB",
+            "buffer_pool_size": "750M",
             "flush_log_at_trx_commit": 1,
             "binlog_enabled": False,
         },
