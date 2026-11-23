@@ -4,6 +4,7 @@ import re
 
 INDEXES = {
     "idx_code": "(tracking_code)",
+    "idx_code_nonuniq": "(tracking_code)",
     "idx_code_cov": "(tracking_code,status,updated_at)",
     "idx_sender": "(sender_id)",
     "idx_sender_created": "(sender_id,created_at)",
@@ -19,6 +20,9 @@ RQ4_INDEX_SETS = {
     3: ["idx_code", "idx_sender_created", "idx_hub_status"],
 }
 RQ4_INDEX_SETS[5] = RQ4_INDEX_SETS[3] + ["idx_cod", "idx_status"]
+# Same key prefix with and without covering columns. W2 changes only sender_cov.
+RQ4_INDEX_SETS["sender_created"] = ["idx_sender_created"]
+RQ4_INDEX_SETS["sender_cov"] = ["idx_sender_cov"]
 
 
 def identifier(name):

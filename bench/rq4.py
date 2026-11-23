@@ -1,6 +1,7 @@
 """Run the RQ4 matrix on disposable copies of the verified baseline."""
 
 import csv
+import hashlib
 import json
 import math
 import re
@@ -14,6 +15,7 @@ from urllib.request import urlopen
 from uuid import uuid4
 
 import docker
+import mysql.connector
 
 from .config import get_engine_config
 from .db import analyze, checksum, connect, engine_settings
@@ -167,6 +169,65 @@ def measure(args, client, containers, table, threads, mode, run_id):
     return values
 
 
+def config_fingerprint(client, containers):
+    """Identify the resources and settings that a set of trials shares."""
+    parts = [str(client.info()["MemTotal"]), str(client.info()["NCPU"])]
+    for name in sorted(containers):
+        attrs = client.containers.get(containers[name]).attrs
+        host = attrs["HostConfig"]
+        parts.append(
+            json.dumps(
+                [name, attrs["Image"], attrs["Config"]["Cmd"], host["NanoCpus"],
+                 host["Memory"], host["MemorySwap"]]
+            )
+        )
+    for path in sorted((ROOT / "docker/profiles").glob("tikv-*.toml")):
+        parts.append(path.read_text(encoding="utf-8"))
+    for path in (ROOT / "docker/mysql.cnf", ROOT / "sysbench/shipments_write.lua"):
+        parts.append(path.read_text(encoding="utf-8"))
+    return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:12]
+
+
+def completed_trials(path, engine, config_id):
+    """Return recorded trials, refusing to resume under another configuration."""
+    if not path.exists() or path.stat().st_size == 0:
+        return set()
+    with path.open(encoding="utf-8-sig", newline="") as stream:
+        rows = [r for r in csv.DictReader(stream) if r["engine"] == engine]
+    if any(r.get("config_id") != config_id for r in rows):
+        raise ValueError(
+            f"{path} holds {engine} trials from another configuration. Use a new --output."
+        )
+    return {
+        (engine, int(r["replicas"]), r["index_set"], int(r["threads"]),
+         r["mode"], int(r["rep"]))
+        for r in rows
+    }
+
+
+def settle(client, containers, services, limit=2_000_000, window=10, timeout=180):
+    """Wait for background writes to stay under limit bytes/s for two windows."""
+
+    def written():
+        snapshot = resource_snapshot(client, {s: containers[s] for s in services})
+        return snapshot["time_ns"], sum(
+            v["write_bytes"] for v in snapshot["services"].values()
+        )
+
+    start, quiet = time.monotonic(), 0
+    t0, w0 = written()
+    while True:
+        time.sleep(window)
+        t1, w1 = written()
+        quiet = quiet + 1 if (w1 - w0) / ((t1 - t0) / 1e9) < limit else 0
+        elapsed = round(time.monotonic() - start, 1)
+        if quiet >= 2:
+            return elapsed, True
+        if elapsed >= timeout:
+            return elapsed, False
+        t0, w0 = t1, w1
+
+
 def save_row(path: Path, row):
     path.parent.mkdir(parents=True, exist_ok=True)
     exists = path.exists() and path.stat().st_size > 0
@@ -207,18 +268,37 @@ def benchmark(args):
             replica_values = args.replicas if args.engine == "tidb" else [1]
             if args.engine == "mysql":
                 cur.execute("SET SESSION information_schema_stats_expiry=0")
+            config_id = config_fingerprint(client, containers)
+            completed = completed_trials(args.output, args.engine, config_id)
             for rf in replica_values:
                 if args.engine == "tidb":
                     set_replicas(conn, rf)
                 for ix, th, mode, rep in product(
                     args.indexes, args.threads, args.mode, range(1, args.reps + 1)
                 ):
+                    trial_key = (args.engine, rf, str(ix), th, mode, rep)
+                    if trial_key in completed:
+                        print(
+                            f"Skipping already recorded trial: engine={args.engine} rf={rf} idx={ix} th={th} mode={mode} rep={rep}",
+                            flush=True,
+                        )
+                        continue
                     with measured_table(conn, args.engine, rows, cod, ix) as table:
                         settings = engine_settings(conn, args.engine)
                         if args.engine == "tidb" and settings["max_replicas"] != rf:
                             raise RuntimeError(
                                 "Replica setting changed before measurement"
                             )
+                        leaders = ""
+                        if args.engine == "tidb":
+                            cur.execute(
+                                "SELECT leader_count FROM information_schema.tikv_store_status "
+                                "WHERE store_state_name='Up' ORDER BY store_id"
+                            )
+                            leaders = "/".join(str(r[0]) for r in cur.fetchall())
+                        settle_s, settled = settle(
+                            client, containers, SERVICES[args.engine]
+                        )
                         run_id = table + "_" + mode
                         metrics = measure(
                             args, client, containers, table, th, mode, run_id
@@ -231,13 +311,18 @@ def benchmark(args):
                             raise ValueError(
                                 f"Expected {expected} rows after {mode}, got {after_rows}"
                             )
-                        analyze(conn, table, engine=args.engine)
-                        cur.execute(
-                            "SELECT data_length,index_length FROM information_schema.tables "
-                            "WHERE table_schema=DATABASE() AND table_name=%s",
-                            (table,),
-                        )
-                        data_bytes, index_bytes = cur.fetchone()
+                        data_bytes = index_bytes = ""
+                        try:
+                            analyze(conn, table, engine=args.engine)
+                            cur.execute(
+                                "SELECT data_length,index_length FROM information_schema.tables "
+                                "WHERE table_schema=DATABASE() AND table_name=%s",
+                                (table,),
+                            )
+                            data_bytes, index_bytes = map(int, cur.fetchone())
+                        except mysql.connector.Error as exc:
+                            # Throughput is already measured. Leave sizes blank, never stale.
+                            print(f"Sizes unavailable for {run_id}: {exc}", flush=True)
                         row = dict(
                             run_id=run_id,
                             machine=settings["machine"],
@@ -250,15 +335,20 @@ def benchmark(args):
                             buffer_pool=settings.get("buffer_pool", ""),
                             baseline_rows=rows,
                             sum_cod=cod,
-                            n_indexes=ix,
+                            n_indexes=len(RQ4_INDEX_SETS[ix]),
+                            index_set=ix,
+                            leaders=leaders,
                             threads=th,
                             mode=mode,
                             rep=rep,
                             duration_s=args.seconds,
                             **metrics,
                             final_rows=after_rows,
-                            table_bytes=int(data_bytes),
-                            index_bytes=int(index_bytes),
+                            table_bytes=data_bytes,
+                            index_bytes=index_bytes,
+                            config_id=config_id,
+                            settle_s=settle_s,
+                            settled=int(settled),
                         )
                         save_row(args.output, row)
                         print(

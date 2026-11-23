@@ -44,7 +44,7 @@ def test_shared_tsv_is_deterministic_and_w1_codes_do_not_collide(tmp_path: Path)
     assert all(len(r) == 14 and int(r[1][2:]) % 2 == 0 for r in rows)
 
 
-def test_failed_rq4_trial_still_restores_rf3_and_stops_load_generator(monkeypatch):
+def test_failed_rq4_trial_still_restores_rf3_and_stops_load_generator(monkeypatch, tmp_path):
     from argparse import Namespace
     from bench import rq4
 
@@ -57,6 +57,7 @@ def test_failed_rq4_trial_still_restores_rf3_and_stops_load_generator(monkeypatc
     compose = MagicMock(return_value="container-id")
     monkeypatch.setattr(rq4, "compose", compose)
     monkeypatch.setattr(rq4.docker, "from_env", MagicMock())
+    monkeypatch.setattr(rq4, "config_fingerprint", lambda *args: "cfg")
     replicas = MagicMock()
     monkeypatch.setattr(rq4, "set_replicas", replicas)
     monkeypatch.setattr(
@@ -71,8 +72,23 @@ def test_failed_rq4_trial_still_restores_rf3_and_stops_load_generator(monkeypatc
         indexes=[0],
         mode=["update"],
         replicas=[1],
+        output=tmp_path / "rq4.csv",
     )
     with pytest.raises(RuntimeError, match="trial failed"):
         rq4.benchmark(args)
     assert [call.args[1] for call in replicas.call_args_list] == [1, 3]
     compose.assert_called_with("stop", "sysbench")
+
+
+def test_resume_refuses_trials_from_another_configuration(tmp_path):
+    from bench.rq4 import completed_trials
+
+    path = tmp_path / "rq4.csv"
+    path.write_text(
+        "engine,replicas,n_indexes,threads,mode,rep,index_set,config_id\n"
+        "tidb,3,0,16,insert,1,0,aaa\n"
+    )
+    assert completed_trials(path, "tidb", "aaa") == {("tidb", 3, "0", 16, "insert", 1)}
+    assert completed_trials(path, "mysql", "bbb") == set()
+    with pytest.raises(ValueError, match="another configuration"):
+        completed_trials(path, "tidb", "bbb")

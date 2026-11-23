@@ -81,7 +81,7 @@ def switch_engine(target, switch):
         if not switch:
             raise SystemExit(f"{other} is running. Use --switch.")
         compose("stop", "sysbench", *SERVICES[other])
-    compose("up", "-d", "--build", *SERVICES[target])
+    compose("up", "-d", "--build", "--force-recreate", *SERVICES[target])
     deadline = time.monotonic() + 120
     while True:
         try:
