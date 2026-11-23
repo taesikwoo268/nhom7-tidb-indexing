@@ -24,7 +24,11 @@ def main():
     rq4.add_argument("--reps", type=int, default=int(os.getenv("REPS", "3")))
     rq4.add_argument("--threads", type=int, nargs="+", default=[16, 64])
     rq4.add_argument(
-        "--indexes", type=int, choices=[0, 1, 3, 5], nargs="+", default=[0, 1, 3, 5]
+        "--indexes",
+        type=lambda v: int(v) if v.isdigit() else v,
+        choices=[0, 1, 3, 5, "sender_created", "sender_cov"],
+        nargs="+",
+        default=[0, 1, 3, 5],
     )
     rq4.add_argument("--replicas", type=int, choices=[1, 3], nargs="+", default=[3, 1])
     rq4.add_argument(
