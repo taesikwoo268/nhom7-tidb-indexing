@@ -156,7 +156,8 @@ def resource_snapshot(client, containers):
     for name, cid in containers.items():
         stats = client.api.stats(cid, stream=False, one_shot=True)
         io = stats["blkio_stats"]["io_service_bytes_recursive"]
-        if io is None and name != "sysbench":
+        # These two keep no data, so they may not have touched the disk since a restart.
+        if io is None and name not in {"sysbench", "tidb"}:
             raise RuntimeError(f"Missing device I/O counters for {name}")
         snapshot[name] = {
             "cpu_ns": stats["cpu_stats"]["cpu_usage"]["total_usage"],

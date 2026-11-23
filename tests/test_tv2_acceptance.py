@@ -128,7 +128,7 @@ def test_rounds_interleave_indexes_and_limit_c1():
         engine="tidb", reps=2, threads=[16], mode=["update"], indexes=[0, 1, 5]
     )
     rounds = list(pending_trials(args, [3, 1], {("tidb", 3, "0", 16, "update", 1)}))
-    assert [(rf, rep, [t[2] for t in trials]) for rf, rep, trials in rounds] == [
+    assert [(rf, rep, sorted(t[2] for t in trials)) for rf, rep, trials in rounds] == [
         (3, 1, [1, 5]),
         (3, 2, [0, 1, 5]),
         (1, 1, [0, 5]),
@@ -192,3 +192,32 @@ def test_rq4_summary_uses_own_baseline_and_refuses_mixed_configurations():
     assert out["sender_cov"]["change_pct"] == -50.0
     with pytest.raises(ValueError, match="Mixed config_id"):
         summarise(rows + [row("1", 1, "b")])
+
+
+def test_round_order_is_reproducible_and_changes_between_rounds():
+    from argparse import Namespace
+    from bench.rq4 import pending_trials
+
+    args = Namespace(
+        engine="mysql", reps=3, threads=[64], mode=["insert", "update"],
+        indexes=[0, 1, 3, 5, "sender_created", "sender_cov"],
+    )
+    rounds = [trials for _, _, trials in pending_trials(args, [1], set())]
+    assert rounds == [trials for _, _, trials in pending_trials(args, [1], set())]
+    assert len({r[0] for r in rounds}) == 3
+    done = {("mysql", 1, str(ix), th, m, 1) for th, m, ix in rounds[0][:4]}
+    assert next(pending_trials(args, [1], done))[2] == rounds[0][4:]
+
+
+def test_only_stateless_services_may_lack_disk_counters():
+    from bench.resources import resource_snapshot
+
+    client = MagicMock()
+    client.api.stats.return_value = {
+        "blkio_stats": {"io_service_bytes_recursive": None},
+        "cpu_stats": {"cpu_usage": {"total_usage": 1}},
+        "memory_stats": {"usage": 1},
+    }
+    assert resource_snapshot(client, {"tidb": "x"})["services"]["tidb"]["write_bytes"] == 0
+    with pytest.raises(RuntimeError, match="tikv1"):
+        resource_snapshot(client, {"tikv1": "x"})

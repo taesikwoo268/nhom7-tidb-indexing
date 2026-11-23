@@ -10,6 +10,7 @@ import subprocess
 import time
 from contextlib import contextmanager
 from itertools import product
+from random import Random
 from pathlib import Path
 from urllib.request import urlopen
 from uuid import uuid4
@@ -276,9 +277,12 @@ def pending_trials(args, replica_values, completed):
     """Yield (replicas, repetition, trials) rounds that still need measuring."""
     for rf in replica_values:
         for rep in range(1, args.reps + 1):
+            order = list(product(args.threads, args.mode, args.indexes))
+            # A different fixed order each round, so no set is always measured first.
+            Random(rep).shuffle(order)
             trials = [
                 (th, mode, ix)
-                for th, mode, ix in product(args.threads, args.mode, args.indexes)
+                for th, mode, ix in order
                 # C1 only separates replication cost, at 0 and 5 indexes.
                 if not (args.engine == "tidb" and rf == 1 and ix not in (0, 5))
                 and (args.engine, rf, str(ix), th, mode, rep) not in completed
