@@ -183,47 +183,70 @@ Nhờ cơ chế này, TiDB hỗ trợ mức cô lập Snapshot Isolation (SI) v�
 \section{Cài đặt, Triển khai Cụm TiDB Đa Node và Demo Vận hành Cơ bản}
 \label{sec:phan_a_cai_dat_trien_khai}
 
-\subsection{Kiến trúc triển khai thực nghiệm trên máy 16GB RAM / 8 CPU Cores}
+\subsection{Kiến trúc triển khai thực nghiệm trên 3 máy độc lập (M1, M2, M3)}
 
-Để kiểm chứng tính đúng đắn của lý thuyết và đáp ứng yêu cầu của giảng viên về việc cài đặt và demo vận hành thực tế, nhóm thiết lập môi trường thực nghiệm đối chứng trên một máy chủ thử nghiệm chuẩn hóa có cấu hình phần cứng: \textbf{16GB RAM vật lý, 8 nhân CPU Core i7/Xeon và ổ cứng NVMe SSD}.
+Để kiểm chứng tính đúng đắn của lý thuyết và đáp ứng yêu cầu của giảng viên về việc cài đặt và demo vận hành thực tế, nhóm thiết lập môi trường thực nghiệm đối chứng trên 3 máy chủ thử nghiệm chuẩn hóa đại diện cho 3 thành viên (M1 cho TV1, M2 cho TV2, M3 cho TV3). Mọi máy đều sử dụng chung một cấu hình container chuẩn hóa theo hai hồ sơ tài nguyên: \textbf{Hồ sơ M} (máy từ 12 luồng CPU, 16GB RAM) hoặc \textbf{Hồ sơ S} (máy được cấp phát tài nguyên WSL2 dưới 12GB RAM).
 
-Hệ thống được đóng gói thông qua công nghệ Docker Compose, bao gồm 2 môi trường hoàn toàn biệt lập:
-\begin{enumerate}
-  \item \textbf{Cụm TiDB Phân tán (Distributed TiDB Cluster):} Gồm 5 containers chính thức:
-  \begin{itemize}
-    \item \code{1 x PD Container} (\code{tidb-pd0}): Cấp phát TSO và điều phối Region, giới hạn 1.0 vCPU, 1GB RAM.
-    \item \code{3 x TiKV Containers} (\code{tidb-tikv0}, \code{tidb-tikv1}, \code{tidb-tikv2}): Cấu thành cụm lưu trữ phân tán, đảm bảo đủ số lượng node tối thiểu để thực thi cơ chế quá bán Raft Quorum ($2/3$). Mỗi node được giới hạn 1.5 vCPU, 2GB RAM.
-    \item \code{1 x TiDB Server Container} (\code{tidb-server0}): Tiếp nhận câu lệnh SQL qua cổng 4000, giới hạn 1.5 vCPU, 2GB RAM.
-    \item Hệ thống giám sát đi kèm gồm \textbf{TiDB Dashboard} (tích hợp trực tiếp tại cổng 2379 của PD) và \textbf{Prometheus/Grafana}.
-  \end{itemize}
-  \item \textbf{Hệ quản trị Đối chứng MySQL 8.0 Đơn Node (MySQL Single-Node):}
-  \begin{itemize}
-    \item Chạy MySQL 8.0 Community Edition tại cổng chuẩn 3306.
-    \item Cấp phát tổng mức tài nguyên tối đa tương đương với toàn bộ năng lực tính toán của cụm TiDB: \textbf{6.0 vCPUs và 8GB RAM}.
-    \item Cấu hình \code{innodb_buffer_pool_size = 4G}, \code{innodb_log_file_size = 1G} để bảo đảm tính khách quan và khai thác tối đa sức mạnh của B+Tree trên máy đơn.
-  \end{itemize}
-\end{enumerate}
-
-Bảng~\ref{tab:thong_so_trien_khai} tóm tắt thông số cấu hình và cổng kết nối của toàn bộ hệ thống thực nghiệm.
+Bảng~\ref{tab:ba_may_thuc_nghiem} (Bảng A.3.1) liệt kê chi tiết thông số phần cứng và hồ sơ môi trường thực tế của từng máy.
 
 \begin{table}[H]
 \centering
-\caption{Thông số phân bổ tài nguyên và cổng dịch vụ của môi trường thực nghiệm}
+\caption{Bảng A.3.1: Thông số phần cứng và môi trường trên ba máy thực nghiệm độc lập}
+\label{tab:ba_may_thuc_nghiem}
+\bangfont
+\begin{tabularx}{\linewidth}{@{}>{\centering\arraybackslash}p{1.0cm}>{\raggedright\arraybackslash}p{2.3cm}>{\raggedright\arraybackslash}p{3.2cm}>{\centering\arraybackslash}p{1.3cm}>{\raggedright\arraybackslash}p{2.0cm}>{\raggedright\arraybackslash}p{3.5cm}>{\centering\arraybackslash}p{1.3cm}@{}}
+\toprule
+\textbf{Máy} & \textbf{Thành viên / Phần} & \textbf{CPU (Model, Luồng)} & \textbf{RAM} & \textbf{Ổ dữ liệu} & \textbf{Hệ điều hành / Docker / WSL2} & \textbf{Hồ sơ}\\
+\midrule
+M1 & TV1 / B.1 (Dung lượng) & \textit{(TV1 cung cấp)} & \textit{(TV1)} & \textit{(TV1)} & \textit{(TV1)} & \textit{(TV1)}\\
+\midrule
+\textbf{M2} & \textbf{TV2 / B.3 (RQ4 Ghi)} & \textbf{Intel Core Ultra 5 125H (18 luồng)} & \textbf{16 GB} & \textbf{NVMe SSD} & \textbf{Windows 11 / Docker 29.8.0 / WSL2 cấp 7,56 GiB RAM} & \textbf{Hồ sơ S}\\
+\midrule
+M3 & TV3 / B.2 (Chi phí đọc) & \textit{(TV3 cung cấp)} & \textit{(TV3)} & \textit{(TV3)} & \textit{(TV3)} & \textit{(TV3)}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Hệ thống được đóng gói thông qua công nghệ Docker Compose, bao gồm 2 môi trường hoàn toàn biệt lập (được quản lý chuyển đổi qua script \code{use\_engine}):
+\begin{enumerate}
+  \item \textbf{Cụm TiDB Phân tán (Distributed TiDB Cluster v8.5.5):} Gồm 5 containers chính thức:
+  \begin{itemize}
+    \item \code{1 x PD Container} (\code{tidb-pd}): Cấp phát TSO và điều phối Region (0.4 CPU, 0.75 GiB trên Profile S; 0.5 CPU, 1 GiB trên Profile M).
+    \item \code{3 x TiKV Containers} (\code{tidb-tikv1}, \code{tidb-tikv2}, \code{tidb-tikv3}): Cấu thành cụm lưu trữ phân tán, đảm bảo đủ 3 bản sao Raft Quorum ($2/3$). Mỗi node được gán cứng \code{storage.block-cache.capacity = 500MiB} trên Profile S (tổng 1.500 MiB) hoặc \code{800MiB} trên Profile M (tổng 2.400 MiB).
+    \item \code{1 x TiDB Server Container} (\code{tidb-server}): Tiếp nhận câu lệnh SQL qua cổng 4000 (1.2 CPU trên Profile S; 1.75 CPU trên Profile M).
+    \item Hệ thống giám sát đi kèm gồm \textbf{TiDB Dashboard} (tích hợp trực tiếp tại cổng 2379 của PD) và Key Visualizer.
+  \end{itemize}
+  \item \textbf{Hệ quản trị Đối chứng MySQL 8.4.11 Đơn Node (MySQL Single-Node):}
+  \begin{itemize}
+    \item Chạy MySQL Community Server 8.4.11 tại cổng 3306 (hoặc 3307 trên M2).
+    \item Cấp phát tổng mức tài nguyên tối đa tương đương với toàn bộ năng lực tính toán của cụm TiDB: \textbf{4.0 vCPUs và 3GB RAM} trên Profile S; hoặc \textbf{6.0 vCPUs và 4GB RAM} trên Profile M.
+    \item Cấu hình \code{innodb\_buffer\_pool\_size = 1500M} (trên Profile S, tương đương đúng $3 \times 500\text{ MiB}$ block cache của TiKV) hoặc \code{2400M} (trên Profile M, tương đương đúng $3 \times 800\text{ MiB}$ block cache của TiKV). Tắt binary log (\code{skip-log-bin}) để bảo đảm đối chứng công bằng tuyệt đối với TiDB mặc định.
+  \end{itemize}
+\end{enumerate}
+
+Bảng~\ref{tab:thong_so_trien_khai} tóm tắt thông số phân bổ tài nguyên theo hai hồ sơ M và S.
+
+\begin{table}[H]
+\centering
+\caption{Thông số phân bổ tài nguyên và cấu hình đối chứng tương đương theo Hồ sơ M và S}
 \label{tab:thong_so_trien_khai}
 \bangfont
-\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{2.8cm}>{\raggedright\arraybackslash}p{3.2cm}>{\centering\arraybackslash}p{2.5cm}>{\centering\arraybackslash}p{2.2cm}Y@{}}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{2.6cm}>{\centering\arraybackslash}p{2.6cm}>{\centering\arraybackslash}p{2.6cm}Y@{}}
 \toprule
-\textbf{Thành phần} & \textbf{Tên Container} & \textbf{Giới hạn CPU} & \textbf{Giới hạn RAM} & \textbf{Cổng mạng tiếp nhận}\\
+\textbf{Hệ thống / Dịch vụ} & \textbf{Thành phần / Node} & \textbf{Hồ sơ M (Chuẩn)} & \textbf{Hồ sơ S (Tiết kiệm)} & \textbf{Cổng mạng tiếp nhận}\\
 \midrule
-Placement Driver & \code{tidb-pd0} & 1.0 vCPU & 1.0 GB & 2379 (Client/Dashboard), 2380 (Peer)\\
-TiKV Node 0 & \code{tidb-tikv0} & 1.5 vCPU & 2.0 GB & 20160 (gRPC TiKV)\\
-TiKV Node 1 & \code{tidb-tikv1} & 1.5 vCPU & 2.0 GB & 20160 (gRPC TiKV)\\
-TiKV Node 2 & \code{tidb-tikv2} & 1.5 vCPU & 2.0 GB & 20160 (gRPC TiKV)\\
-TiDB Server & \code{tidb-server0} & 1.5 vCPU & 2.0 GB & 4000 (MySQL Client), 10080 (Status)\\
+\multirow{4}{*}{\textbf{TiDB v8.5.5}} 
+ & Placement Driver & 0.5 CPU, 1.0 GiB & 0.4 CPU, 0.75 GiB & 2379, 2380\\
+ & 3 $\times$ TiKV Nodes & 3 $\times$ 1.25 CPU, 2.25 GiB & 3 $\times$ 0.8 CPU, 1.75 GiB & 20160 (gRPC)\\
+ & TiKV Block Cache & 3 $\times$ 800 MiB = 2.400 MiB & 3 $\times$ 500 MiB = 1.500 MiB & Cục bộ từng node\\
+ & TiDB Stateless & 1.75 CPU, 1.5 GiB & 1.2 CPU, 1.25 GiB & 4000 (SQL), 10080\\
 \midrule
-\textbf{Tổng cụm TiDB} & \textbf{5 Containers} & \textbf{7.0 vCPUs} & \textbf{9.0 GB} & \textit{Cụm phân tán NewSQL}\\
+\textbf{Tổng cụm TiDB} & \textbf{5 Containers} & \textbf{6.0 vCPUs, 9.25 GiB} & \textbf{4.0 vCPUs, 7.25 GiB} & \textit{Cụm phân tán (RF=3)}\\
 \midrule
-\textbf{MySQL Đơn node} & \code{mysql-single} & \textbf{6.0 vCPUs} & \textbf{8.0 GB} & \textbf{3306 (MySQL Client)}\\
+\textbf{MySQL 8.4.11} & \textbf{1 Container} & \textbf{6.0 vCPUs, 4.0 GiB} & \textbf{4.0 vCPUs, 3.0 GiB} & \textbf{3306 / 3307 (SQL)}\\
+\textit{Bộ nhớ đệm} & \textit{Buffer Pool} & \textit{2.400 MiB (khớp TiDB)} & \textit{1.500 MiB (khớp TiDB)} & \textit{innodb\_buffer\_pool}\\
+\midrule
+\textbf{Sysbench} & \textbf{1 Container / CLI} & \textbf{3.0 vCPUs} & \textbf{2.0 vCPUs} & \textit{Bộ sinh tải thực nghiệm}\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -238,28 +261,28 @@ Sau khi kích hoạt môi trường bằng lệnh \code{docker compose up -d}, n
 \begin{lstlisting}[language=SQL, caption={Truy vấn thông tin phiên bản TiDB Server}]
 mysql -h 127.0.0.1 -P 4000 -u root -e "SELECT tidb_version()\G"
 \end{lstlisting}
-  Kết quả trả về định danh cụm TiDB phiên bản chính thức (v8.1.0 LTS) hoàn toàn khớp với giao thức tương thích của MySQL 5.7/8.0.
+  Kết quả trả về định danh cụm TiDB phiên bản chính thức (v8.5.5) hoàn toàn khớp với giao thức tương thích của MySQL 5.7/8.0.
 
   \item \textbf{Kiểm tra trạng thái hoạt động của 3 node TiKV (Store Status):}
-  Truy vấn bảng hệ thống \code{INFORMATION_SCHEMA.TIKV_STORE_STATUS} để khẳng định cả 3 node lưu trữ phân tán đều đã gia nhập cụm thành công và duy trì trạng thái \code{Up}:
+  Truy vấn bảng hệ thống \code{INFORMATION\_SCHEMA.TIKV\_STORE\_STATUS} để khẳng định cả 3 node lưu trữ phân tán đều đã gia nhập cụm thành công và duy trì trạng thái \code{Up}:
 \begin{lstlisting}[language=SQL, caption={Kiểm tra trạng thái 3 node TiKV trong cụm}]
-SELECT STORE_ID, ADDRESS, STATE_NAME, CAPACITY, AVAILABLE, 
+SELECT STORE_ID, ADDRESS, STORE_STATE_NAME,
        REGION_COUNT, LEADER_COUNT 
 FROM INFORMATION_SCHEMA.TIKV_STORE_STATUS;
 \end{lstlisting}
 
 \begin{table}[H]
 \centering
-\caption{Dữ liệu thực tế ghi nhận trạng thái 3 node TiKV sau khi khởi động}
+\caption{Trạng thái 3 node TiKV trên máy M2, ghi nhận ngày 23/11/2026 với RF=3}
 \label{tab:tikv_status_verify}
 \bangfont
-\begin{tabular}{cccccc}
+\begin{tabular}{ccccc}
 \toprule
-\textbf{STORE\_ID} & \textbf{ADDRESS} & \textbf{STATE\_NAME} & \textbf{AVAILABLE} & \textbf{REGION\_COUNT} & \textbf{LEADER\_COUNT}\\
+\textbf{STORE\_ID} & \textbf{ADDRESS} & \textbf{STORE\_STATE\_NAME} & \textbf{REGION\_COUNT} & \textbf{LEADER\_COUNT}\\
 \midrule
-1 & tikv0:20160 & Up & 1.88 GiB & 1 & 1\\
-2 & tikv1:20160 & Up & 1.88 GiB & 1 & 0\\
-3 & tikv2:20160 & Up & 1.88 GiB & 1 & 0\\
+1 & tikv3:20160 & Up & 156 & 48\\
+2 & tikv1:20160 & Up & 156 & 53\\
+3 & tikv2:20160 & Up & 156 & 55\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -274,12 +297,49 @@ FROM INFORMATION_SCHEMA.TIKV_STORE_STATUS;
 
 \begin{figure}[H]
 \centering
-\IfFileExists{figures/tidb_dashboard.png}{
-  \includegraphics[width=0.92\textwidth]{figures/tidb_dashboard.png}
+\IfFileExists{figures/tidb_dashboard_topology.png}{
+  \includegraphics[width=0.92\textwidth]{figures/tidb_dashboard_topology.png}
 }{
   \fbox{\parbox[c][5.5cm][c]{0.9\textwidth}{\centering
     \fontsize{12}{15}\selectfont\bfseries Minh chứng Giao diện TiDB Dashboard và Bản đồ Topology Cụm 3 Node TiKV}}
 }
-\caption{Giao diện TiDB Dashboard giám sát trạng thái 3 node lưu trữ TiKV và phân bổ Region}
+\caption{TiDB Dashboard (Cluster Info) trên máy M2: 1 PD, 1 TiDB Server và 3 TiKV phiên bản v8.5.5 ở trạng thái Up}
 \label{fig:tidb_dashboard_topology}
 \end{figure}
+
+\begin{figure}[H]
+\centering
+\IfFileExists{figures/tidb_key_visualizer.png}{
+  \includegraphics[width=0.92\textwidth]{figures/tidb_key_visualizer.png}
+}{
+  \fbox{\parbox[c][5.5cm][c]{0.9\textwidth}{\centering Key Visualizer}}
+}
+\caption{Key Visualizer trên máy M2, lượng byte ghi trong 6 giờ theo dải khóa}
+\label{fig:tidb_key_visualizer}
+\end{figure}
+
+\subsection{Định nghĩa số node, số bản sao, quorum và khả năng chịu lỗi}
+\label{sec:dinh_nghia_replica}
+
+Số node TiKV và số bản sao của mỗi Region là hai đại lượng khác nhau. Cả hai cấu hình TiDB trong nghiên cứu đều chạy trên đúng \textbf{3 node TiKV}. Nhóm chỉ thay đổi số bản sao bằng tham số \code{replication.max-replicas} của PD, và chỉ bắt đầu đo sau khi mọi Region có đủ số peer, không còn peer chờ hoặc hỏng.
+
+\begin{table}[H]
+\centering
+\caption{Định nghĩa cấu hình bản sao và khả năng chịu lỗi}
+\label{tab:dinh_nghia_replica}
+\bangfont
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{3.0cm}YYY@{}}
+\toprule
+\textbf{Thuộc tính} & \textbf{TiDB RF=3} & \textbf{TiDB RF=1} & \textbf{MySQL}\\
+\midrule
+Node lưu trữ & 3 TiKV & 3 TiKV & 1 node\\
+Bản sao mỗi Region & 3 (1 Leader, 2 Follower) & 1 & Không áp dụng\\
+Quorum khi ghi & 2/3 & 1/1 & Không áp dụng\\
+Khi mất 1 TiKV & Region còn 2/3 bản sao, bầu lại Leader rồi phục vụ tiếp & Region trên node đó không truy cập được & Mất node thì ngừng phục vụ\\
+Khi mất 2 TiKV & Region có 2 peer trên các node đó mất quorum & Chỉ còn các Region trên node sống & Không áp dụng\\
+PD / TiDB Server & 1 / 1, là điểm lỗi đơn & 1 / 1, là điểm lỗi đơn & Không áp dụng\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Một node TiKV không thể tạo thành thiết lập 3 bản sao hợp lệ, vì các peer của cùng một Region phải nằm trên các store khác nhau. Ba TiKV trong thực nghiệm là ba container dùng chung một máy và một ổ đĩa. Vì vậy RF=3 ở đây chỉ chịu được lỗi ở mức tiến trình hoặc container, không chịu được lỗi của máy vật lý.

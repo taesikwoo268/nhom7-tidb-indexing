@@ -255,7 +255,7 @@ nhom7-tidb-indexing/
   - `time_query(conn, sql: str, params: list[tuple], repeats: int = 5, warmup: int = 50) -> Stats`. Mỗi lần lặp chạy toàn bộ `params` một lượt và đọc hết các dòng trả về. Độ trễ đo bằng `time.perf_counter_ns`.
   - `summarize(latencies_ns: list[list[int]]) -> Stats` (hàm thuần).
   - `append_result(path: Path, row: dict) -> None`: ghi header ở lần ghi đầu tiên và tự thêm cột `timestamp`.
-  - `parse_tidb_execution_info(text: str) -> dict`, trả về `cop_tasks`, `rpc_num`, `total_process_keys` (số nguyên, cộng dồn qua mọi lần xuất hiện).
+  - `parse_tidb_execution_info(text: str) -> dict`, trả về `cop_tasks`, `rpc_num`, `total_process_keys` (số nguyên) và `rpc_time_ms`, `tot_proc_ms`, `tot_wait_ms` (số thực), đều cộng dồn qua mọi lần xuất hiện.
   - `explain_analyze(conn, engine, sql, params) -> dict`, trả về:
     - `access_op`:
       - với tidb: toán tử đầu tiên tìm được từ trên xuống trong số `IndexLookUp|IndexReader|TableReader|Point_Get|Batch_Point_Get|IndexMerge`;
@@ -290,6 +290,7 @@ nhom7-tidb-indexing/
   - `RQ1_CASES: list[tuple[str, str, list[str]]]`, mỗi phần tử là (tên case, tên SQL, các index có mặt):
     - `("q1_single_full", "Q1_FULL", ["idx_code"])`
     - `("q1_single_cov", "Q1_COV", ["idx_code"])`
+    - `("q1_nonuniq_cov", "Q1_COV", ["idx_code_nonuniq"])`: đối chứng không UNIQUE, tách covering khỏi `Point_Get`
     - `("q1_covidx_cov", "Q1_COV", ["idx_code_cov"])`
     - `("q2_sender", "Q2_COV", ["idx_sender"])`
     - `("q2_sender_created", "Q2_COV", ["idx_sender_created"])`
@@ -311,8 +312,8 @@ nhom7-tidb-indexing/
   5. chạy `time_query` với 200 bộ tham số lấy mẫu;
   6. chạy một lần `explain_analyze` với bộ tham số đầu tiên.
 - [ ] **Bước 4: Chạy** test → PASS. Sau đó chạy trên máy `python experiments/rq1_covering.py --engine tidb --rows 1000000`:
-  - CSV có 8 dòng;
-  - trên TiDB, case `q1_covidx_cov` có `access_op` là `IndexReader` (hoặc `Point_Get` vì là index unique);
+  - CSV có 9 dòng;
+  - trên TiDB, case `q1_covidx_cov` có `access_op` là `IndexReader` (`idx_code_cov` không unique);
   - case `q1_single_full` có `access_op` là `IndexLookUp` hoặc `Point_Get`.
 - [ ] **Bước 5: Commit** `feat: RQ1 covering-index experiment`.
 

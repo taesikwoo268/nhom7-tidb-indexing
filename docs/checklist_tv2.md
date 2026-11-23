@@ -10,9 +10,9 @@ Bạn phụ trách môi trường dùng chung, thực nghiệm chi phí ghi RQ4,
 - [x] Chạy đạt `tests/test_config.py` cho cấu hình kết nối hai hệ.
 - [x] Cấu hình Docker Compose cho TiDB v8.5.5 và MySQL 8.4.11 theo hồ sơ M/S ở Phụ lục A. Với hồ sơ M, mỗi hệ được cấp 6 CPU, mỗi TiKV có 800 MiB block cache, MySQL có buffer pool 2.400 MiB và sysbench có 3 CPU. Đặt `innodb_flush_log_at_trx_commit=1` và tắt binlog của MySQL.
 - [x] Viết và kiểm tra `scripts/use_engine.sh`. Khi hệ kia đang chạy, script phải báo lỗi. Với `--switch`, script dừng hệ kia, bật hệ được chọn và chờ `SELECT 1` thành công.
-- [ ] Đẩy khung repo, Compose và script chuyển hệ lên repo chung để TV1 và TV3 dùng. Mốc kế hoạch là **trước 12h ngày 18/11**.
+- [x] Đẩy khung repo, Compose và script chuyển hệ lên repo chung để TV1 và TV3 dùng. Mốc kế hoạch là **trước 12h ngày 18/11**.
 - [x] Dựng môi trường trên M2, xác nhận đủ 3 TiKV store ở trạng thái `Up` và kết nối được MySQL sau khi chuyển hệ.
-- [ ] Điền dòng M2 trong Bảng A.3.1 với CPU, RAM, ổ dữ liệu Docker, hệ điều hành, phiên bản Docker, tài nguyên WSL2 và hồ sơ thực tế.
+- [x] Điền dòng M2 trong Bảng A.3.1 với CPU, RAM, ổ dữ liệu Docker, hệ điều hành, phiên bản Docker, tài nguyên WSL2 và hồ sơ thực tế.
 
 ## 19/11 · Task 4 — Nạp và xác minh dữ liệu
 

@@ -7,7 +7,7 @@
 
 \subsection{Tổng kết kết quả nghiên cứu và thực nghiệm}
 
-Đề tài đã hoàn thành xuất sắc toàn bộ các mục tiêu đặt ra, bám sát cấu trúc đối xứng 2 Phần (Phần A -- Phần B, tỷ lệ 50\% -- 50\%) theo đúng định hướng phương pháp luận khoa học của giảng viên:
+Báo cáo theo cấu trúc đối xứng 2 Phần (Phần A -- Phần B, tỷ lệ 50\% -- 50\%) theo đúng định hướng phương pháp luận khoa học của giảng viên:
 
 \begin{enumerate}
   \item \textbf{Về mặt Lý thuyết Kiến trúc (Phần A --- 50\%):}
@@ -20,8 +20,9 @@
   \item \textbf{Về mặt Mô hình Toán học và Thực nghiệm Đối chứng (Phần B --- 50\%):}
   \begin{itemize}
     \item Xây dựng thành công mô hình toán học tính toán dung lượng vật lý chi tiết đến từng byte cho 10 triệu và 100 triệu bản ghi. Đề tài chứng minh: trên 1 bản sao, cấu trúc LSM-Tree của TiDB nén dữ liệu tốt hơn B+Tree của MySQL ($1,88\text{ GiB}$ so với $2,35\text{ GiB}$); trên toàn cụm 3 node, TiDB đánh đổi dung lượng đĩa ($6,00\text{ GiB}$) để đổi lấy 3 bản sao chịu lỗi an toàn tuyệt đối.
-    \item Phân tích chi tiết chi phí tính toán (RAM, CPU, IOPS) trước và sau khi đánh Index: chứng minh cơ chế ghi tuần tự LSM-Tree của TiDB giải quyết triệt để nút thắt cổ chai về I/O ngẫu nhiên và phân mảnh trang của B+Tree khi tạo và cập nhật chỉ mục.
-    \item Qua 2 kịch bản thực nghiệm đối chứng: chứng minh tính khách quan khi MySQL thắng ở mức tải thấp đơn luồng, nhưng TiDB áp đảo hoàn toàn ở mức tải cao đồng thời và cập nhật chỉ mục; kiểm thử Chaos Test khẳng định năng lực tự phục hồi thần kỳ của cụm TiDB (Raft Quorum bầu Leader mới trong 3--8 giây, $RPO = 0$, $100\%$ dữ liệu bảo toàn) trong khi MySQL sập hoàn toàn gây tê liệt dịch vụ.
+    \item Phân tích chi tiết chi phí tính toán (RAM, CPU, IOPS) trước và sau khi đánh Index: LSM-Tree tránh sửa trang tại chỗ nhưng phải trả chi phí compaction. Phần nào lớn hơn được phân xử bằng số đo RQ4.
+    \item Thực nghiệm sơ bộ trên \code{sbtest1} cho thấy MySQL đạt thông lượng cao hơn TiDB 8--32 lần trên một máy, kể cả ở tải cập nhật chỉ mục. Demo chịu lỗi (bổ sung) ghi nhận TiDB RF=3 tự phục hồi: QPS bằng 0 trong 10 giây, về lại 90\% sau 18,4 giây, không mất giao dịch đã commit.
+    % TODO(cả nhóm): điền kết luận RQ1, RQ2, RQ4 sau khi có số liệu chính thức.
   \end{itemize}
 \end{enumerate}
 
@@ -36,7 +37,7 @@ Không có hệ thống nào là hoàn hảo trong mọi trường hợp. Bảng
 \bangfont
 \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{5.5cm}Y@{}}
 \toprule
-\textbf{Tiêu chí đánh giá} & \textbf{Nên chọn MySQL 8.0 (InnoDB)} & \textbf{Nên chuyển sang TiDB (NewSQL)}\\
+\textbf{Tiêu chí đánh giá} & \textbf{Nên chọn MySQL (InnoDB)} & \textbf{Nên chuyển sang TiDB (NewSQL)}\\
 \midrule
 \textbf{Quy mô dữ liệu} & Bảng dưới 30--50 triệu bản ghi; tổng dung lượng cơ sở dữ liệu nhỏ hơn $500\text{ GB}$. & Bảng vượt ngưỡng 50--100 triệu bản ghi; dung lượng dữ liệu hàng Terabyte đến Petabyte.\\
 \midrule

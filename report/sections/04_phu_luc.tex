@@ -22,7 +22,7 @@ FROM information_schema.TABLES
 WHERE table_schema = 'sbtest' AND table_name = 'sbtest1';
 \end{lstlisting}
 
-  \item \textbf{Kiểm tra số lượng Region của bảng và của riêng Index \code{k_1} trên TiDB:}
+  \item \textbf{Kiểm tra số lượng Region của bảng và của riêng Index \code{k\_1} trên TiDB:}
 \begin{lstlisting}[language=SQL, caption={Kiểm tra phân bổ Region trên TiDB Cluster}]
 -- Dem so luong Region cua du lieu bang sbtest1
 SHOW TABLE sbtest1 REGIONS;
@@ -232,8 +232,8 @@ echo "[$(date '+%H:%M:%S')] HOAN TAT KIEM THU CHAOS TEST."
 - Viết \textbf{Mục 3} (Quy trình cài đặt cụm TiDB, MySQL đối chứng và TiDB Dashboard).\par
 - Viết \textbf{Mục 5} (Thực nghiệm nạp 10 triệu bản ghi, đo dung lượng thực tế, phân tích RAM/CPU/Disk và \code{EXPLAIN ANALYZE} trước/sau Index). &
 - Thiết lập môi trường Docker Compose chuẩn hóa trên máy 16GB RAM.\par
-- Thực hiện kịch bản nạp 10 triệu dòng (có và không có Index \code{k_1}).\par
-- Chụp ảnh minh chứng Dashboard, trích xuất dữ liệu \code{INFORMATION_SCHEMA}.\\
+- Thực hiện kịch bản nạp 10 triệu dòng (có và không có Index \code{k\_1}).\par
+- Chụp ảnh minh chứng Dashboard, trích xuất dữ liệu \code{INFORMATION\_SCHEMA}.\\
 \midrule
 \textbf{Thành viên 3} (Kỹ sư Kiểm thử Chịu tải \& Chaos Test) &
 - Viết \textbf{Mục 6} (Phân tích thực nghiệm Scalability 16--512 threads, Scale-out node thứ 4, Chaos Test đánh sập node \code{tikv0}).\par

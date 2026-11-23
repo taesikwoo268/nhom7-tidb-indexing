@@ -124,7 +124,7 @@ Mục này là **nền lý thuyết để giải thích các kết quả ở Ph�
      | Máy | Người dùng / phần | CPU (model, số luồng) | RAM | Ổ dữ liệu Docker (SSD/HDD) | Hệ điều hành / Docker / bộ nhớ WSL2 | Hồ sơ |
      |---|---|---|---|---|---|---|
      | M1 | TV1 / B.1 | | | | | |
-     | M2 | TV2 / B.3 | | | | | |
+     | M2 | TV2 / B.3 | Intel Core Ultra 5 125H (18 luồng) | 16 GB | NVMe SSD 512 GB | Windows 11 / Docker 29.8.0 / WSL2 7,56 GiB | Hồ sơ S |
      | M3 | TV3 / B.2 | | | | | |
 2. **Minh chứng cài đặt:** chạy `SELECT tidb_version();` và `SELECT * FROM information_schema.TIKV_STORE_STATUS;` (3 store `Up`); chụp TiDB Dashboard (Topology, Key Visualizer); chạy `SHOW CREATE TABLE shipments` trên cả hai hệ.
 3. **Demo chịu lỗi** (dùng lại kết quả giai đoạn 1, bảng `sbtest1`, tải `oltp_read_write` 64 luồng). Giết `tikv0` bằng `docker kill` ở giây thứ 60:
@@ -246,14 +246,14 @@ Quy trình chung cho mọi phép đo đọc:
   * Q2: lấy 20 đơn mới nhất của một shop trong 7 ngày;
   * Q3: đếm đơn theo trạng thái tại một kho.
 * **Các cấu hình index:**
-  * Q1: `(tracking_code)` và `(tracking_code, status, updated_at)`;
+  * Q1: `(tracking_code)` UNIQUE, `(tracking_code)` không UNIQUE (đối chứng) và `(tracking_code, status, updated_at)`. Cặp không UNIQUE tách hiệu ứng covering khỏi hiệu ứng `Point_Get`;
   * Q2: `(sender_id)`, `(sender_id, created_at)` và covering `(sender_id, created_at, status, cod_amount)`;
   * Q3: `(dest_hub_id)` và `(dest_hub_id, status)`.
 * **Giả thuyết:** chênh lệch giữa covering và non-covering ở TiDB lớn hơn ở MySQL. Lý do: ở TiDB, `IndexLookUp` cần thêm một đợt cop task tới các Region chứa dòng, còn ở MySQL đó chỉ là các lần tra trang trong buffer pool.
 * **Lý do giả thuyết có thể sai:**
   * TiDB gom handle theo lô và chạy hai phía song song, nên chi phí thêm có thể nhỏ khi mỗi truy vấn trả về nhiều dòng;
   * với tra cứu một dòng qua index unique, TiDB dùng `Point_Get` nên có thể không có khác biệt.
-* **Kiểm chứng bằng:** tỉ lệ `p50(non-covering) / p50(covering)` trên từng hệ, cùng số cop task và số RPC.
+* **Kiểm chứng bằng:** tỉ lệ `p50(non-covering) / p50(covering)` trên từng hệ, cùng số cop task, số RPC, `rpc_time`, thời gian xử lý và chờ của cop task. `rpc_time` trên một máy gồm cả xử lý, xếp hàng và gRPC nên không được gọi là độ trễ mạng. Bằng chứng chính cho covering là Q2. Ghi thêm dung lượng của từng index.
 
 #### RQ2 — Ngưỡng độ chọn lọc (10 triệu dòng)
 * **Truy vấn:** `SELECT * FROM shipments WHERE cod_amount BETWEEN ? AND ?`. Độ chọn lọc thay đổi từ 0,001% đến 50% qua 10 mức.
@@ -293,7 +293,8 @@ Quy trình chung cho mọi phép đo đọc:
 * **Hai giả thuyết đối lập** (thực nghiệm sẽ phân xử):
   * **(a)** LSM-tree ghi tuần tự, không đọc rồi sửa trang, nên mức giảm TPS theo số index trên TiDB **thấp hơn** MySQL.
   * **(b)** Mỗi index là thêm các cặp KV phải prewrite và commit qua Raft trên 3 bản sao, nên mức giảm trên TiDB **cao hơn**.
-* **Tách nguyên nhân:** so TiDB 3 bản sao với TiDB 1 bản sao để định lượng phần chi phí do Raft (lưu ý cả 3 TiKV dùng chung một ổ đĩa). So W1 với W2 để thấy chi phí khi cập nhật cột có nằm trong index (`status`).
+* **Tách nguyên nhân:** so TiDB 3 bản sao với TiDB 1 bản sao để định lượng tổng chi phí nhân bản (Raft log, fsync, CPU của Follower, tranh chấp đĩa chung), không phải riêng phần mạng. Cả hai cấu hình đều có 3 TiKV; RF=3 có quorum 2/3, RF=1 có quorum 1/1 và không chịu lỗi. Một TiKV không tạo được thiết lập 3 bản sao hợp lệ. So W1 với W2 để thấy chi phí khi cập nhật cột có nằm trong index (`status`). Diễn giải W2 theo số index bị ảnh hưởng, vì `idx_code`, `idx_sender_created` và `idx_cod` không chứa cột được cập nhật.
+* **Chi phí ghi của covering (24 lượt, chạy sau 144 lượt chính):** so `idx_sender_created` với `idx_sender_cov`, 16 luồng, W1 và W2, 3 lần, trên MySQL và TiDB RF=3.
 
 ### Mục B.4. Tổng hợp, khuyến nghị và hạn chế
 
