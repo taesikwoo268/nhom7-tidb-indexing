@@ -221,3 +221,20 @@ def test_only_stateless_services_may_lack_disk_counters():
     assert resource_snapshot(client, {"tidb": "x"})["services"]["tidb"]["write_bytes"] == 0
     with pytest.raises(RuntimeError, match="tikv1"):
         resource_snapshot(client, {"tikv1": "x"})
+
+
+def test_fingerprint_ignores_image_rebuilds_and_sees_limits():
+    from bench.rq4 import config_fingerprint
+
+    def fingerprint(digest, memory):
+        client = MagicMock()
+        client.info.return_value = {"MemTotal": 10426142720, "NCPU": 18}
+        client.containers.get.return_value.attrs = {
+            "Image": digest,
+            "Config": {"Image": "nhom7xs-mysql", "Cmd": ["mysqld"]},
+            "HostConfig": {"NanoCpus": 4, "Memory": memory, "MemorySwap": memory},
+        }
+        return config_fingerprint(client, {"mysql": "x"})
+
+    assert fingerprint("sha256:a", 1) == fingerprint("sha256:b", 1)
+    assert fingerprint("sha256:a", 1) != fingerprint("sha256:a", 2)

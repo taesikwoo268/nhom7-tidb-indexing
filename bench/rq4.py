@@ -202,18 +202,26 @@ def redo_fsyncs(cur, engine):
 
 
 def config_fingerprint(client, containers):
-    """Identify the resources and settings that a set of trials shares."""
-    parts = [str(client.info()["MemTotal"]), str(client.info()["NCPU"])]
+    """Identify the resources and settings that a set of trials shares.
+
+    Image digests change on every rebuild, even when no layer changed, so the image
+    name and the Dockerfiles with their pinned versions are used instead.
+    """
+    info = client.info()
+    parts = [f"{info['MemTotal'] / 1024**3:.1f}", str(info["NCPU"])]
     for name in sorted(containers):
         attrs = client.containers.get(containers[name]).attrs
         host = attrs["HostConfig"]
         parts.append(
             json.dumps(
-                [name, attrs["Image"], attrs["Config"]["Cmd"], host["NanoCpus"],
+                [name, attrs["Config"]["Image"], attrs["Config"]["Cmd"], host["NanoCpus"],
                  host["Memory"], host["MemorySwap"]]
             )
         )
-    for path in sorted((ROOT / "docker/profiles").glob("tikv-*.toml")):
+    for path in [
+        *sorted((ROOT / "docker").glob("*.Dockerfile")),
+        *sorted((ROOT / "docker/profiles").glob("tikv-*.toml")),
+    ]:
         parts.append(path.read_text(encoding="utf-8"))
     for path in (ROOT / "docker/mysql.cnf", ROOT / "sysbench/shipments_write.lua"):
         parts.append(path.read_text(encoding="utf-8"))
