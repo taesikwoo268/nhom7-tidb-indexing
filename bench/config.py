@@ -23,7 +23,7 @@ VALID_PROFILES = {"M", "S", "XS"}
 # Default machine and profile if not specified in environment
 # Machine M2 is assigned to TV2 (write cost RQ4)
 DEFAULT_MACHINE_ID = "M2"
-DEFAULT_PROFILE = "M"
+DEFAULT_PROFILE = "XS"
 
 
 def get_machine_id() -> str:
@@ -33,7 +33,7 @@ def get_machine_id() -> str:
 
 
 def get_profile() -> str:
-    """Return the current resource PROFILE from environment, defaulting to M."""
+    """Return the current resource PROFILE from environment, defaulting to XS."""
     prof = os.environ.get("PROFILE", DEFAULT_PROFILE).strip().upper()
     return prof if prof in VALID_PROFILES else DEFAULT_PROFILE
 
@@ -125,7 +125,7 @@ PROFILES: dict[str, dict[str, Any]] = {
             "pd_cpus": 0.4,
             "pd_memory": "0.5GiB",
             "tidb_cpus": 1.2,
-            "tidb_memory": "1GiB",
+            "tidb_memory": "1.25GiB",
             "tikv_nodes": 3,
             "tikv_cpus_per_node": 0.8,
             "tikv_memory_per_node": "1.25GiB",

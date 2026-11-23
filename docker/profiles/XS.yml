@@ -4,7 +4,7 @@ services:
     mem_limit: 512m
   tidb:
     cpus: 1.2
-    mem_limit: 1024m
+    mem_limit: 1280m
   tikv:
     cpus: 0.8
     mem_limit: 1280m

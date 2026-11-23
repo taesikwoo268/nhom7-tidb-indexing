@@ -12,6 +12,8 @@ from .config import get_engine_config, get_profile
 from .db import connect
 
 ROOT = Path(__file__).resolve().parents[1]
+# One project name for the whole team, so volumes never mix with older profiles.
+PROJECT = "nhom7xs"
 SERVICES = {"mysql": ["mysql"], "tidb": ["pd", "tikv1", "tikv2", "tikv3", "tidb"]}
 
 
@@ -30,7 +32,11 @@ def compose(*args, capture=False):
         check=True,
         text=True,
         stdout=subprocess.PIPE if capture else None,
-        env={**os.environ, "PROFILE": get_profile()},
+        env={
+            "COMPOSE_PROJECT_NAME": PROJECT,
+            **os.environ,
+            "PROFILE": get_profile(),
+        },
     ).stdout
 
 
@@ -67,22 +73,8 @@ def assert_engine(engine):
         )
 
 
-def switch_engine(target, switch):
-    active = running_services()
-    if target == "status":
-        print("Running:", ", ".join(sorted(active)) or "none")
-        return
-    if target == "stop":
-        compose("stop", "sysbench", *SERVICES["mysql"], *SERVICES["tidb"])
-        return
-    other = "mysql" if target == "tidb" else "tidb"
-    check_legacy_containers(other)
-    if active.intersection(SERVICES[other]):
-        if not switch:
-            raise SystemExit(f"{other} is running. Use --switch.")
-        compose("stop", "sysbench", *SERVICES[other])
-    compose("up", "-d", "--build", "--force-recreate", *SERVICES[target])
-    deadline = time.monotonic() + 120
+def wait_ready(target):
+    deadline = time.monotonic() + 180
     while True:
         try:
             with connect(target, server_only=True) as conn, conn.cursor() as cur:
@@ -92,11 +84,49 @@ def switch_engine(target, switch):
                     raise RuntimeError(
                         f"Unexpected server on the configured port: {version}"
                     )
-            break
+            return value, version
         except mysql.connector.Error as exc:
             if time.monotonic() >= deadline:
                 raise RuntimeError(f"{target} readiness query failed: {exc}") from exc
             time.sleep(1)
+
+
+def restart_engine(target):
+    """Restart the containers in place. Container IDs and limits are unchanged."""
+    compose("restart", "-t", "90", *SERVICES[target])
+    wait_ready(target)
+    assert_engine(target)
+
+
+def trim_docker_disk(image):
+    """Let Docker Desktop reuse freed blocks. Harmless where the path does not exist."""
+    result = subprocess.run(
+        ["docker", "run", "--rm", "--privileged", "--pid=host", "--network", "none",
+         "--entrypoint", "nsenter", image, "-t", "1", "-m", "--",
+         "fstrim", "/mnt/docker-desktop-disk"],
+        capture_output=True, text=True,
+    )
+    if result.returncode:
+        print(f"Trim skipped: {result.stderr.strip()[:120]}", flush=True)
+
+
+def switch_engine(target, switch):
+    active = running_services()
+    if target == "status":
+        print("Running:", ", ".join(sorted(active)) or "none")
+        return
+    if target == "stop":
+        compose("stop", "-t", "90", "sysbench", *SERVICES["mysql"], *SERVICES["tidb"])
+        return
+    other = "mysql" if target == "tidb" else "tidb"
+    check_legacy_containers(other)
+    if active.intersection(SERVICES[other]):
+        if not switch:
+            raise SystemExit(f"{other} is running. Use --switch.")
+        # TiKV needs longer than the default 10 s to close cleanly.
+        compose("stop", "-t", "90", "sysbench", *SERVICES[other])
+    compose("up", "-d", "--build", "--force-recreate", *SERVICES[target])
+    value, version = wait_ready(target)
     assert_engine(target)
     print(
         f"{target} SELECT 1 = {value}; version={version}; port={get_engine_config(target)['port']}"

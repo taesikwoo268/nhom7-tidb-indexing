@@ -67,7 +67,7 @@ class TestConfig(unittest.TestCase):
             self.assertEqual(get_machine_id(), DEFAULT_MACHINE_ID)
 
     def test_profile_detection(self):
-        """Verify default profile is M and respects PROFILE env var."""
+        """Verify default profile is XS and respects PROFILE env var."""
         with patch.dict(os.environ, {}, clear=True):
             self.assertEqual(get_profile(), DEFAULT_PROFILE)
 
@@ -75,7 +75,7 @@ class TestConfig(unittest.TestCase):
             with patch.dict(os.environ, {"PROFILE": prof}):
                 self.assertEqual(get_profile(), prof)
 
-        # Invalid profile falls back to M
+        # Invalid profile falls back to XS
         with patch.dict(os.environ, {"PROFILE": "UNKNOWN"}):
             self.assertEqual(get_profile(), DEFAULT_PROFILE)
 

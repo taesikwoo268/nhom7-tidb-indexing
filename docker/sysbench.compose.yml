@@ -1,7 +1,7 @@
 services:
   sysbench:
     extends:
-      file: ./profiles/${PROFILE:-M}.yml
+      file: ./profiles/${PROFILE:-XS}.yml
       service: sysbench
     build:
       context: .

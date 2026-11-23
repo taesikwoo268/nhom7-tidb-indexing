@@ -1,7 +1,7 @@
 services:
   mysql:
     extends:
-      file: ./profiles/${PROFILE:-M}.yml
+      file: ./profiles/${PROFILE:-XS}.yml
       service: mysql
     build:
       context: .

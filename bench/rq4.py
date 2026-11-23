@@ -19,7 +19,14 @@ import mysql.connector
 
 from .config import get_engine_config
 from .db import analyze, assert_replicas, checksum, connect, engine_settings
-from .environment import ROOT, SERVICES, assert_engine, compose
+from .environment import (
+    ROOT,
+    SERVICES,
+    assert_engine,
+    compose,
+    restart_engine,
+    trim_docker_disk,
+)
 from .resources import resource_snapshot
 from .schema import RQ4_INDEX_SETS, create_index_sql, shipments_ddl
 
@@ -53,7 +60,24 @@ def parse_sysbench(log):
     )
 
 
+def wait_settings(conn, timeout=180):
+    """After a restart, SHOW CONFIG is empty until every component has registered."""
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            settings = engine_settings(conn, "tidb")
+            if settings["tikv_stores"] == 3:
+                return
+            error = RuntimeError(f"{settings['tikv_stores']} of 3 TiKV stores are Up")
+        except (ValueError, mysql.connector.Error) as exc:
+            error = exc
+        if time.monotonic() >= deadline:
+            raise error
+        time.sleep(3)
+
+
 def set_replicas(conn, count):
+    wait_settings(conn)
     with conn.cursor() as cur:
         cur.execute(f"SET CONFIG pd `replication.max-replicas` = {count}")
     deadline = time.monotonic() + 300
@@ -169,6 +193,13 @@ def measure(args, client, containers, table, threads, mode, run_id):
     return values
 
 
+def redo_fsyncs(cur, engine):
+    if engine != "mysql":
+        return None
+    cur.execute("SHOW GLOBAL STATUS LIKE 'Innodb_os_log_fsyncs'")
+    return int(cur.fetchone()[1])
+
+
 def config_fingerprint(client, containers):
     """Identify the resources and settings that a set of trials shares."""
     parts = [str(client.info()["MemTotal"]), str(client.info()["NCPU"])]
@@ -205,7 +236,7 @@ def completed_trials(path, engine, config_id):
     }
 
 
-def settle(client, containers, services, limit=2_000_000, window=10, timeout=180):
+def settle(client, containers, services, limit=2_000_000, window=10, timeout=600):
     """Wait for background writes to stay under limit bytes/s for two windows."""
 
     def written():
@@ -226,6 +257,34 @@ def settle(client, containers, services, limit=2_000_000, window=10, timeout=180
         if elapsed >= timeout:
             return elapsed, False
         t0, w0 = t1, w1
+
+
+def wait_replicas(conn, count, timeout=300):
+    """Wait until new Regions reach the required peers, then re-raise any failure."""
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            assert_replicas(conn, count)
+            return
+        except (RuntimeError, ValueError, mysql.connector.Error):
+            if time.monotonic() >= deadline:
+                raise
+            time.sleep(5)
+
+
+def pending_trials(args, replica_values, completed):
+    """Yield (replicas, repetition, trials) rounds that still need measuring."""
+    for rf in replica_values:
+        for rep in range(1, args.reps + 1):
+            trials = [
+                (th, mode, ix)
+                for th, mode, ix in product(args.threads, args.mode, args.indexes)
+                # C1 only separates replication cost, at 0 and 5 indexes.
+                if not (args.engine == "tidb" and rf == 1 and ix not in (0, 5))
+                and (args.engine, rf, str(ix), th, mode, rep) not in completed
+            ]
+            if trials:
+                yield rf, rep, trials
 
 
 def save_row(path: Path, row):
@@ -266,32 +325,27 @@ def benchmark(args):
                 for s in [*SERVICES[args.engine], "sysbench"]
             }
             replica_values = args.replicas if args.engine == "tidb" else [1]
-            if args.engine == "mysql":
-                cur.execute("SET SESSION information_schema_stats_expiry=0")
             config_id = config_fingerprint(client, containers)
             completed = completed_trials(args.output, args.engine, config_id)
-            for rf in replica_values:
-                if args.engine == "tidb":
+            skipped = []
+            trim_image = client.containers.get(containers["sysbench"]).attrs["Config"]["Image"]
+            # One round measures every configuration once, so slow drift is not
+            # mistaken for an index effect. Each round starts from a restart.
+            for rf, rep, trials in pending_trials(args, replica_values, completed):
+                restart_engine(args.engine)
+                conn.reconnect(attempts=10, delay=3)
+                cur = conn.cursor()
+                if args.engine == "mysql":
+                    cur.execute("SET SESSION information_schema_stats_expiry=0")
+                else:
                     set_replicas(conn, rf)
-                # Repetition is the outer loop so slow drift is not mistaken for an
-                # index effect.
-                for rep, th, mode, ix in product(
-                    range(1, args.reps + 1), args.threads, args.mode, args.indexes
-                ):
-                    # C1 only separates replication cost, at 0 and 5 indexes.
-                    if args.engine == "tidb" and rf == 1 and ix not in (0, 5):
-                        continue
+                for th, mode, ix in trials:
                     trial_key = (args.engine, rf, str(ix), th, mode, rep)
-                    if trial_key in completed:
-                        print(
-                            f"Skipping already recorded trial: engine={args.engine} rf={rf} idx={ix} th={th} mode={mode} rep={rep}",
-                            flush=True,
-                        )
-                        continue
+                    trim_docker_disk(trim_image)
                     with measured_table(conn, args.engine, rows, cod, ix) as table:
                         settings = engine_settings(conn, args.engine)
                         if args.engine == "tidb":
-                            assert_replicas(conn, rf)
+                            wait_replicas(conn, rf)
                         leaders = ""
                         if args.engine == "tidb":
                             cur.execute(
@@ -302,10 +356,18 @@ def benchmark(args):
                         settle_s, settled = settle(
                             client, containers, SERVICES[args.engine]
                         )
+                        if not settled:
+                            print(f"Not settled, not recorded: {trial_key}", flush=True)
+                            skipped.append(trial_key)
+                            continue
                         run_id = table + "_" + mode
+                        fsyncs = redo_fsyncs(cur, args.engine)
                         metrics = measure(
                             args, client, containers, table, th, mode, run_id
                         )
+                        if fsyncs is not None:
+                            # About 1/group size. Shows which commit grouping was active.
+                            fsyncs = redo_fsyncs(cur, args.engine) - fsyncs
                         after_rows, _ = checksum(conn, table)
                         expected = rows + (
                             metrics["transactions"] if mode == "insert" else 0
@@ -348,6 +410,9 @@ def benchmark(args):
                             rep=rep,
                             duration_s=args.seconds,
                             **metrics,
+                            redo_fsyncs_per_transaction=(
+                                "" if fsyncs is None else fsyncs / metrics["transactions"]
+                            ),
                             final_rows=after_rows,
                             table_bytes=data_bytes,
                             index_bytes=index_bytes,
@@ -363,6 +428,11 @@ def benchmark(args):
                             "transactions",
                             flush=True,
                         )
+            if skipped:
+                raise SystemExit(
+                    f"{len(skipped)} trials were not recorded because the disk did not "
+                    f"settle. Run the same command again: {skipped}"
+                )
         finally:
             try:
                 if args.engine == "tidb":

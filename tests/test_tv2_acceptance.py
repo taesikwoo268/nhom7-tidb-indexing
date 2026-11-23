@@ -58,6 +58,8 @@ def test_failed_rq4_trial_still_restores_rf3_and_stops_load_generator(monkeypatc
     monkeypatch.setattr(rq4, "compose", compose)
     monkeypatch.setattr(rq4.docker, "from_env", MagicMock())
     monkeypatch.setattr(rq4, "config_fingerprint", lambda *args: "cfg")
+    monkeypatch.setattr(rq4, "restart_engine", MagicMock())
+    monkeypatch.setattr(rq4, "trim_docker_disk", MagicMock())
     replicas = MagicMock()
     monkeypatch.setattr(rq4, "set_replicas", replicas)
     monkeypatch.setattr(
@@ -116,3 +118,77 @@ def test_assert_replicas_requires_three_stores_and_full_peers(monkeypatch, peers
     else:
         with pytest.raises(RuntimeError):
             db.assert_replicas(conn, 3)
+
+
+def test_rounds_interleave_indexes_and_limit_c1():
+    from argparse import Namespace
+    from bench.rq4 import pending_trials
+
+    args = Namespace(
+        engine="tidb", reps=2, threads=[16], mode=["update"], indexes=[0, 1, 5]
+    )
+    rounds = list(pending_trials(args, [3, 1], {("tidb", 3, "0", 16, "update", 1)}))
+    assert [(rf, rep, [t[2] for t in trials]) for rf, rep, trials in rounds] == [
+        (3, 1, [1, 5]),
+        (3, 2, [0, 1, 5]),
+        (1, 1, [0, 5]),
+        (1, 2, [0, 5]),
+    ]
+
+
+def test_unsettled_disk_is_reported(monkeypatch):
+    from bench import rq4
+
+    clock = iter(range(0, 10_000_000, 30))
+    monkeypatch.setattr(rq4.time, "sleep", lambda s: None)
+    monkeypatch.setattr(rq4.time, "monotonic", lambda: next(clock))
+    calls = iter(range(1000))
+
+    def busy(*args):
+        n = next(calls)
+        return {"time_ns": n * 10**10, "services": {"tikv1": {"write_bytes": n * 10**9}}}
+
+    monkeypatch.setattr(rq4, "resource_snapshot", busy)
+    assert rq4.settle(None, {"tikv1": "x"}, ["tikv1"], timeout=120)[1] is False
+
+
+def test_check_rejects_every_deviation_from_the_team_configuration():
+    from bench.check import problems
+
+    gib = 1024**3
+    assert problems("XS", 10 * gib, 12, True, "") == []
+    assert problems("XS", 10 * gib, 12, None, "") == []
+    assert len(problems("S", 5 * gib, 4, False, " M docker/mysql.cnf")) == 5
+
+
+def test_team_hash_ignores_line_endings_and_sees_changes(tmp_path):
+    from bench.check import team_hash
+
+    path = tmp_path / "docker/mysql.cnf"
+    path.parent.mkdir()
+    path.write_bytes(b"a\nb\n")
+    first = team_hash(tmp_path)
+    path.write_bytes(b"a\r\nb\r\n")
+    assert team_hash(tmp_path) == first
+    path.write_bytes(b"a\nc\n")
+    assert team_hash(tmp_path) != first
+
+
+def test_rq4_summary_uses_own_baseline_and_refuses_mixed_configurations():
+    from experiments.rq4_summary import summarise
+
+    def row(index_set, tps, config="a"):
+        return dict(
+            engine="mysql", replica_config="", threads="64", mode="update",
+            index_set=index_set, tps=str(tps), config_id=config, machine="M2",
+            profile="XS", sysbench_cpu_pct="50",
+        )
+
+    rows = [row("0", 100), row("0", 300), row("0", 200), row("5", 150),
+            row("sender_created", 180), row("sender_cov", 90)]
+    out = {r["index_set"]: r for r in summarise(rows)}
+    assert (out["0"]["tps_median"], out["0"]["tps_min"], out["0"]["tps_max"]) == (200, 100, 300)
+    assert out["5"]["change_pct"] == -25.0
+    assert out["sender_cov"]["change_pct"] == -50.0
+    with pytest.raises(ValueError, match="Mixed config_id"):
+        summarise(rows + [row("1", 1, "b")])
