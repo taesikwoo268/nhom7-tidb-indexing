@@ -18,7 +18,9 @@ MODE_NAMES = {"insert": "W1: thêm đơn mới", "update": "W2: cập nhật tr�
 
 
 def system(row):
-    return "MySQL" if row["engine"] == "mysql" else f"TiDB {row['replica_config']}"
+    # Trials run only after assert_replicas proved this count on three Up stores.
+    # replica_config is a snapshot taken earlier, so it can miss a store briefly down.
+    return "MySQL" if row["engine"] == "mysql" else f"TiDB C{row['replicas']}"
 
 
 def summarise(rows):
@@ -100,6 +102,8 @@ def plot(summary, path):
                 [int(c) for c in xs], ys, yerr=[low, high], label=name, linewidth=2,
                 marker=MARKERS[name], markersize=7, capsize=3, color=COLORS[name],
                 elinewidth=1,
+                # A dashed line only joins the two measured ends.
+                linestyle="-" if len(xs) == len(COUNTS) else "--",
             )
         ax.set_title(MODE_NAMES[mode], fontsize=10)
         ax.set_xlabel("Số chỉ mục phụ")
