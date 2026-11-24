@@ -1,0 +1,6 @@
+# Extra manifest used only by experiments/rq1_covering.py. RQ4 runs without it.
+services:
+  tidb:
+    command: ["--store=tikv", "--path=pd:2379", "--config=/tidb.toml"]
+    volumes:
+      - ./profiles/tidb-rq1.toml:/tidb.toml:ro

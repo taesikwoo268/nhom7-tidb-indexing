@@ -58,13 +58,38 @@ Chạy thử đúng một tổ hợp bằng lệnh dưới đây sau khi nạp T
 
 Mỗi lượt ghi trên bản sao mới của `shipments`. Dữ liệu gốc dùng tracking code chẵn, W1 sinh mã lẻ và dùng phân bố đều cho `sender_id`. p95/p99 lấy từ histogram độ trễ của cùng lượt sysbench. Byte ghi là chênh lệch bộ đếm block I/O của các container database trong cửa sổ chạy. Dung lượng bảng và index lấy từ `information_schema.tables` sau `ANALYZE TABLE`. Hồ sơ S và XS dùng 2.048 mẫu khi TiDB phân tích thống kê để vừa giới hạn RAM.
 
+## Chạy RQ1 (covering index)
+
+Sau khi pull, cài thêm client C dùng để đo: `python -m pip install -e ".[dev]"`. Rồi chạy thử khoảng 5 phút, xem CSV, và chạy chính thức. Nếu bị ngắt, chạy lại đúng lệnh đó.
+
+```powershell
+# Chạy thử
+.\scripts
+q1_official.ps1 -Reps 1 -Params 20 -Output results/runs/rq1_trial.csv
+# Chính thức: 1 triệu dòng (M3), 3 triệu dòng (M1)
+.\scripts
+q1_official.ps1
+.\scripts
+q1_official.ps1 -Rows 3000000
+# Bảng, mô hình t = a + b×R và hình
+.venv/Scripts/python -m experiments.rq1_summary results/rq1_M3.csv
+```
+
+Kết quả của mỗi máy nằm trong `results/rq1_<máy>.csv`, kế hoạch thô và bộ tham số trong `results/raw/<run_id>/`. Mã nguồn: `experiments/rq1_covering.py` (đo) và `experiments/rq1_summary.py` (tổng hợp).
+
+- **Thiết kế:** A là index không covering, B là covering. Riêng Q1, A là UNIQUE, A2 (A′ trong kế hoạch) là index thường cùng khóa với B; hiệu ứng covering lấy từ A2 và B. Index được ép bằng hint và mọi kế hoạch được kiểm tra trước khi đo.
+- **Bộ nhớ đệm kết quả của TiDB bị tắt** trong lúc đo (`docker/tidb-rq1.yml`), vì lệnh lặp lại sẽ trúng bộ nhớ đệm này, còn MySQL 8 không có cơ chế tương đương. Script trả TiDB về cấu hình chung khi kết thúc.
+- **Độ trễ** đo từ lúc gửi lệnh đến khi client C nhận đủ dòng, một kết nối, không TLS, gồm cả đường mạng từ Windows vào container. Chỉ so tỉ số trong từng hệ.
+- **R** là số dòng khớp. Q2R chọn mốc thời gian để có đúng khoảng 10, 100, 1.000 và 10.000 dòng. Q3 chỉ có một mức R (số dòng chia 200 kho) nên không khớp `a + b×R`.
+- **Thời gian RPC, xử lý và chờ của TiDB** là trung vị của 10 lệnh `EXPLAIN ANALYZE` mỗi lượt, cộng dồn qua các tác vụ song song nên có thể lớn hơn thời gian chạy. `rest_ms` chỉ là xấp xỉ.
+
 ## Vị trí bàn giao theo phần việc
 
 | Máy | Công việc | Tệp dự kiến |
 |---|---|---|
 | M1 / TV1 | Generator, DDL, B.1 và RQ3 rút gọn nếu còn thời gian | `bench/datagen.py`, `bench/schema.py`, `bench/storage_model.py`, `experiments/b1_storage.py`, `experiments/rq3_pk.py` |
 | M2 / TV2 | Cấu hình hai DBMS, kết nối, nạp dữ liệu và RQ4 | `docker/`, `bench/config.py`, phần kết nối của `bench/db.py`, `scripts/use_engine.sh`, `scripts/load.sh`, `scripts/rq4_write.sh`, `sysbench/shipments_write.lua` |
-| M3 / TV3 | Đo và phân tích RQ1/RQ2, sinh biểu đồ | Phần EXPLAIN của `bench/db.py`, `bench/runner.py`, `experiments/queries.py`, `experiments/rq1_covering.py`, `experiments/rq2_selectivity.py`, `experiments/plots.py` |
+| M3 / TV3 | Đo và phân tích RQ1/RQ2, sinh biểu đồ | `experiments/rq1_covering.py`, `experiments/rq1_summary.py`, `experiments/rq2_selectivity.py`, `experiments/plots.py` |
 
 ## Từ chuẩn bị đến báo cáo
 
