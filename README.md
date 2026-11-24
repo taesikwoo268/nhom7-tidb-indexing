@@ -64,13 +64,10 @@ Sau khi pull, cài thêm client C dùng để đo: `python -m pip install -e ".[
 
 ```powershell
 # Chạy thử
-.\scripts
-q1_official.ps1 -Reps 1 -Params 20 -Output results/runs/rq1_trial.csv
+.\scripts\rq1_official.ps1 -Reps 1 -Params 20 -Output results/runs/rq1_trial.csv
 # Chính thức: 1 triệu dòng (M3), 3 triệu dòng (M1)
-.\scripts
-q1_official.ps1
-.\scripts
-q1_official.ps1 -Rows 3000000
+.\scripts\rq1_official.ps1
+.\scripts\rq1_official.ps1 -Rows 3000000
 # Bảng, mô hình t = a + b×R và hình
 .venv/Scripts/python -m experiments.rq1_summary results/rq1_M3.csv
 ```
