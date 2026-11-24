@@ -1,0 +1,29 @@
+% Mục A.1. Phụ trách: TV1.
+\phutrach{TV1 -- mục A.1}
+
+\subsection{Đặc trưng dữ liệu vận đơn}
+\ghichu{Ba yêu cầu cùng lúc: giao dịch ACID khi cập nhật trạng thái và COD; tra cứu qua nhiều chỉ mục phụ; thống kê theo kho và trạng thái.}
+
+\subsection{Các nhóm hệ quản trị và hạn chế}
+
+\subsubsection{RDBMS trên một máy}
+\ghichu{MySQL, PostgreSQL: ACID, SQL, nhiều loại chỉ mục; dung lượng và chịu lỗi giới hạn bởi một máy.}
+
+\subsubsection{Wide-column NoSQL}
+\ghichu{Cassandra, HBase: mở rộng ngang tốt; hạn chế giao dịch đa dòng, chỉ mục phụ và JOIN.}
+
+\subsubsection{NewSQL phân tán}
+\ghichu{TiDB: mô hình quan hệ và giao thức MySQL trên KV phân tán. Kết thúc bằng câu hỏi của đề tài. Bỏ các câu ``mở rộng ngang vô hạn'', ``giải quyết triệt để'' ở bản cũ.}
+
+\begin{table}[!htp]
+\centering\bangfont
+\caption{So sánh các nhóm hệ quản trị với bài toán vận đơn}\label{tab:nhom-hqt}
+\begin{tabular}{|L{3.4cm}|L{3.6cm}|L{3.6cm}|L{3.6cm}|}
+\hline
+\dongdau \textbf{Tiêu chí} & \textbf{RDBMS một máy} & \textbf{Wide-column} & \textbf{NewSQL (TiDB)} \\ \hline
+Giao dịch ACID & \chuaco & \chuaco & \chuaco \\ \hline
+Chỉ mục phụ & \chuaco & \chuaco & \chuaco \\ \hline
+Mở rộng ngang & \chuaco & \chuaco & \chuaco \\ \hline
+Chịu lỗi & \chuaco & \chuaco & \chuaco \\ \hline
+\end{tabular}
+\end{table}

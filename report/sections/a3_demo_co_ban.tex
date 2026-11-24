@@ -1,0 +1,28 @@
+% Mục A.3 demo chức năng cơ bản. Phụ trách: TV2.
+\phutrach{TV2 -- mục A.3, demo chức năng cơ bản}
+
+\subsection{Demo chức năng cơ bản}
+Demo chạy trên database riêng \code{demo\_nhom7} với 20.000 vận đơn, không dùng bảng của các thí nghiệm. Cùng một kịch bản chạy trên cả hai hệ.
+\ghichu{Chạy \path{scripts/demo_co_ban.py} trên M2, đầu ra ở \path{results/runs}. Trích phần chính vào báo cáo, toàn bộ đầu ra dẫn sang Phụ lục C. Đây là demo chức năng, không phải phép đo hiệu năng.}
+
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Các chức năng được demo}\label{tab:demo-co-ban}
+\begin{tabular}{|L{4.2cm}|L{5.6cm}|C{2.2cm}|C{2.2cm}|}
+\hline
+\dongdau \textbf{Chức năng} & \textbf{Kiểm tra} & \textbf{MySQL} & \textbf{TiDB} \\ \hline
+Kết nối, phiên bản & Đọc được phiên bản, 3 store Up (TiDB) & \chuaco & \chuaco \\ \hline
+Tạo bảng & \code{SHOW CREATE TABLE} & \chuaco & \chuaco \\ \hline
+Thêm, đọc, sửa, xóa & Dòng thay đổi đúng như lệnh & \chuaco & \chuaco \\ \hline
+Giao dịch ROLLBACK & Dữ liệu giữ giá trị cũ & \chuaco & \chuaco \\ \hline
+Giao dịch COMMIT & Dữ liệu đổi sang giá trị mới & \chuaco & \chuaco \\ \hline
+Ràng buộc UNIQUE & Từ chối mã vận đơn trùng & \chuaco & \chuaco \\ \hline
+Tạo chỉ mục & Kế hoạch đổi sau khi tạo chỉ mục & \chuaco & \chuaco \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Thêm, đọc, sửa, xóa và giao dịch}
+\ghichu{Trích lệnh và kết quả.}
+
+\subsubsection{Chỉ mục và kế hoạch thực thi}
+\ghichu{Trích \code{EXPLAIN} ba lần: chưa có chỉ mục, có chỉ mục không covering, có chỉ mục covering. Chỉ nêu toán tử, không nêu thời gian.}

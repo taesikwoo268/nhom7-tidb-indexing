@@ -1,0 +1,95 @@
+% Mục B.1. Phụ trách: TV1.
+\phutrach{TV1 -- mục B.1}
+
+\subsection{Dữ liệu và lược đồ}
+Bảng \code{shipments} có 14 cột, sinh bằng seed 20261116. Hai hệ dùng cùng lược đồ; TiDB thêm từ khóa \code{CLUSTERED} cho khóa chính.
+
+\begin{lstlisting}[language=SQL,caption={Lược đồ bảng shipments}]
+CREATE TABLE shipments (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  tracking_code VARCHAR(20) NOT NULL,
+  sender_id INT NOT NULL,
+  origin_hub_id SMALLINT NOT NULL,
+  dest_hub_id SMALLINT NOT NULL,
+  status TINYINT NOT NULL,
+  cod_amount INT NOT NULL DEFAULT 0,
+  weight_grams INT NOT NULL,
+  shipping_fee INT NOT NULL,
+  recipient_phone VARCHAR(15) NOT NULL,
+  recipient_address VARCHAR(150) NOT NULL,
+  note VARCHAR(100),
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (id)   -- TiDB: PRIMARY KEY (id) CLUSTERED
+);
+\end{lstlisting}
+
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Các bộ chỉ mục dùng trong B.1 và RQ4}\label{tab:bo-chi-muc}
+\begin{tabular}{|L{3.0cm}|L{11.8cm}|}
+\hline
+\dongdau \textbf{Bộ} & \textbf{Chỉ mục} \\ \hline
+0 & Không có chỉ mục phụ \\ \hline
+1 & \code{idx\_code} (tracking\_code), UNIQUE \\ \hline
+3 & Bộ 1; \code{idx\_sender\_created} (sender\_id, created\_at); \code{idx\_hub\_status} (dest\_hub\_id, status) \\ \hline
+5 & Bộ 3; \code{idx\_cod} (cod\_amount); \code{idx\_status} (status) \\ \hline
+sender\_created & Chỉ \code{idx\_sender\_created} \\ \hline
+sender\_cov & Chỉ \code{idx\_sender\_cov} (sender\_id, created\_at, status, cod\_amount) \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Mô hình dung lượng của InnoDB}
+\ghichu{Dòng thô, phần phụ mỗi dòng, hệ số lấp đầy khi tạo chỉ mục sau khi nạp và khi chèn dần. \code{DATETIME} 5 B. Thay phần \code{sbtest1} cũ.}
+
+\subsection{Mô hình dung lượng của TiDB/TiKV}
+\ghichu{Dòng KV, mục chỉ mục KV, hệ số nén và khuếch đại LSM-tree đã hiệu chỉnh. Ghi rõ cách hiệu chỉnh và phần chênh không giải thích được.}
+
+\subsection{Phương pháp đo}
+\ghichu{MySQL và TiDB (C3) đo bằng gì; trước hay sau nén; một bản sao hay toàn cụm; có gồm phiên bản MVCC chưa dọn không. Không dùng ước tính thống kê làm dung lượng vật lý. Nguồn: \path{experiments/b1_storage.py}.}
+
+\subsection{Đối chiếu mô hình và số đo}
+\begin{table}[!htp]
+\centering\bangnho
+\caption{Dung lượng theo mô hình và theo số đo (MiB)}\label{tab:dung-luong}
+\begin{tabular}{|L{2.3cm}|C{1.2cm}|C{1.6cm}|C{1.6cm}|C{1.9cm}|C{1.9cm}|C{1.5cm}|C{1.5cm}|}
+\hline
+\dongdau \textbf{Quy mô, bộ chỉ mục} & \textbf{Thô} & \textbf{MySQL mô hình} & \textbf{MySQL đo} & \textbf{TiDB mô hình (1 bản sao)} & \textbf{TiDB C3 đo (toàn cụm)} & \textbf{MySQL đo / mô hình} & \textbf{TiDB đo / mô hình} \\ \hline
+1 triệu, 0 & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+1 triệu, 5 & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+3 triệu, 0 & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+3 triệu, 5 & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+10 triệu, 5 (mô hình) & \chuaco & \chuaco & --- & \chuaco & --- & --- & --- \\ \hline
+\end{tabular}
+\par\vspace{3pt}{\noindent\small\itshape Nguồn: results/b1\_storage\_M1.csv. Số đo trên máy M1.\par}
+\end{table}
+\ghichu{Khi so với mô hình một bản sao của TiDB, chia số toàn cụm cho 3 và ghi đó là xấp xỉ.}
+
+\hinhcho{results/fig/b1\_model\_vs\_measured.png}{Dung lượng theo mô hình và theo số đo}{fig:b1}
+
+\subsection{Chi phí tạo chỉ mục}
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Thời gian và tài nguyên khi tạo chỉ mục ở 3 triệu dòng}\label{tab:tao-chi-muc}
+\begin{tabular}{|L{3.8cm}|C{2.0cm}|C{2.4cm}|C{2.4cm}|C{3.2cm}|}
+\hline
+\dongdau \textbf{Chỉ mục} & \textbf{Hệ} & \textbf{Thời gian (s)} & \textbf{CPU (\%)} & \textbf{Byte ghi đĩa (MiB)} \\ \hline
+\chuaco & MySQL & \chuaco & \chuaco & \chuaco \\ \hline
+\chuaco & TiDB C3 & \chuaco & \chuaco & \chuaco \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Dung lượng của covering index}
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Dung lượng chỉ mục có và không covering}\label{tab:dl-covering}
+\begin{tabular}{|L{4.6cm}|C{3.2cm}|C{3.2cm}|C{2.8cm}|}
+\hline
+\dongdau \textbf{Chỉ mục} & \textbf{MySQL (MiB)} & \textbf{TiDB C3 (MiB)} & \textbf{Số dòng} \\ \hline
+\code{idx\_sender\_created} & \chuaco & \chuaco & \chuaco \\ \hline
+\code{idx\_sender\_cov} & \chuaco & \chuaco & \chuaco \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Kết luận chương}
+\ghichu{Mô hình đúng tới đâu, sai ở đâu và vì sao.}

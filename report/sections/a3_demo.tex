@@ -1,0 +1,24 @@
+% Mục A.3 phần demo. Phụ trách: TV3.
+\phutrach{TV3 -- mục A.3, phần demo}
+
+\subsection{Demo bổ sung: chịu lỗi}
+\ghichu{Một đoạn ngắn, cấu hình C3, số của giai đoạn 1 trên \code{sbtest1}, chỉ giữ số có log gốc. MySQL một node không có bản sao nên so sánh không ngang hàng. Không dùng demo này cho kết luận về chỉ mục.}
+
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Demo chịu lỗi (giai đoạn 1)}\label{tab:demo-loi}
+\begin{tabular}{|L{6.4cm}|C{4.0cm}|C{4.0cm}|}
+\hline
+\dongdau \textbf{Chỉ số} & \textbf{TiDB C3} & \textbf{MySQL một node} \\ \hline
+Số giây QPS bằng 0 & \chuaco & \chuaco \\ \hline
+Thời gian về 90\% QPS & \chuaco & \chuaco \\ \hline
+Lệnh ghi thử bị lỗi & \chuaco & \chuaco \\ \hline
+Giao dịch đã commit bị mất & \chuaco & \chuaco \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Demo bổ sung: thêm node TiKV}
+\ghichu{Một đoạn. Demo cho thấy mở rộng trực tuyến, không chứng minh thêm node làm tăng hiệu năng.}
+
+\subsection{Kết luận chương}
+\ghichu{Cụm đã cài đúng cấu hình nào, điều gì được dùng ở Phần 2, điều gì chỉ là minh họa.}

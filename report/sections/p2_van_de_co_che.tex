@@ -1,0 +1,33 @@
+% Chương mở đầu Phần 2. Phụ trách: TV1.
+\phutrach{TV1 -- vấn đề và cơ chế}
+
+\subsection{Vấn đề kỹ thuật đã đăng ký}
+\ghichu{Nhắc lại tên đề tài đã đăng ký và câu hỏi nghiên cứu (Bảng~\ref{tab:cau-hoi}) trong khoảng nửa trang. Nêu vì sao cần thực nghiệm, không chỉ phân tích lý thuyết.}
+
+\subsection{Cơ chế chỉ mục phụ}
+
+\subsubsection{Đọc và ghi qua chỉ mục phụ trong InnoDB}
+\ghichu{B+Tree phụ chứa khóa và khóa chính; quay về clustered index; tách trang khi chèn khóa ngẫu nhiên; redo log và group commit.}
+
+\subsubsection{Đọc qua chỉ mục phụ trong TiDB}
+\ghichu{\code{Point\_Get}, \code{IndexReader}, \code{IndexLookUp}: các pha, cop task, gom handle theo lô. Chỉ nêu cơ chế; số đo ở Chương~\ref{sec:doc}.}
+
+\subsubsection{Ghi qua chỉ mục phụ trong TiDB}
+\ghichu{Mỗi dòng và mỗi mục chỉ mục là một cặp KV, cùng đi qua prewrite, commit và Raft. Cập nhật cột nằm trong chỉ mục phải xóa mục cũ và ghi mục mới. Số đo ở Chương~\ref{sec:ghi}.}
+
+\subsubsection{Covering index}
+\ghichu{Điều kiện để truy vấn chỉ đọc chỉ mục trên mỗi hệ; cái giá về dung lượng và ghi.}
+
+\begin{table}[!htp]
+\centering\bangfont
+\caption{So sánh cơ chế chỉ mục phụ của hai hệ}\label{tab:so-co-che}
+\begin{tabular}{|L{4.0cm}|L{5.2cm}|L{5.2cm}|}
+\hline
+\dongdau \textbf{Khía cạnh} & \textbf{MySQL InnoDB} & \textbf{TiDB} \\ \hline
+Cấu trúc lưu chỉ mục & \chuaco & \chuaco \\ \hline
+Đọc không covering & \chuaco & \chuaco \\ \hline
+Đọc covering & \chuaco & \chuaco \\ \hline
+Thêm một dòng & \chuaco & \chuaco \\ \hline
+Cập nhật cột trong chỉ mục & \chuaco & \chuaco \\ \hline
+\end{tabular}
+\end{table}

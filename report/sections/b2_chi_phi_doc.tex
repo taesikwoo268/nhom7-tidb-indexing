@@ -1,0 +1,106 @@
+% Mục B.2. Phụ trách: TV3. Số RQ1 ở 3 triệu dòng do TV1 gửi (results/rq1_M1*.csv).
+\phutrach{TV3 -- mục B.2}
+
+\subsection{RQ1: thiết kế thí nghiệm}
+
+\subsubsection{Bộ truy vấn}
+\begin{table}[!htp]
+\centering\bangnho
+\caption{Bộ truy vấn vận đơn, thiết kế không covering và covering}\label{tab:truy-van}
+\begin{tabular}{|C{1.1cm}|L{3.4cm}|L{4.1cm}|L{4.1cm}|C{1.6cm}|}
+\hline
+\dongdau \textbf{Mã} & \textbf{Nghiệp vụ} & \textbf{Không covering} & \textbf{B: covering} & \textbf{R} \\ \hline
+Q1 & Tra một vận đơn & A: UNIQUE (tracking\_code); A2: cùng cột, không unique & (tracking\_code, status, updated\_at) & 1 \\ \hline
+Q2 & 20 đơn mới nhất của một shop & A: (sender\_id, created\_at) & (sender\_id, created\_at, status, cod\_amount) & 20 \\ \hline
+Q2R & Như Q2, bỏ LIMIT & Như Q2 & Như Q2 & 10 đến 10.000 \\ \hline
+Q3 & Đếm đơn theo trạng thái tại một kho & A: (dest\_hub\_id) & (dest\_hub\_id, status) & khoảng N/200 \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Tách ba nguồn chênh lệch}
+\ghichu{Độ chọn lọc (R), đường truy cập (toán tử), chi phí gọi KV (cop task, RPC, xử lý, chờ, phần còn lại). Ép chỉ mục bằng hint và kiểm tra kế hoạch. Đường chuẩn \code{SELECT 1} và tra khóa chính. Mô hình $t = a + bR$. Tắt coprocessor cache. Phần còn lại chỉ là xấp xỉ, không phải độ trễ mạng.}
+
+\subsection{RQ1: kế hoạch thực thi}
+\begin{table}[!htp]
+\centering\bangnho
+\caption{Toán tử truy cập quan sát được}\label{tab:ke-hoach}
+\begin{tabular}{|C{1.6cm}|C{2.4cm}|L{5.0cm}|L{5.0cm}|}
+\hline
+\dongdau \textbf{Truy vấn} & \textbf{Thiết kế} & \textbf{MySQL} & \textbf{TiDB C3} \\ \hline
+Q1 & A / A2 / B & \chuaco & \chuaco \\ \hline
+Q2, Q2R & A / B & \chuaco & \chuaco \\ \hline
+Q3 & A / B & \chuaco & \chuaco \\ \hline
+\end{tabular}
+\end{table}
+\ghichu{Trích nguyên văn một kế hoạch có và một kế hoạch không covering cho Q2 và Q3 trên mỗi hệ, lấy từ thư mục \path{results/raw} của lượt đo.}
+
+\subsection{RQ1: lợi ích của covering}
+\begin{table}[!htp]
+\centering\bangnho
+\caption[Độ trễ p50 và lợi ích covering trong từng hệ]{Độ trễ p50 và lợi ích covering $t(A)/t(B)$ trong từng hệ, 1 triệu dòng (M3)}\label{tab:covering}
+\begin{tabular}{|C{1.5cm}|C{1.4cm}|C{1.8cm}|C{1.8cm}|C{1.8cm}|C{1.8cm}|C{1.6cm}|C{1.6cm}|}
+\hline
+\dongdau \textbf{Truy vấn} & \textbf{R} & \textbf{MySQL A (ms)} & \textbf{MySQL B (ms)} & \textbf{TiDB A (ms)} & \textbf{TiDB B (ms)} & \textbf{Lợi ích MySQL} & \textbf{Lợi ích TiDB} \\ \hline
+Q1 (A2) & 1 & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+Q2 & 20 & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+Q2R & 10 & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+Q2R & 100 & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+Q2R & 1.000 & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+Q2R & 10.000 & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+Q3 & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+\end{tabular}
+\par\vspace{3pt}{\noindent\small\itshape Nguồn: results/rq1\_M3\_summary.csv. Chỉ so lợi ích trong từng hệ.\par}
+\end{table}
+
+\hinhcho{results/fig/rq1\_M3\_covering.png}{Lợi ích covering theo truy vấn và R, 1 triệu dòng}{fig:covering}
+
+\subsection{RQ1: chi phí cố định, chi phí mỗi dòng và chi phí gọi KV}
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Mô hình $t = a + bR$ trên Q2R}\label{tab:mo-hinh}
+\begin{tabular}{|C{2.4cm}|C{1.8cm}|C{1.8cm}|C{1.9cm}|C{2.2cm}|C{1.4cm}|C{2.0cm}|}
+\hline
+\dongdau \textbf{Máy, số dòng} & \textbf{Hệ} & \textbf{Thiết kế} & \textbf{a (ms)} & \textbf{b ($\mu$s/dòng)} & \textbf{$R^2$} & \textbf{Phần dư lớn nhất} \\ \hline
+M3, 1 triệu & MySQL & A / B & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+M3, 1 triệu & TiDB C3 & A / B & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+M1, 3 triệu & MySQL & A / B & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+M1, 3 triệu & TiDB C3 & A / B & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[!htp]
+\centering\bangnho
+\caption{Chi phí gọi KV của TiDB theo truy vấn và thiết kế}\label{tab:kv}
+\begin{tabular}{|C{1.7cm}|C{1.4cm}|C{1.4cm}|C{1.5cm}|C{1.4cm}|C{1.8cm}|C{1.8cm}|C{2.0cm}|}
+\hline
+\dongdau \textbf{Truy vấn, R} & \textbf{Thiết kế} & \textbf{Cop task} & \textbf{Số RPC} & \textbf{Số key} & \textbf{Xử lý (ms)} & \textbf{Chờ (ms)} & \textbf{Phần còn lại (ms)} \\ \hline
+\chuaco & A & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+\chuaco & B & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+\end{tabular}
+\end{table}
+\ghichu{Thời gian trong \code{EXPLAIN ANALYZE} cộng dồn qua các tác vụ song song. Chỉ nói ``chi phí gọi KV'' khi $a$ hoặc phần còn lại chiếm tỉ trọng đáng kể.}
+
+\subsection{RQ1: ảnh hưởng của quy mô}
+\ghichu{So tỉ số covering ở 1 triệu (M3) và 3 triệu dòng (M1). Không so độ trễ tuyệt đối giữa hai máy, không gộp vào một đường khớp.}
+
+\subsection{RQ2: ngưỡng độ chọn lọc}
+
+\subsubsection{Thiết kế}
+\ghichu{Truy vấn theo khoảng \code{cod\_amount}, 10 mức chọn lọc, 3 chế độ, 3 triệu dòng trên M3. Nêu đúng số khoảng giá trị ở từng mức.}
+
+\subsubsection{Kết quả}
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Điểm giao nhau và điểm optimizer đổi phương án}\label{tab:rq2}
+\begin{tabular}{|C{2.6cm}|C{3.8cm}|C{4.2cm}|C{3.4cm}|}
+\hline
+\dongdau \textbf{Hệ} & \textbf{Điểm giao nhau (\%)} & \textbf{Điểm đổi phương án (\%)} & \textbf{Chênh lệch} \\ \hline
+MySQL & \chuaco & \chuaco & \chuaco \\ \hline
+TiDB C3 & \chuaco & \chuaco & \chuaco \\ \hline
+\end{tabular}
+\end{table}
+
+\hinhcho{Độ trễ theo độ chọn lọc, trục x thang log, ba chế độ}{Ngưỡng độ chọn lọc của hai hệ}{fig:rq2}
+
+\subsection{Kết luận chương}
+\ghichu{Trả lời giả thuyết RQ1, RQ2 bằng số. Nêu các lượt bất thường.}
