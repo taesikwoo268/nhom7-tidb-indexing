@@ -82,7 +82,8 @@ def check():
         subprocess.check_output(["docker", "info", "--format", "{{json .}}"], text=True)
     )
     ac = on_ac_power()
-    dirty = git("status", "--porcelain", "--", "docker", "sysbench", "bench")
+    dirty = git("status", "--porcelain", "--", "docker", "sysbench", "bench",
+                "experiments/rq1_covering.py")
     print(
         f"machine={get_machine_id()} profile={get_profile()} "
         f"docker={info['NCPU']} CPU/{info['MemTotal'] / 1024**3:.1f} GiB "

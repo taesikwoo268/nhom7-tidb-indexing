@@ -1,0 +1,4 @@
+# RQ1 repeats the same reads. Without this, TiDB would answer some of them from its
+# coprocessor result cache. MySQL 8 has no query cache.
+[tikv-client.copr-cache]
+capacity-mb = 0.0
