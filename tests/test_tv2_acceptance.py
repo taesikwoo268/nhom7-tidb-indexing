@@ -194,6 +194,14 @@ def test_rq4_summary_uses_own_baseline_and_refuses_mixed_configurations():
         summarise(rows + [row("1", 1, "b")])
 
 
+def test_rq4_summary_groups_tidb_by_checked_replicas():
+    from experiments.rq4_summary import system
+
+    # A store that was briefly down when settings were read leaves replica_config blank.
+    assert system(dict(engine="tidb", replicas="3", replica_config="")) == "TiDB C3"
+    assert system(dict(engine="tidb", replicas="1", replica_config="C1")) == "TiDB C1"
+
+
 def test_round_order_is_reproducible_and_changes_between_rounds():
     from argparse import Namespace
     from bench.rq4 import pending_trials

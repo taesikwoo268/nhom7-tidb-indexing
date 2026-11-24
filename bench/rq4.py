@@ -355,9 +355,10 @@ def benchmark(args):
                     trial_key = (args.engine, rf, str(ix), th, mode, rep)
                     trim_docker_disk(trim_image)
                     with measured_table(conn, args.engine, rows, cod, ix) as table:
-                        settings = engine_settings(conn, args.engine)
+                        # Check first, so the recorded settings are the checked ones.
                         if args.engine == "tidb":
                             wait_replicas(conn, rf)
+                        settings = engine_settings(conn, args.engine)
                         leaders = ""
                         if args.engine == "tidb":
                             cur.execute(
