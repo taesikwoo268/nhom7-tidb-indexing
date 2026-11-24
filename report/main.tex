@@ -1,9 +1,7 @@
 % !TeX program = xelatex
 \documentclass[a4paper,12pt]{article}
 
-% ==============================================================================
-% 1. KHỔ GIẤY, LỀ TRANG, FONT VÀ ĐỊNH DẠNG VĂN BẢN (CHUẨN BÁO CÁO UET)
-% ==============================================================================
+% ===== 1. KHỔ GIẤY, LỀ TRANG, FONT =====
 \usepackage[left=3cm,right=2cm,top=2cm,bottom=2cm,footskip=1cm]{geometry}
 \usepackage{fontspec}
 
@@ -26,65 +24,65 @@
     }
   }
 }
-
 \usepackage{indentfirst}
 \usepackage{microtype}
+\usepackage{colortbl}
+\usepackage{needspace}
 \usepackage{graphicx}
 \usepackage{float}
 \usepackage{tikz}
-\usetikzlibrary{shapes.geometric, arrows, positioning}
-\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsmath,amssymb}
 \usepackage{array,tabularx,booktabs,longtable}
 \usepackage{enumitem}
 \usepackage{titlesec}
 \usepackage{tocloft}
 \usepackage{caption}
 \usepackage{xurl}
-\usepackage{listings}
-\usepackage{xcolor}
 \usepackage[unicode,hidelinks]{hyperref}
 \urlstyle{same}
 
-% Cấu hình kích cỡ font văn bản chuẩn 13pt / 1.5 line spacing
 \renewcommand{\normalsize}{\fontsize{13}{19.5}\selectfont}
 \AtBeginDocument{\normalsize}
 \setlength{\parindent}{0.5cm}
 \setlength{\parskip}{4pt}
-\setlength{\emergencystretch}{2em}
+\setlength{\emergencystretch}{3em}
+\hyphenpenalty=10000
+\exhyphenpenalty=10000
 \raggedbottom
 \setlist{topsep=4pt,itemsep=2pt,parsep=0pt,leftmargin=*}
 
-% ==============================================================================
-% 2. ĐỊNH DẠNG TIÊU ĐỀ CÁC CẤP: 1 / 1.1 / 1.1.1
-% ==============================================================================
+% ===== 2. BA CẤP TIÊU ĐỀ: 1 / 1.1 / 1.1.1 =====
 \setcounter{secnumdepth}{3}
 \setcounter{tocdepth}{3}
 \renewcommand{\thesection}{\arabic{section}}
 \renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
 \renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}
-
 \titleformat{\section}[hang]
-  {\normalfont\fontsize{15}{19}\selectfont\bfseries}
+  {\normalfont\fontsize{16}{20}\selectfont\bfseries}
   {\thesection.}{0.6em}{}
 \titleformat{\subsection}[hang]
-  {\normalfont\fontsize{13.5}{17}\selectfont\bfseries}
+  {\normalfont\fontsize{14}{18}\selectfont\bfseries}
   {\thesubsection}{0.6em}{}
 \titleformat{\subsubsection}[hang]
-  {\normalfont\fontsize{13}{16}\selectfont\bfseries}
+  {\normalfont\fontsize{13}{17}\selectfont\bfseries}
   {\thesubsubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{16pt}{8pt}
+\titlespacing*{\subsection}{0pt}{12pt}{6pt}
+\titlespacing*{\subsubsection}{0pt}{8pt}{4pt}
 
-\titlespacing*{\section}{0pt}{14pt}{7pt}
-\titlespacing*{\subsection}{0pt}{10pt}{5pt}
-\titlespacing*{\subsubsection}{0pt}{7pt}{3pt}
-
-% ==============================================================================
-% 3. MỤC LỤC VÀ SỐ TRANG
-% ==============================================================================
+% ===== 3. MỤC LỤC VÀ SỐ TRANG =====
 \renewcommand{\contentsname}{MỤC LỤC}
-\renewcommand{\listtablename}{DANH MỤC BẢNG}
-\renewcommand{\listfigurename}{DANH MỤC HÌNH}
+\renewcommand{\listfigurename}{Danh sách hình vẽ}
+\renewcommand{\listtablename}{Danh sách bảng}
+\renewcommand{\cftloftitlefont}{\fontsize{16}{20}\selectfont\bfseries}
+\renewcommand{\cftlottitlefont}{\fontsize{16}{20}\selectfont\bfseries}
+\setlength{\cftbeforeloftitleskip}{0pt}\setlength{\cftafterloftitleskip}{14pt}
+\setlength{\cftbeforelottitleskip}{0pt}\setlength{\cftafterlottitleskip}{14pt}
+\renewcommand{\cftfigpresnum}{Hình }\renewcommand{\cfttabpresnum}{Bảng }
+\renewcommand{\cftfigaftersnum}{.}\renewcommand{\cfttabaftersnum}{.}
+\cftsetindents{figure}{0em}{5em}\cftsetindents{table}{0em}{5.2em}
+\setlength{\cftbeforefigskip}{0pt}\setlength{\cftbeforetabskip}{0pt}
 \renewcommand{\refname}{Tài liệu tham khảo}
-
 \renewcommand{\cfttoctitlefont}{\fontsize{16}{20}\selectfont\bfseries}
 \setlength{\cftbeforetoctitleskip}{0pt}
 \setlength{\cftaftertoctitleskip}{18pt}
@@ -97,7 +95,6 @@
 \cftsetindents{subsection}{2em}{3em}
 \cftsetindents{subsubsection}{5em}{4em}
 \setlength{\cftbeforesecskip}{6pt}
-
 \makeatletter
 \def\ps@plain{%
   \let\@oddhead\@empty\let\@evenhead\@empty
@@ -106,120 +103,177 @@
 \makeatother
 \pagestyle{plain}
 
-% ==============================================================================
-% 4. ĐỊNH DẠNG BẢNG BIỂU, HÌNH ẢNH VÀ ĐOẠN MÃ (CODE LISTINGS)
-% ==============================================================================
+% ===== 4. BẢNG, HÌNH, CHÚ THÍCH =====
+\counterwithin{figure}{section}
+\counterwithin{table}{section}
+\renewcommand{\topfraction}{0.9}\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.08}\renewcommand{\floatpagefraction}{0.75}
+\setcounter{topnumber}{3}\setcounter{totalnumber}{4}
 \renewcommand{\tablename}{Bảng}
 \renewcommand{\figurename}{Hình}
-\DeclareCaptionFont{reportcaption}{\fontsize{11.5}{14.5}\selectfont}
+\DeclareCaptionFont{reportcaption}{\fontsize{12}{15}\selectfont}
 \captionsetup{font=reportcaption,labelfont=bf,labelsep=period,
   justification=centering,skip=6pt}
-\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
-\newcolumntype{C}{>{\centering\arraybackslash}X}
-\newcommand{\bangfont}{\fontsize{11}{14}\selectfont}
+\newcommand{\bangfont}{\fontsize{11}{14}\selectfont\setlength{\tabcolsep}{4.2pt}\renewcommand{\arraystretch}{1.2}}
+\newcommand{\bangnho}{\fontsize{10}{12.5}\selectfont\setlength{\tabcolsep}{4.2pt}\renewcommand{\arraystretch}{1.2}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}m{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}m{#1}}
+\newcommand{\dongdau}{\rowcolor[gray]{0.92}}
 \newcommand{\code}[1]{\texttt{#1}}
 
-% Cấu hình hiển thị code listing đẹp mắt, có số dòng và ngắt dòng tự động
-\definecolor{codegreen}{rgb}{0,0.55,0}
-\definecolor{codegray}{rgb}{0.45,0.45,0.45}
-\definecolor{codepurple}{rgb}{0.55,0,0.80}
-\definecolor{codeblue}{rgb}{0.1,0.2,0.75}
-\definecolor{backcolour}{rgb}{0.97,0.98,0.99}
-
-\lstdefinestyle{reportstyle}{
-    backgroundcolor=\color{backcolour},
-    commentstyle=\color{codegreen}\itshape,
-    keywordstyle=\color{codeblue}\bfseries,
-    numberstyle=\tiny\color{codegray},
-    stringstyle=\color{codepurple},
-    basicstyle=\ttfamily\fontsize{9.5}{12.5}\selectfont,
-    breakatwhitespace=false,
-    breaklines=true,
-    captionpos=b,
-    keepspaces=true,
-    numbers=left,
-    numbersep=6pt,
-    showspaces=false,
-    showstringspaces=false,
-    showtabs=false,
-    tabsize=2,
-    frame=single,
-    rulecolor=\color{gray!35},
-    xleftmargin=12pt,
-    framexleftmargin=12pt
+% Hình giữ chỗ dùng \fbox, đoạn mã dùng listings (chỉ viết ASCII trong đoạn mã).
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\fontsize{9.5}{12.5}\selectfont,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  frame=single,
+  rulecolor=\color[gray]{0.6},
+  captionpos=t,
+  aboveskip=8pt,
+  belowskip=8pt
 }
-\lstset{style=reportstyle}
+\renewcommand{\lstlistingname}{Đoạn mã}
 
-% Macro tạo banner phân cách 2 phần A và B nổi bật
+% ===== 5. CÔNG CỤ BIÊN SOẠN =====
+% Bản nháp: \biensoantrue. Bản nộp: đổi thành \biensoanfalse để ẩn mọi ghi chú.
+\newif\ifbiensoan
+\biensoantrue
+% \phutrach{TV2} : người viết mục
+\newcommand{\phutrach}[1]{\ifbiensoan
+  {\small\noindent\textbf{[Phụ trách: #1]}\par\vspace{2pt}}\fi}
+% \ghichu{Nội dung ... Nguồn: ...}
+\newcommand{\ghichu}[1]{\ifbiensoan
+  {\small\itshape\noindent\textbf{Ghi chú biên soạn:} #1\par\vspace{6pt}}\fi}
+% \hinhcho{mô tả}{chú thích}{nhãn} : khung giữ chỗ, thay bằng \hinh khi có ảnh
+\newcommand{\hinhcho}[3]{%
+  \begin{figure}[!htp]
+  \centering
+  \fbox{\parbox{0.92\textwidth}{\centering\small\itshape #1}}
+  \caption{#2}\label{#3}
+  \end{figure}}
+% \hinh{tên file trong figures/}{bề rộng}{chú thích}{nhãn}
+\newcommand{\hinh}[4]{%
+  \begin{figure}[!htp]
+  \centering
+  \includegraphics[width=#2\textwidth]{figures/#1}
+  \caption{#3}\label{#4}
+  \end{figure}}
+% Ô chưa có số liệu
+\newcommand{\chuaco}{\dots}
+% Tiêu đề Phần 1, Phần 2
 \newcommand{\phanbaocao}[2]{%
   \clearpage
-  \vspace*{0.5cm}
+  \phantomsection
+  \addcontentsline{toc}{section}{#1. #2}
   \begin{center}
-    \setlength{\fboxsep}{10pt}
-    \fbox{%
-      \begin{minipage}{0.94\textwidth}
-        \centering
-        {\fontsize{15}{20}\selectfont\bfseries #1\par}
-        \vspace{4pt}
-        {\fontsize{13}{17}\selectfont\bfseries #2\par}
-      \end{minipage}%
-    }
+    {\fontsize{16}{21}\selectfont\bfseries #1\par}
+    \vspace{4pt}
+    {\fontsize{14}{19}\selectfont\bfseries #2\par}
   \end{center}
-  \addcontentsline{toc}{section}{\textbf{#1: #2}}
-  \vspace{0.6cm}
-}
+  \vspace{6pt}}
 
-% ==============================================================================
-% 5. THÔNG TIN ĐỀ TÀI VÀ TRANG BÌA
-% ==============================================================================
+% ===== 6. THÔNG TIN TRANG BÌA =====
 \newcommand{\DonViChuQuan}{ĐẠI HỌC QUỐC GIA HÀ NỘI}
 \newcommand{\TenTruong}{TRƯỜNG ĐẠI HỌC CÔNG NGHỆ}
 \newcommand{\LoaiBaoCao}{BÁO CÁO BÀI TẬP LỚN}
 \newcommand{\TenMonHoc}{HỆ QUẢN TRỊ CƠ SỞ DỮ LIỆU}
-\newcommand{\TenDeTai}{Nghiên cứu kiến trúc NewSQL phân tán và đánh giá thực nghiệm khả năng mở rộng (Scalability) cùng tính sẵn sàng cao (High Availability) giữa TiDB và MySQL}
-\newcommand{\TenDeTaiTiengAnh}{Analyzing Distributed NewSQL Architecture: An Empirical Evaluation of Scalability and High Availability in TiDB Compared to MySQL}
-\newcommand{\GiangVien}{ThS. / TS. Giảng viên hướng dẫn}
-\newcommand{\SoNhom}{Nhóm thực hiện}
-\newcommand{\LopMonHoc}{INT3202}
-\newcommand{\DiaDiemThoiGian}{Hà Nội, Tháng 11/2026}
+\newcommand{\TenDeTai}{CHI PHÍ CỦA CHỈ MỤC PHỤ TRÊN HỆ LƯU TRỮ KEY-VALUE PHÂN TÁN: NGHIÊN CỨU THỰC NGHIỆM TiDB SO VỚI MySQL InnoDB TRÊN BÀI TOÁN TRA CỨU VẬN ĐƠN}
+\newcommand{\GiangVien}{[Họ tên giảng viên]}
+\newcommand{\SoNhom}{Nhóm 7}
+\newcommand{\LopMonHoc}{[Mã lớp môn học]}
+\newcommand{\TenTVMot}{[Họ tên TV1]}
+\newcommand{\MSSVMot}{[MSSV]}
+\newcommand{\TenTVHai}{[Họ tên TV2]}
+\newcommand{\MSSVHai}{[MSSV]}
+\newcommand{\TenTVBa}{[Họ tên TV3]}
+\newcommand{\MSSVBa}{[MSSV]}
+\newcommand{\DiaDiemThoiGian}{Hà Nội, tháng 11 năm 2026}
+\hypersetup{pdftitle={Chi phí của chỉ mục phụ: TiDB so với MySQL InnoDB},pdfauthor={Nhóm 7}}
 
-\hypersetup{
-  pdftitle={\TenDeTai},
-  pdfauthor={\SoNhom},
-  pdfsubject={\TenMonHoc}
-}
-
-% ==============================================================================
-% 6. THÂN VĂN BẢN CHÍNH (MAIN BODY)
-% ==============================================================================
 \begin{document}
 
-% --- Trang bìa chuẩn UET ---
-\input{sections/00_cover.tex}
+\input{sections/00_cover}
 
-% --- Mục lục và danh mục bảng/hình ---
+% ===== 7. PHẦN MỞ ĐẦU (SỐ TRANG LA MÃ) =====
 \pagenumbering{roman}
-\tableofcontents
+\input{sections/00_mo_dau}
+
 \clearpage
-\listoftables
+{\setlength{\parskip}{0pt}\setlength{\cftbeforesecskip}{4pt}\fontsize{12.5}{17}\selectfont\tableofcontents}
+
 \clearpage
-\listoffigures
+\phantomsection
+\addcontentsline{toc}{section}{\listfigurename}
+{\setlength{\parskip}{0pt}\fontsize{12.5}{17.5}\selectfont\listoffigures}
+
+\clearpage
+\phantomsection
+\addcontentsline{toc}{section}{\listtablename}
+{\setlength{\parskip}{0pt}\fontsize{12.5}{17.5}\selectfont\listoftables}
+
+\input{sections/00_viet_tat}
+
+% ===== 8. NỘI DUNG CHÍNH =====
 \clearpage
 \pagenumbering{arabic}
+\renewcommand{\thetable}{\thesection.\arabic{table}}
+\setcounter{page}{1}
 
-% --- PHẦN A: TÌM HIỂU HỆ QUẢN TRỊ PHÂN TÁN TiDB (50% BÁO CÁO) ---
-\input{sections/01_phan_a.tex}
+\section{Đặt vấn đề}
+\label{sec:dat-van-de}
+\input{sections/c1_dat_van_de}
 
-% --- PHẦN B: PHÂN TÍCH LƯU TRỮ VẬT LÝ, INDEX VÀ THỰC NGHIỆM ĐỐI CHỨNG (50% BÁO CÁO) ---
-\input{sections/02_phan_b.tex}
+\phanbaocao{PHẦN 1}{Giới thiệu và cài đặt hệ quản trị cơ sở dữ liệu TiDB}
 
-% --- KẾT LUẬN VÀ KHUYẾN NGHỊ ĐÁNH ĐỔI KIẾN TRÚC ---
-\input{sections/03_ket_luan.tex}
+\section{Tổng quan và kiến trúc TiDB}
+\label{sec:kien-truc}
+\input{sections/a1_du_lieu}
+\input{sections/a0_tong_quan}
+\input{sections/a2_kien_truc}
 
-% --- TÀI LIỆU THAM KHẢO ---
-\input{sections/tai_lieu_tham_khao.tex}
+\clearpage
+\section{Cài đặt, cấu hình, vận hành và demo}
+\label{sec:cai-dat}
+\input{sections/a3_cai_dat}
+\input{sections/a3_van_hanh}
+\input{sections/a3_demo_co_ban}
+\input{sections/a3_demo}
 
-% --- PHỤ LỤC KỸ THUẬT: LỆNH ĐO ĐẠC & CẤU HÌNH DOCKER ---
-\input{sections/04_phu_luc.tex}
+\phanbaocao{PHẦN 2}{Phân tích chuyên sâu: chi phí chỉ mục phụ trên TiDB so với MySQL}
+
+\section{Vấn đề, cơ chế và phương pháp}
+\label{sec:phuong-phap}
+\input{sections/p2_van_de_co_che}
+\input{sections/p2_phuong_phap}
+
+\clearpage
+\section{Thực nghiệm sơ bộ, dữ liệu và dung lượng chỉ mục}
+\label{sec:dung-luong}
+\input{sections/b0_so_bo}
+\input{sections/b1_dung_luong}
+
+\clearpage
+\section{Chi phí đọc qua chỉ mục phụ}
+\label{sec:doc}
+\input{sections/b2_chi_phi_doc}
+
+\clearpage
+\section{Chi phí ghi khi tăng số chỉ mục phụ}
+\label{sec:ghi}
+\input{sections/b3_chi_phi_ghi}
+
+\clearpage
+\section{Tổng hợp, khuyến nghị và hạn chế}
+\label{sec:tong-hop}
+\input{sections/b4_tong_hop}
+\input{sections/b4_han_che}
+
+% ===== 9. PHẦN KẾT =====
+\input{sections/ket_luan}
+\input{sections/tai_lieu_tham_khao}
+\input{sections/phu_luc}
 
 \end{document}

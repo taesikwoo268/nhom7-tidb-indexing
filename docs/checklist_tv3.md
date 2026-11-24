@@ -121,11 +121,11 @@ Nếu đến tối 25/11 RQ2 chưa xong ở 3 triệu dòng, đo ở 1 triệu d
 
 ## 24–25/11 · Viết B.0, A.3 phần demo và B.2
 
-Mỗi người viết mục của mình trong file riêng để tránh xung đột; TV1 nối bằng `\input{}`. Bạn dùng `report/sections/b0_so_bo.tex`, `a3_demo.tex` và `b2_chi_phi_doc.tex`.
+Mỗi người viết mục của mình trong file riêng để tránh xung đột; khung `main.tex` đã nối sẵn, xem `report/README.md`. Bạn dùng `report/sections/b0_so_bo.tex`, `a3_demo.tex` và `b2_chi_phi_doc.tex`.
 
 - [ ] **B.0** — Kết quả sơ bộ `sbtest1`: MySQL cao hơn TiDB 13–32 lần ở `oltp_read_write`, 8–13 lần ở `oltp_update_index`; giả thuyết TiDB ổn định hơn ở 256–512 luồng không được xác nhận. Không có CSV giai đoạn 1 trong repo, nên gửi log gốc cho nhóm kiểm tra; số không có log thì bỏ.
 - [ ] **B.0** — Thay phần `02_phan_b.tex` dòng 308–333. Bản cũ ghi MySQL chỉ hơn 25–35%, P99 180 ms và 42 ms, và "TiDB giữ vững phong độ"; các câu này trái với kết quả trên.
-- [ ] **A.3 demo chịu lỗi** — C3, một đoạn ngắn: QPS bằng 0 trong 10 giây, về 90% sau 18,4 giây. MySQL một node không có bản sao nên so sánh không ngang hàng. Không dùng demo này cho kết luận về index. Bỏ các số "3–8 giây" và "RTO ≈ 5s" (`02_phan_b.tex` dòng 343–378).
+- [ ] **A.3 demo chịu lỗi** — Demo bổ sung (demo chức năng cơ bản do TV2 làm). C3, một đoạn ngắn: QPS bằng 0 trong 10 giây, về 90% sau 18,4 giây. MySQL một node không có bản sao nên so sánh không ngang hàng. Không dùng demo này cho kết luận về index. Bỏ các số "3–8 giây" và "RTO ≈ 5s" (`02_phan_b.tex` dòng 343–378).
 - [ ] **A.3 demo scale-out** — Một đoạn: Region đầu tiên chuyển sau 16 giây, TPS giảm 25% vì node mới không thêm phần cứng thật.
 - [ ] **B.2 RQ1** — Ba nguồn chênh lệch tách riêng: độ chọn lọc (R), đường truy cập (toán tử), chi phí gọi KV (cop task, RPC, xử lý, chờ, phần còn lại). Phần còn lại chỉ là xấp xỉ.
 - [ ] **B.2 RQ1** — Với Q1, so A2 và B để lấy hiệu ứng covering; so A và B là so với `Point_Get`. Trình bày đường chuẩn `SELECT 1` và tra khóa chính.

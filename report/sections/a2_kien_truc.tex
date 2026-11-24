@@ -1,0 +1,35 @@
+% Mục A.2. Phụ trách: TV1.
+\phutrach{TV1 -- mục A.2; mỗi mục kết thúc bằng ảnh hưởng tới chỉ mục}
+
+\subsection{Tách tầng tính toán và tầng lưu trữ}
+\ghichu{TiDB server, TiKV, Coprocessor. Giải thích \code{TableReader}, \code{IndexReader} (covering), \code{IndexLookUp}, \code{Point\_Get}, vì Chương~\ref{sec:doc} đo chúng trực tiếp.}
+
+\hinhcho{Sơ đồ 1 PD, 1 TiDB server, 3 TiKV đúng với cụm đã cài}{Kiến trúc cụm TiDB dùng trong đề tài}{fig:kien-truc}
+
+\subsection{Ánh xạ bảng và chỉ mục sang Key-Value}
+
+\subsubsection{Dòng dữ liệu và chỉ mục}
+\ghichu{Dạng key của dòng, chỉ mục unique và không unique; đối chiếu với B+Tree phụ của InnoDB.}
+
+\subsubsection{RocksDB và LSM-tree}
+\ghichu{WAL, MemTable, SST, compaction. Nêu cả lợi ích (không sửa trang tại chỗ) và cái giá (khuếch đại ghi). Không kết luận bên nào rẻ hơn; RQ4 phân xử.}
+
+\subsection{Region và Multi-Raft}
+\ghichu{Kích thước Region theo \code{SHOW CONFIG} trên v8.5.5. Quorum là đa số peer của một Region. Định nghĩa C3 và C1 dùng Bảng~\ref{tab:ban-sao}. Ba TiKV là ba container trên một máy. Bỏ số ``3--8 giây'' ở bản cũ.}
+
+\subsection{Placement Driver, TSO và giao dịch Percolator}
+\ghichu{TSO, prewrite, commit, MVCC. Mức cô lập Snapshot Isolation, không hỗ trợ SERIALIZABLE. Số key phải ghi trong một giao dịch tăng theo số chỉ mục.}
+
+\subsection{Kết luận chương}
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Cơ chế của TiDB và câu hỏi nghiên cứu liên quan}\label{tab:co-che}
+\begin{tabular}{|L{4.6cm}|L{6.6cm}|C{3.0cm}|}
+\hline
+\dongdau \textbf{Cơ chế} & \textbf{Ảnh hưởng tới chỉ mục} & \textbf{Câu hỏi} \\ \hline
+IndexReader, IndexLookUp & \chuaco & RQ1, RQ2 \\ \hline
+Ánh xạ KV, LSM-tree & \chuaco & B.1, RQ4 \\ \hline
+Region, Multi-Raft & \chuaco & RQ4 (C1, C3) \\ \hline
+TSO, Percolator & \chuaco & RQ1, RQ4 \\ \hline
+\end{tabular}
+\end{table}

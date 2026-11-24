@@ -1,0 +1,62 @@
+% Lời cam đoan, Tóm tắt, Phân chia công việc. TV1 ghép, cả nhóm cùng sửa.
+\section*{Lời cam đoan}
+\addcontentsline{toc}{section}{Lời cam đoan}
+Chúng em xin cam đoan đề tài ``Chi phí của chỉ mục phụ trên hệ lưu trữ Key-Value phân tán'' là kết quả do nhóm tự thực hiện. Số liệu thực nghiệm được đo trên máy của các thành viên; file kết quả, cấu hình và script để chạy lại được lưu trong kho mã nguồn của nhóm.
+
+\ghichu{Cả nhóm đọc lại và bổ sung: phần mềm, tài liệu của bên thứ ba đã dùng (TiDB, MySQL, sysbench\dots); công cụ AI nếu có và phạm vi sử dụng. Chỉ giữ câu nào nhóm thật sự cam đoan được.}
+
+Chúng em xin chịu trách nhiệm về tính trung thực của nội dung báo cáo này.
+
+\clearpage
+\section*{Tóm tắt}
+\addcontentsline{toc}{section}{Tóm tắt}
+\phutrach{TV1, viết sau cùng}
+\ghichu{Bốn đoạn, không quá một trang. (1) Bài toán vận đơn và vì sao chi phí chỉ mục phụ là câu hỏi trung tâm. (2) Cách làm: TiDB v8.5.5 và MySQL 8.4.11 trên cùng máy, hồ sơ XS, C3 và C1. (3) Kết quả chính của B.1, RQ1, RQ2, RQ4, mỗi kết quả một con số có trong CSV, kể cả kết quả trái giả thuyết. (4) Giới hạn. Không viết ``TiDB vượt trội'', không quy chênh lệch cho mạng.}
+
+\clearpage
+\section*{Phân chia công việc và mức độ đóng góp}
+\renewcommand{\thetable}{P.\arabic{table}}
+\addcontentsline{toc}{section}{Phân chia công việc và mức độ đóng góp}
+\ghichu{Mỗi người sửa dòng của mình theo việc đã làm thật (đối chiếu lịch sử Git). Nhóm thống nhất tỉ lệ đóng góp trước khi nộp.}
+
+\needspace{9\baselineskip}
+{\bangfont
+\begin{longtable}{|>{\raggedright\arraybackslash\bfseries}p{2.9cm}|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}p{7.2cm}|>{\centering\arraybackslash}p{1.5cm}|}
+\caption{Phân chia công việc và mức độ đóng góp của các thành viên}\label{tab:p1}\\
+\hline
+\dongdau \textbf{Thành viên} & \textbf{Vai trò} & \textbf{Công việc cụ thể} & \textbf{Tỉ lệ} \\
+\hline
+\endfirsthead
+\multicolumn{4}{c}{\textbf{Bảng P.1.} Phân chia công việc và mức độ đóng góp (tiếp theo)}\\[2pt]
+\hline
+\dongdau \textbf{Thành viên} & \textbf{Vai trò} & \textbf{Công việc cụ thể} & \textbf{Tỉ lệ} \\
+\hline
+\endhead
+\endfoot
+\endlastfoot
+\TenTVMot & Trưởng nhóm, máy M1 & Mô hình và số đo dung lượng (B.1); RQ1 ở 3 triệu dòng; kiến trúc TiDB; ghép báo cáo, slide & \chuaco \\ \hline
+\TenTVHai & Môi trường, máy M2 & Cấu hình TiDB và MySQL, công cụ đo dùng chung; RQ4; code RQ1; cài đặt A.3; B.3 & \chuaco \\ \hline
+\TenTVBa & Chi phí đọc, máy M3 & RQ1 ở 1 triệu dòng; RQ2; thực nghiệm sơ bộ B.0; demo A.3; B.2 & \chuaco \\ \hline
+\end{longtable}
+}
+
+\needspace{9\baselineskip}
+{\bangfont
+\begin{longtable}{|>{\raggedright\arraybackslash\bfseries}m{3.6cm}|>{\raggedright\arraybackslash}m{11.6cm}|}
+\caption{Chia việc viết báo cáo}\label{tab:p2}\\
+\hline
+\dongdau \textbf{Thành viên} & \textbf{Phần phụ trách} \\
+\hline
+\endfirsthead
+\multicolumn{2}{c}{\textbf{Bảng P.2.} Chia việc viết báo cáo (tiếp theo)}\\[2pt]
+\hline
+\dongdau \textbf{Thành viên} & \textbf{Phần phụ trách} \\
+\hline
+\endhead
+\endfoot
+\endlastfoot
+\TenTVMot & Tóm tắt; Chương 1; Chương 2; Chương 4 (vấn đề, cơ chế); Chương 5 (dữ liệu và dung lượng); Chương 8 (giả thuyết, khuyến nghị); Kết luận \\ \hline
+\TenTVHai & Chương 3 (cài đặt, cấu hình, vận hành, demo cơ bản); Chương 4 (phương pháp, kịch bản); Chương 7; Phụ lục \\ \hline
+\TenTVBa & Chương 3 (demo bổ sung); Chương 5 (thực nghiệm sơ bộ); Chương 6; Chương 8 (hạn chế) \\ \hline
+\end{longtable}
+}

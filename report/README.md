@@ -1,99 +1,72 @@
-# Khung Báo Cáo LaTeX Bài Tập Lớn: TiDB vs MySQL (Chuẩn UET)
+# Khung báo cáo nhóm 7
 
-Khung tài liệu LaTeX được xây dựng dựa trên mẫu chuẩn `report2.tex` của Trường Đại học Công nghệ (ĐHQGHN) và hiện thực hóa đầy đủ kế hoạch đề tài trong file `project/docs/ke_hoach_do_an_tidb_vs_mysql.md`.
+Định dạng lấy theo báo cáo mẫu của nhóm (bìa UET, cam đoan, tóm tắt, phân công, mục lục, danh sách hình và bảng, từ viết tắt). Nội dung chia theo Phần 1 và Phần 2 mà giảng viên yêu cầu. Mã A.x, B.x là mã trong kế hoạch của nhóm.
 
----
+## Ai viết file nào
 
-## 1. Cấu Trúc Báo Cáo Theo Đúng Định Hướng Giảng Viên (Tỷ lệ 50% – 50%)
+Mỗi người chỉ sửa file của mình trong `sections/`. Không sửa `main.tex`, trừ thông tin bìa ở mục 6.
 
-Báo cáo được chia thành **2 Phần lớn (Phần A và Phần B)** rõ ràng, tích hợp banner phân tách chuyên nghiệp và mục lục 3 cấp:
+| File | Nội dung | Người viết |
+|---|---|---|
+| `00_mo_dau.tex` | Cam đoan, tóm tắt, phân công | TV1, cả nhóm sửa dòng của mình |
+| `00_viet_tat.tex` | Từ viết tắt | Cả nhóm |
+| `c1_dat_van_de.tex` | Chương 1 | TV1 |
+| `a1_du_lieu.tex`, `a0_tong_quan.tex`, `a2_kien_truc.tex` | Chương 2, dữ liệu, tổng quan, kiến trúc (A.1, A.2) | TV1 |
+| `a3_cai_dat.tex`, `a3_van_hanh.tex`, `a3_demo_co_ban.tex` | Chương 3, cài đặt, vận hành, demo cơ bản (A.3) | TV2 |
+| `a3_demo.tex` | Chương 3, demo bổ sung (A.3) | TV3 |
+| `p2_van_de_co_che.tex` | Chương 4, vấn đề và cơ chế | TV1 |
+| `p2_phuong_phap.tex` | Chương 4, phương pháp và kịch bản | TV2 |
+| `b0_so_bo.tex` | Chương 5, thực nghiệm sơ bộ (B.0) | TV3 |
+| `b1_dung_luong.tex` | Chương 5, dung lượng (B.1) | TV1 |
+| `b2_chi_phi_doc.tex` | Chương 6 (B.2) | TV3 |
+| `b3_chi_phi_ghi.tex` | Chương 7 (B.3) | TV2 |
+| `b4_tong_hop.tex` | Chương 8, giả thuyết và khuyến nghị (B.4) | TV1 |
+| `b4_han_che.tex` | Chương 8, hạn chế (B.4) | TV3 |
+| `ket_luan.tex` | Kết luận | TV1 |
+| `phu_luc.tex` | Phụ lục | TV2 |
+| `tai_lieu_tham_khao.tex` | Tài liệu tham khảo | Cả nhóm thêm, TV1 rà |
 
-### **PHẦN A: TÌM HIỂU HỆ QUẢN TRỊ CƠ SỞ DỮ LIỆU PHÂN TÁN TiDB (50% đầu)**
-* **Mục 1 (Mục A.1):** Xuất phát từ Đặc trưng Dữ liệu: Phân loại dữ liệu và Lý do chọn TiDB (NewSQL) thay vì RDBMS truyền thống hay NoSQL.
-  * Bảng đối chiếu 4 dạng dữ liệu (Quan hệ vừa/nhỏ, Cột rộng, Tìm kiếm/Đồ thị, Giao dịch lớn HTAP).
-  * Hạn chế của MySQL khi bảng vượt 50–100 triệu dòng (dẫn chứng case study Pipedrive bảng `activities` 1,47 tỷ dòng).
-* **Mục 2 (Mục A.2):** Các Đặc trưng Kiến trúc Cốt lõi làm nên Sức mạnh của TiDB:
-  * **Đặc trưng 1:** Tách biệt hoàn toàn Tầng Tính toán (*Compute - Stateless*) và Tầng Lưu trữ (*Storage - Stateful*).
-  * **Đặc trưng 2:** Tầng Ánh xạ Dữ liệu (*Table-to-KV*) và Cấu trúc Lưu trữ Vật lý Cục bộ RocksDB LSM-Tree (`MemTable`, `WAL`, các tầng `SST` và 4 Column Families).
-  * **Đặc trưng 3:** Chia mảnh tự động theo Vùng (*Region Auto-Splitting*) và Cơ chế Đồng thuận Multi-Raft (3 Replicas, Quorum $2/3$, Leader Election).
-  * **Đặc trưng 4:** Bộ điều phối trung tâm Placement Driver (PD), Timestamp Oracle (TSO) và Giao dịch phân tán Percolator 2 pha (MVCC Snapshot Isolation).
-* **Mục 3 (Mục A.3):** Cài đặt, Triển khai Cụm TiDB Đa Node và Demo Vận hành Cơ bản:
-  * Kiến trúc thực nghiệm trên máy 16GB RAM / 8 CPU Cores (5 containers: 1 PD, 3 TiKV, 1 TiDB + MySQL đối chứng).
-  * Minh chứng cài đặt thành công (`SELECT tidb_version()`, `INFORMATION_SCHEMA.TIKV_STORE_STATUS`, TiDB Dashboard và Key Visualizer).
+`01_phan_a.tex`, `02_phan_b.tex`, `03_ket_luan.tex` và `04_phu_luc.tex` là bản cũ, không còn được biên dịch. Chỉ dùng để tham khảo, vì có nhiều số và nhận định chưa được kiểm chứng.
 
----
+## Yêu cầu của giảng viên nằm ở đâu
 
-### **PHẦN B: ĐI SÂU PHÂN TÍCH BÀI TOÁN LƯU TRỮ VẬT LÝ, CHI PHÍ CHỈ MỤC VÀ THỰC NGHIỆM ĐỐI CHỨNG (50% sau)**
-* **Mục 4 (Mục B.1):** Bài toán Tính toán Lý thuyết Dung lượng Lưu trữ Vật lý (*Theoretical Storage Model*):
-  * Lược đồ bảng thực nghiệm chuẩn `sbtest1`.
-  * Công thức tính Dữ liệu Thô lý thuyết ($S_{\text{raw}}$) cho 10 triệu và 100 triệu dòng (Chưa Index: $1,75\text{ GiB}$; Có Index: $1,83\text{ GiB}$).
-  * Mô hình lưu trữ vật lý trên MySQL InnoDB: Cây B+Tree trang 16KB, 13B MVCC, Record Header 5B, hệ số lấp đầy $93,75\%$, phân mảnh trang Index $72\% \rightarrow 2,35\text{ GiB}$ (10M dòng) và $\sim 23,5\text{ GiB}$ (100M dòng).
-  * Mô hình lưu trữ vật lý trên TiDB / TiKV: Mã hóa cặp Key-Value, tỷ lệ nén LSM-Tree $C_{\text{ratio}} \approx 0,60$, khuếch đại không gian $\alpha_{\text{LSM}} \approx 1,11$.
-    * Trên 1 bản sao: $1,54\text{ GiB}$ (chưa index) và $1,88\text{ GiB}$ (có index).
-    * Toàn cụm 3 node (Multi-Raft RF=3): $4,87\text{ GiB}$ (chưa index) và $6,00\text{ GiB}$ (có index, $\sim 22$ Regions).
-  * Bảng tổng hợp đối chiếu toàn diện Lý thuyết vs. Thực tế.
-* **Mục 5 (Mục B.2):** Phân tích Chi phí Tính toán (RAM, CPU, IOPS) Trước và Sau khi có Index trên Máy 16GB RAM:
-  * Trạng thái 0: Baseline hệ thống.
-  * Trạng thái 1: Nạp 10 triệu bản ghi chưa có Index (Buffer Pool vs MemTable/BlockCache, Auto-split 18 Regions).
-  * Trạng thái 2: Tạo Index `k_1` (`ALTER TABLE ADD INDEX`) và chèn dữ liệu (MySQL Sort Buffer / Merge Sort đĩa tạm / bão I/O vs TiDB Distributed Reorg Workers / LSM-Tree ghi tuần tự không Read-Modify-Write).
-  * So sánh kế hoạch thực thi câu lệnh (`EXPLAIN ANALYZE`) trước và sau Index (TableFullScan đẩy xuống Coprocessor 3 node song song vs IndexLookUp 2 chặng).
-* **Mục 6 (Mục B.3):** Thực nghiệm Đối chứng Nâng tầm TiDB so với MySQL trên Dữ liệu Lớn:
-  * Thực nghiệm 2: Scalability & Chịu tải đồng thời cao (Sysbench 16 $\rightarrow$ 512 threads). Phân tích khách quan tại sao tải thấp MySQL nhanh hơn (IPC nội bộ), nhưng tải cao TiDB ổn định vượt trội nhờ LSM và đa Region Leader.
-  * Mở rộng ngang không gián đoạn (Online Scale-out thêm node `tikv3`).
-  * Thực nghiệm 3: Chaos Testing (đánh sập node lưu trữ ở giây thứ 60). MySQL sập $100\%$, TiDB Raft Quorum $2/3$ tự bầu Leader mới sau 3--8 giây, $RPO = 0$.
+| Yêu cầu | Vị trí trong khung |
+|---|---|
+| Phần 1: tổng quan, kiến trúc, thành phần chính | Chương 2 |
+| Phần 1: cài đặt, cấu hình, vận hành, demo chức năng cơ bản | Chương 3 |
+| Phần 1: trình bày tổng quát, chi tiết dẫn ra ngoài | Phụ lục C |
+| Phần 2: vấn đề đã đăng ký, cơ chế, phương pháp, kịch bản | Chương 4 và đầu Chương 5, 6, 7 |
+| Phần 2: phân tích kết quả | Chương 5, 6, 7, 8 |
+| Phần 2: dữ liệu và thực nghiệm thực tế (bắt buộc) | Chương 5, 6, 7; file trong `results/` ở Phụ lục B |
 
----
+Phần 1 viết tổng quát. Phần nào cần nhiều lệnh thì dẫn sang Phụ lục C.
 
-### **KẾT LUẬN & PHỤ LỤC**
-* **Mục 7:** Kết luận, Bảng khuyến nghị lựa chọn kiến trúc (Khi nào nên giữ MySQL, khi nào bắt buộc chuyển sang TiDB NewSQL) và hướng mở rộng (TiFlash HTAP, Multi-DC).
-* **Tài liệu tham khảo:** Chuẩn trích dẫn IEEE / học thuật (PingCAP, MySQL 8.4 Manual, Google Spanner, F1, Percolator, Raft, LSM-Tree, Pipedrive report).
-* **Phụ lục Kỹ thuật:** Toàn bộ câu lệnh SQL kiểm tra dung lượng bảng, script Bash giám sát tài nguyên `docker stats`, file `docker-compose.yml` hoàn chỉnh, script Sysbench và Bảng phân chia công việc cho 3 thành viên.
+## Lệnh có sẵn
 
----
+| Lệnh | Dùng để |
+|---|---|
+| `\ghichu{...}` | Ghi chú biên soạn. Viết xong mục nào thì xóa ghi chú của mục đó |
+| `\phutrach{TV2}` | Ghi người viết mục |
+| `\chuaco` | Ô bảng chưa có số. Thay bằng số thật, không để ước lượng |
+| `\hinhcho{mô tả}{chú thích}{fig:nhan}` | Khung giữ chỗ cho hình chưa có |
+| `\hinh{ten.png}{0.9}{chú thích}{fig:nhan}` | Chèn hình trong `figures/` |
+| `\code{...}` | Tên lệnh, cột, bảng. Viết `\_` thay cho `_` |
+| `\path{...}` | Đường dẫn file, viết `_` bình thường |
+| `\bangfont`, `\bangnho`, `\dongdau` | Cỡ chữ bảng và nền dòng đầu |
 
-## 2. Cấu Trúc Thư Mục Tệp Tin
+Bảng và hình luôn có `\caption` và `\label`, và được nhắc trong bài bằng `Bảng~\ref{tab:...}` hoặc `Hình~\ref{fig:...}`. Trong đoạn mã `lstlisting` chỉ viết chữ không dấu.
 
-```
-project/report/
-├── main.tex                    # Tệp chính điều phối văn bản (Preamble, Fonts, Layout, TOC)
-├── logo.png                    # Logo Trường Đại học Công nghệ (ĐHQGHN)
-├── compile.bat                 # Script chạy biên dịch 1-click bằng XeLaTeX trên Windows
-├── README.md                   # Tài liệu hướng dẫn sử dụng khung báo cáo
-├── figures/                    # Thư mục chứa hình ảnh và đồ thị thực nghiệm
-│   └── README.md
-└── sections/                   # Thư mục chứa các module nội dung theo phân công 3 thành viên
-    ├── 00_cover.tex            # Trang bìa chuẩn UET (khung đôi, logo, thông tin sinh viên)
-    ├── 01_phan_a.tex           # PHẦN A: Tìm hiểu TiDB (Mục 1, 2, 3) -> TV1 & TV2
-    ├── 02_phan_b.tex           # PHẦN B: Phân tích lưu trữ & Thực nghiệm (Mục 4, 5, 6) -> TV1, TV2, TV3
-    ├── 03_ket_luan.tex         # Kết luận & Khuyến nghị đánh đổi kiến trúc (Mục 7) -> TV3
-    ├── 04_phu_luc.tex          # Phụ lục kỹ thuật: SQL, Bash, Docker Compose, Lộ trình 4 tuần
-    └── tai_lieu_tham_khao.tex  # Danh mục tài liệu tham khảo khoa học chuẩn
-```
+## Quy tắc viết
 
----
+- Mỗi con số có nguồn là một CSV trong `results/`. Số thập phân dùng dấu phẩy, hàng nghìn dùng dấu chấm.
+- Chỉ so TiDB với MySQL trên cùng máy. Giữa các máy chỉ so tỉ lệ.
+- Dùng C3 và C1 đúng như Bảng "Định nghĩa cấu hình bản sao", không viết RF=3, RF=1.
+- Không giấu kết quả trái giả thuyết, không bỏ lượt đo, không quy mọi chênh lệch cho mạng.
+- Không viết "vượt trội", "tuyệt đối", "triệt để".
 
-## 3. Hướng Dẫn Biên Dịch (Compile)
+## Biên dịch
 
-### Cách 1: Biên dịch bằng XeLaTeX trên máy tính cá nhân
-Dự án sử dụng bộ font chuẩn XeLaTeX (`fontspec`, hỗ trợ Unicode tiếng Việt đầy đủ).
-1. Mở Command Prompt hoặc PowerShell tại thư mục `project/report`.
-2. Chạy lệnh:
-   ```bash
-   xelatex -synctex=1 -interaction=nonstopmode main.tex
-   xelatex -synctex=1 -interaction=nonstopmode main.tex
-   ```
-   *(Chạy 2 lần để cập nhật số trang, mục lục tự động và danh mục bảng/hình).*
-3. Hoặc chỉ cần **nhấp đúp chuột vào file `compile.bat`** trên Windows!
+- **Overleaf:** nén thư mục `report/` (bỏ `ReportExample/`), tải lên bằng New Project → Upload Project, rồi chọn Menu → Compiler → XeLaTeX.
+- **Máy cá nhân:** chạy `compile.bat`, hoặc chạy `xelatex main.tex` ít nhất hai lần.
 
-### Cách 2: Tải lên Overleaf
-1. Nén toàn bộ thư mục `report/` thành file `.zip`.
-2. Truy cập [Overleaf.com](https://www.overleaf.com), tạo dự án mới (*New Project* $\rightarrow$ *Upload Project*).
-3. Trong phần **Menu** (góc trên bên trái), tại mục **Compiler**, chọn **XeLaTeX**.
-4. Nhấn **Recompile** để xem kết quả PDF chuẩn xác 100%.
-
----
-
-## 4. Phân Công Thành Viên Theo Lộ Trình 4 Tuần
-* **Thành viên 1 (Trưởng nhóm):** Chịu trách nhiệm viết `01_phan_a.tex` (Mục 1, 2) và `02_phan_b.tex` (Mục 4 - Mô hình toán học).
-* **Thành viên 2 (Kỹ sư Hạ tầng):** Chịu trách nhiệm hoàn thiện `01_phan_a.tex` (Mục 3 - Triển khai thực nghiệm) và `02_phan_b.tex` (Mục 5 - Chi phí RAM/CPU/Index).
-* **Thành viên 3 (Kỹ sư Chịu tải & Chaos Test):** Chịu trách nhiệm hoàn thiện `02_phan_b.tex` (Mục 6 - Scalability, Chaos Test) và `03_ket_luan.tex` (Mục 7).
+Trước khi nộp, đổi `\biensoantrue` thành `\biensoanfalse` trong `main.tex` để ẩn mọi ghi chú, rồi tìm và thay hết `\chuaco` và `\hinhcho`.

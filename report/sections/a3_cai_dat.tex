@@ -1,0 +1,54 @@
+% Mục A.3 phần cài đặt. Phụ trách: TV2.
+\phutrach{TV2 -- mục A.3, phần cài đặt}
+
+\subsection{Ba máy thực nghiệm}
+\begin{table}[!htp]
+\centering\bangnho
+\caption{Ba máy thực nghiệm (Bảng A.3.1 trong kế hoạch)}\label{tab:ba-may}
+\begin{tabular}{|C{1.1cm}|L{2.9cm}|L{3.1cm}|C{1.5cm}|L{2.2cm}|L{3.0cm}|}
+\hline
+\dongdau \textbf{Máy} & \textbf{Phần đo} & \textbf{CPU, số luồng} & \textbf{RAM} & \textbf{Ổ dữ liệu} & \textbf{Windows, Docker, WSL2} \\ \hline
+M1 & B.1; RQ1 (3 triệu dòng) & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+M2 & RQ4 (1 triệu dòng) & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+M3 & RQ1 (1 triệu dòng); RQ2 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+\end{tabular}
+\end{table}
+\ghichu{TV1 và TV3 gửi thông tin máy cho TV2. Số WSL2 là số thật lúc đo, không chép bản nháp hồ sơ S.}
+
+\subsection{Cấu hình tài nguyên}
+Cả ba máy dùng hồ sơ XS (Bảng~\ref{tab:xs}). Mỗi lúc chỉ một hệ chạy.
+
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Hồ sơ XS: giới hạn tài nguyên của từng thành phần}\label{tab:xs}
+\begin{tabular}{|L{4.2cm}|C{2.4cm}|C{3.0cm}|L{4.6cm}|}
+\hline
+\dongdau \textbf{Thành phần} & \textbf{CPU} & \textbf{RAM (MiB)} & \textbf{Bộ nhớ đệm} \\ \hline
+PD & 0,4 & 512 & --- \\ \hline
+TiDB server v8.5.5 & 1,2 & 1.280 & --- \\ \hline
+TiKV v8.5.5 (3 node) & $3 \times 0{,}8$ & $3 \times 1.280$ & Block cache $3 \times 250$ MiB \\ \hline
+\textbf{Tổng cụm TiDB} & \textbf{4,0} & \textbf{5.632} & \textbf{750 MiB} \\ \hline
+MySQL 8.4.11 & 4,0 & 2.048 & Buffer pool 750M (giá trị cấu hình) \\ \hline
+sysbench (RQ4) & 2,0 & 512 & --- \\ \hline
+\end{tabular}
+\end{table}
+\ghichu{Nêu: tổng RAM hai hệ khác nhau (5,5 GiB và 2 GiB) dù bộ nhớ đệm gần bằng nhau; MySQL tắt binlog, \code{innodb\_flush\_log\_at\_trx\_commit=1}; image TiKV bỏ phần debug. Nguồn: \path{docker/profiles/XS.yml}, \path{docker/profiles/tikv-XS.toml}, \path{docker/mysql.cnf}, \path{docker/tikv.Dockerfile}.}
+
+\subsection{Số node, số bản sao, quorum và khả năng chịu lỗi}
+\begin{table}[!htp]
+\centering\bangnho
+\caption{Định nghĩa cấu hình bản sao (Bảng A.3.2 trong kế hoạch)}\label{tab:ban-sao}
+\begin{tabular}{|C{1.4cm}|C{1.4cm}|C{2.0cm}|C{1.8cm}|C{1.7cm}|L{5.5cm}|}
+\hline
+\dongdau \textbf{Ký hiệu} & \textbf{TiKV} & \textbf{Bản sao mỗi Region} & \textbf{Quorum} & \textbf{Chịu mất} & \textbf{Dùng cho} \\ \hline
+C3 & 3 & 3 & 2 trên 3 & 1 store & Mọi phép đo chính \\ \hline
+C1 & 3 & 1 & 1 trên 1 & Không & Tách chi phí nhân bản ở RQ4, bộ 0 và 5 chỉ mục \\ \hline
+\end{tabular}
+\end{table}
+\ghichu{Nêu: ba store là ba container trên một máy và một ổ đĩa, nên C3 chỉ chịu mất một tiến trình; PD và TiDB server chỉ có một node, là điểm lỗi đơn; 1 TiKV không thể là cấu hình 3 bản sao; điều kiện kiểm tra trước khi đo (\code{assert\_replicas}).}
+
+\subsection{Các bước cài đặt}
+\ghichu{Trình bày tổng quát, mỗi bước một câu: cài Docker Desktop và WSL2; lấy mã nguồn; tạo môi trường Python; đặt \code{MACHINE\_ID}, \code{PROFILE}; bật từng hệ; nạp dữ liệu. Lệnh chi tiết dẫn sang README của dự án (Phụ lục C).}
+
+\subsection{Minh chứng cài đặt}
+\ghichu{\code{SELECT tidb\_version()}; trạng thái 3 store \code{Up}; phiên bản MySQL; \code{SHOW CREATE TABLE shipments} của hai hệ.}

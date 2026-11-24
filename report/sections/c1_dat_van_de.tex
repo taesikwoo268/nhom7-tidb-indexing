@@ -1,0 +1,43 @@
+% Chương 1. Phụ trách: TV1.
+\phutrach{TV1}
+
+\subsection{Bối cảnh}
+\ghichu{Bài toán quản lý vận đơn: số đơn lớn, trạng thái cập nhật nhiều lần, tra cứu qua nhiều thuộc tính. Vì cần nhiều chỉ mục phụ trên một bảng lớn nên chi phí của chỉ mục phụ là câu hỏi trung tâm. Con số thị trường phải có nguồn trích dẫn.}
+
+\subsection{Vấn đề nghiên cứu}
+\ghichu{TiDB lưu bảng và mỗi chỉ mục thành các cặp KV phân tán; InnoDB lưu bằng B+Tree trên một máy. Đọc, ghi và dung lượng qua chỉ mục phụ thay đổi thế nào? Nêu thực nghiệm sơ bộ (Chương~\ref{sec:dung-luong}) là động lực, không kết luận trước hệ nào tốt hơn.}
+
+\subsection{Câu hỏi nghiên cứu và giả thuyết}
+Bảng~\ref{tab:cau-hoi} liệt kê các câu hỏi nghiên cứu. Giả thuyết được đặt trước khi đo và có thể bị số liệu bác bỏ.
+\begin{table}[!htp]
+\centering\bangnho
+\caption{Câu hỏi nghiên cứu, giả thuyết và lý do có thể sai}\label{tab:cau-hoi}
+\begin{tabular}{|C{1.2cm}|L{3.6cm}|L{4.7cm}|L{4.7cm}|}
+\hline
+\dongdau \textbf{Mã} & \textbf{Câu hỏi} & \textbf{Giả thuyết} & \textbf{Lý do có thể sai} \\ \hline
+B.1 & Bảng và chỉ mục chiếm bao nhiêu dung lượng? & Mô hình lý thuyết dự đoán được số đo sau khi hiệu chỉnh & Hệ số nén và phiên bản MVCC chưa dọn làm số đo lệch \\ \hline
+RQ1 & Covering index giảm độ trễ đọc bao nhiêu? & R nhỏ: lợi ích covering ở TiDB lớn hơn vì chi phí cố định; R lớn: hai hệ có thể gần nhau & Point\_Get rẻ; TiDB gom handle theo lô; MySQL đọc ngẫu nhiên nếu vượt bộ nhớ đệm \\ \hline
+RQ2 & Ở độ chọn lọc nào quét bảng nhanh hơn dùng chỉ mục? & Điểm giao nhau của TiDB thấp hơn MySQL & TiDB lấy dòng theo lô; TiKV ít CPU nên quét bảng cũng đắt \\ \hline
+RQ4 & Thêm chỉ mục làm TPS ghi giảm bao nhiêu? & (a) TiDB giảm ít hơn nhờ LSM-tree; (b) TiDB giảm nhiều hơn vì mỗi chỉ mục thêm cặp KV phải prewrite và commit qua Raft & Hai giả thuyết đối lập, do thực nghiệm phân xử \\ \hline
+\end{tabular}
+\end{table}
+\ghichu{Bảng chưa có RQ3 (biến thể khóa chính). Nếu không đo, nêu lý do ở mục phạm vi; nếu có đo, thêm một dòng.}
+
+\subsection{Mục tiêu và cách đo}
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Mục tiêu và cách đo}\label{tab:muc-tieu}
+\begin{tabular}{|L{3.4cm}|L{5.6cm}|L{5.6cm}|}
+\hline
+\dongdau \textbf{Nhóm mục tiêu} & \textbf{Mục tiêu} & \textbf{Cách đo} \\ \hline
+Tách nguồn chênh lệch đọc & Tách độ chọn lọc, đường truy cập và chi phí gọi KV & Ép chỉ mục bằng hint, đường chuẩn, mô hình $t = a + bR$ \\ \hline
+Cấu hình bản sao & Nêu đúng số TiKV, số bản sao, quorum và khả năng chịu lỗi & Kiểm tra trước khi đo TiDB \\ \hline
+Covering trên truy vấn vận đơn & Kế hoạch, độ trễ, chi phí ghi, dung lượng & RQ1, RQ4 và B.1 \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Phạm vi và giới hạn}
+\ghichu{Hồ sơ XS; 1 triệu và 3 triệu dòng; mọi node trên một máy và một ổ đĩa; RQ4 chỉ ở 64 luồng. Failover và scale-out chỉ là demo phụ. Không có số đo 10 triệu dòng.}
+
+\subsection{Cấu trúc báo cáo}
+Phần 1 gồm Chương~\ref{sec:kien-truc} (tổng quan và kiến trúc TiDB) và Chương~\ref{sec:cai-dat} (cài đặt, cấu hình, vận hành và demo). Phần 2 gồm Chương~\ref{sec:phuong-phap} (vấn đề, cơ chế và phương pháp), Chương~\ref{sec:dung-luong} (dữ liệu và dung lượng), Chương~\ref{sec:doc} (chi phí đọc), Chương~\ref{sec:ghi} (chi phí ghi) và Chương~\ref{sec:tong-hop} (tổng hợp). Chi tiết cài đặt và mã nguồn được dẫn ở Phụ lục.

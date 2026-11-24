@@ -1,0 +1,34 @@
+% Mục B.4, giả thuyết và khuyến nghị. Phụ trách: TV1.
+\phutrach{TV1 -- mục B.4, bảng giả thuyết và khuyến nghị}
+
+\subsection{Giả thuyết và kết quả}
+\begin{table}[!htp]
+\centering\bangnho
+\caption{Đối chiếu giả thuyết với kết quả}\label{tab:gia-thuyet}
+\begin{tabular}{|C{1.4cm}|L{4.0cm}|L{3.0cm}|L{3.8cm}|L{2.2cm}|}
+\hline
+\dongdau \textbf{Câu hỏi} & \textbf{Giả thuyết} & \textbf{Kết luận (xác nhận, bác bỏ, một phần)} & \textbf{Số liệu chính} & \textbf{Nguồn} \\ \hline
+B.1 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+RQ1 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+RQ2 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+RQ4 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Đánh đổi của covering index}
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Lợi ích đọc, chi phí ghi và dung lượng của covering index}\label{tab:danh-doi}
+\begin{tabular}{|L{5.6cm}|C{4.2cm}|C{4.2cm}|}
+\hline
+\dongdau \textbf{Chỉ số} & \textbf{MySQL} & \textbf{TiDB C3} \\ \hline
+Lợi ích đọc Q2 (Bảng~\ref{tab:covering}) & \chuaco & \chuaco \\ \hline
+Thay đổi TPS W1 (Bảng~\ref{tab:rq4-covering}) & \chuaco & \chuaco \\ \hline
+Thay đổi TPS W2 (Bảng~\ref{tab:rq4-covering}) & \chuaco & \chuaco \\ \hline
+Dung lượng thêm (Bảng~\ref{tab:dl-covering}) & \chuaco & \chuaco \\ \hline
+\end{tabular}
+\end{table}
+\ghichu{Ba nguồn số đo trên ba máy khác nhau, nên chỉ ghép tỉ lệ, không ghép số tuyệt đối.}
+
+\subsection{Khuyến nghị thiết kế chỉ mục}
+\ghichu{Quy tắc nào giữ nguyên, quy tắc nào thay đổi khi chuyển từ MySQL sang TiDB. Mỗi khuyến nghị dẫn tới một bảng hoặc hình.}

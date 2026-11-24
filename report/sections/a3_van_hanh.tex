@@ -1,0 +1,30 @@
+% Mục A.3 phần vận hành. Phụ trách: TV2.
+\phutrach{TV2 -- mục A.3, phần vận hành}
+
+\subsection{Vận hành cụm}
+\ghichu{Trình bày tổng quát, mỗi việc một đến hai câu kèm lệnh; chi tiết dẫn sang Phụ lục C.}
+
+\begin{table}[!htp]
+\centering\bangnho
+\caption{Các thao tác vận hành thường dùng}\label{tab:van-hanh}
+\begin{tabular}{|L{4.4cm}|L{7.0cm}|L{3.2cm}|}
+\hline
+\dongdau \textbf{Thao tác} & \textbf{Lệnh} & \textbf{Kết quả mong đợi} \\ \hline
+Bật TiDB, tắt MySQL & \code{.\textbackslash scripts\textbackslash use\_engine.ps1 -Engine tidb -Switch} & \chuaco \\ \hline
+Bật MySQL, tắt TiDB & \code{.\textbackslash scripts\textbackslash use\_engine.ps1 -Engine mysql -Switch} & \chuaco \\ \hline
+Xem dịch vụ đang chạy & \code{.\textbackslash scripts\textbackslash use\_engine.ps1 -Status} & \chuaco \\ \hline
+Dừng tất cả, giữ dữ liệu & \code{.\textbackslash scripts\textbackslash use\_engine.ps1 -Stop} & \chuaco \\ \hline
+Kiểm tra cấu hình chung & \code{python -m bench.cli check} & \chuaco \\ \hline
+Nạp dữ liệu & \code{.\textbackslash scripts\textbackslash load.ps1 -Engine tidb -Rows 1000000} & \chuaco \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Kiểm tra trạng thái}
+\ghichu{Trạng thái store và số bản sao của Region: \code{information\_schema.tikv\_store\_status}, \code{information\_schema.tikv\_region\_peers}, \code{SHOW CONFIG}. Trích kết quả thật trên M2.}
+
+\subsubsection{Giám sát bằng TiDB Dashboard}
+\ghichu{Dashboard ở cổng 2379 của PD: Cluster Info, Key Visualizer, SQL Statements. Ảnh chụp trên hồ sơ XS, hoặc ghi rõ hồ sơ và ngày chụp.}
+
+\hinhcho{Ảnh TiDB Dashboard: 1 PD, 1 TiDB, 3 TiKV ở trạng thái Up}{TiDB Dashboard trên máy M2}{fig:dashboard}
+
+\hinhcho{Ảnh Key Visualizer}{Key Visualizer trên máy M2}{fig:keyviz}

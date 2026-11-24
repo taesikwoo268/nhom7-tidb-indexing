@@ -1,0 +1,16 @@
+% Mục B.0. Phụ trách: TV3.
+\phutrach{TV3 -- mục B.0}
+
+\subsection{Thực nghiệm sơ bộ}
+\ghichu{Khoảng nửa trang. sysbench trên \code{sbtest1}, 16 đến 512 luồng. Nêu giả thuyết ban đầu không được xác nhận. Chỉ giữ số có log gốc; ghi rõ đây là số giai đoạn 1, khác cấu hình XS. Kết thúc bằng câu hỏi dẫn tới các mục sau.}
+
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Thông lượng sơ bộ trên sbtest1 (giai đoạn 1)}\label{tab:so-bo}
+\begin{tabular}{|L{4.4cm}|C{2.2cm}|C{2.6cm}|C{2.6cm}|C{2.2cm}|}
+\hline
+\dongdau \textbf{Tải} & \textbf{Số luồng} & \textbf{MySQL} & \textbf{TiDB} & \textbf{Tỉ số} \\ \hline
+\code{oltp\_read\_write} & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+\code{oltp\_update\_index} & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+\end{tabular}
+\end{table}

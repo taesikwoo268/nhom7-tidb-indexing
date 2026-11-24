@@ -1,0 +1,94 @@
+% Mục B.3. Phụ trách: TV2.
+\phutrach{TV2 -- mục B.3}
+
+\subsection{Câu hỏi và hai giả thuyết}
+\ghichu{(a) LSM-tree làm TiDB giảm ít hơn; (b) cặp KV qua prewrite, commit và Raft làm TiDB giảm nhiều hơn. Cách tách: MySQL $\to$ C1 $\to$ C3; W1 và W2; covering và không covering.}
+
+\subsection{Thiết kế thí nghiệm}
+Thí nghiệm chạy trên máy M2 với 1 triệu dòng, 64 luồng, 60 giây mỗi lượt và 3 vòng. W1 thêm đơn mới; W2 cập nhật \code{status} và \code{updated\_at} theo \code{id}.
+
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Ma trận 84 lượt của RQ4}\label{tab:rq4-ma-tran}
+\begin{tabular}{|L{4.2cm}|L{6.6cm}|C{3.4cm}|}
+\hline
+\dongdau \textbf{Cấu hình} & \textbf{Bộ chỉ mục} & \textbf{Số lượt} \\ \hline
+MySQL & 0, 1, 3, 5, sender\_created, sender\_cov & $6 \times 2 \times 3 = 36$ \\ \hline
+TiDB C3 & 0, 1, 3, 5, sender\_created, sender\_cov & $6 \times 2 \times 3 = 36$ \\ \hline
+TiDB C1 & 0, 5 & $2 \times 2 \times 3 = 12$ \\ \hline
+\end{tabular}
+\end{table}
+\ghichu{Nêu: bảng mới cho mỗi lượt, chờ đĩa lắng, kiểm tra bản sao, thứ tự xáo theo vòng, vì sao bỏ 16 luồng. W2 chỉ làm thay đổi chỉ mục có chứa \code{status}. Nguồn: \path{bench/rq4.py}, \path{scripts/rq4_official.ps1}, commit 317f0a6.}
+
+\subsection{Kết quả thêm đơn mới (W1)}
+\begin{table}[!htp]
+\centering\bangfont
+\caption{W1: TPS trung vị theo số chỉ mục và thay đổi so với 0 chỉ mục}\label{tab:rq4-w1}
+\begin{tabular}{|C{2.3cm}|C{2.3cm}|C{2.3cm}|C{2.3cm}|C{2.3cm}|C{2.2cm}|}
+\hline
+\dongdau \textbf{Cấu hình} & \textbf{0} & \textbf{1} & \textbf{3} & \textbf{5} & \textbf{0 $\to$ 5} \\ \hline
+MySQL & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+TiDB C3 & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+TiDB C1 & \chuaco & --- & --- & \chuaco & \chuaco \\ \hline
+\end{tabular}
+\par\vspace{3pt}{\noindent\small\itshape Nguồn: results/rq4\_official\_summary.csv. Trung vị của 3 lượt.\par}
+\end{table}
+
+\hinh{rq4_tps_vs_indexes.png}{0.95}{TPS theo số chỉ mục, W1 và W2, 64 luồng}{fig:rq4}
+
+\subsection{Kết quả cập nhật trạng thái (W2)}
+\begin{table}[!htp]
+\centering\bangfont
+\caption{W2: TPS trung vị theo số chỉ mục và thay đổi so với 0 chỉ mục}\label{tab:rq4-w2}
+\begin{tabular}{|C{2.3cm}|C{2.3cm}|C{2.3cm}|C{2.3cm}|C{2.3cm}|C{2.2cm}|}
+\hline
+\dongdau \textbf{Cấu hình} & \textbf{0} & \textbf{1} & \textbf{3} & \textbf{5} & \textbf{0 $\to$ 5} \\ \hline
+MySQL & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+TiDB C3 & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+TiDB C1 & \chuaco & --- & --- & \chuaco & \chuaco \\ \hline
+\end{tabular}
+\par\vspace{3pt}{\noindent\small\itshape Nguồn: results/rq4\_official\_summary.csv. Trung vị của 3 lượt.\par}
+\end{table}
+
+\subsection{Chi phí ghi của covering index}
+\begin{table}[!htp]
+\centering\bangfont
+\caption{TPS với chỉ mục không covering và covering}\label{tab:rq4-covering}
+\begin{tabular}{|C{2.4cm}|C{1.8cm}|C{3.4cm}|C{3.4cm}|C{2.8cm}|}
+\hline
+\dongdau \textbf{Cấu hình} & \textbf{Tải} & \textbf{sender\_created} & \textbf{sender\_cov} & \textbf{Thay đổi} \\ \hline
+MySQL & W1 & \chuaco & \chuaco & \chuaco \\ \hline
+MySQL & W2 & \chuaco & \chuaco & \chuaco \\ \hline
+TiDB C3 & W1 & \chuaco & \chuaco & \chuaco \\ \hline
+TiDB C3 & W2 & \chuaco & \chuaco & \chuaco \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Chi phí nhân bản: C1 và C3}
+\ghichu{C1 và C3 ở bộ 0 và 5. Đây là chi phí nhân bản Raft trên một máy và một ổ đĩa, không phải chi phí mạng. Nêu leader của C1 lệch.}
+
+\subsection{Độ trễ, byte ghi và tài nguyên}
+\begin{table}[!htp]
+\centering\bangnho
+\caption{p95, p99, byte ghi mỗi giao dịch và CPU của sysbench}\label{tab:rq4-chi-tiet}
+\begin{tabular}{|C{1.9cm}|C{1.2cm}|C{1.7cm}|C{1.9cm}|C{1.9cm}|C{2.5cm}|C{2.3cm}|}
+\hline
+\dongdau \textbf{Cấu hình} & \textbf{Tải} & \textbf{Bộ chỉ mục} & \textbf{p95 (ms)} & \textbf{p99 (ms)} & \textbf{Byte ghi / giao dịch} & \textbf{CPU sysbench (\%)} \\ \hline
+MySQL & W1 & 0 / 5 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+MySQL & W2 & 0 / 5 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+TiDB C3 & W1 & 0 / 5 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+TiDB C3 & W2 & 0 / 5 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+TiDB C1 & W1 & 0 / 5 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+TiDB C1 & W2 & 0 / 5 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+\end{tabular}
+\end{table}
+\ghichu{TiKV bận nhất ở C3 thường dùng 0,7--0,8 trên 0,8 CPU, MySQL khoảng 3,9 trên 4 CPU. Dung lượng chỉ mục TiDB trong CSV là ước tính thống kê.}
+
+\subsection{Các điểm bất thường}
+\ghichu{Nêu đủ danh sách trong \path{docs/checklist_tv2.md}. Không bỏ lượt nào; bỏ thử 6 lượt bị nhiễu thì hướng kết luận không đổi.}
+
+\subsection{Thảo luận}
+\ghichu{Giả thuyết nào được số liệu ủng hộ, điểm nào chưa giải thích được. Phân biệt số đo và cách giải thích. Không quy chênh lệch cho mạng.}
+
+\subsection{Kết luận chương}
+\ghichu{Ba đến bốn câu, mỗi câu kèm số.}

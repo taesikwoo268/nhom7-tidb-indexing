@@ -1,0 +1,20 @@
+% Tổng quan TiDB. Phụ trách: TV1.
+\phutrach{TV1 -- tổng quan TiDB}
+
+\subsection{Tổng quan về TiDB}
+\ghichu{Khoảng nửa trang, trình bày tổng quát: TiDB là gì, ai phát triển, mã nguồn mở theo giấy phép nào, phiên bản v8.5.5, tương thích giao thức MySQL, nhóm bài toán phù hợp và không phù hợp. Mỗi thông tin có trích dẫn, ví dụ \cite{pingcap_arch}. Chi tiết dẫn sang Phụ lục C.}
+
+\subsection{Các thành phần chính}
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Các thành phần chính của TiDB}\label{tab:thanh-phan}
+\begin{tabular}{|L{2.6cm}|L{6.6cm}|C{2.4cm}|L{2.8cm}|}
+\hline
+\dongdau \textbf{Thành phần} & \textbf{Vai trò} & \textbf{Lưu trạng thái} & \textbf{Trong đề tài} \\ \hline
+TiDB server & \chuaco & \chuaco & 1 node \\ \hline
+TiKV & \chuaco & \chuaco & 3 node \\ \hline
+PD & \chuaco & \chuaco & 1 node \\ \hline
+TiFlash & \chuaco & \chuaco & Không dùng \\ \hline
+TiDB Dashboard & \chuaco & --- & Có, trong PD \\ \hline
+\end{tabular}
+\end{table}
