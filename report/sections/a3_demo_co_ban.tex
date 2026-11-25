@@ -1,28 +1,84 @@
-% Mục A.3 demo chức năng cơ bản. Phụ trách: TV2.
+% Mục A.3 demo chức năng cơ bản. Phụ trách: TV2. Nguồn: results/runs/demo_{mysql,tidb}_M2.txt (25/11/2026).
 \phutrach{TV2 -- mục A.3, demo chức năng cơ bản}
 
 \subsection{Demo chức năng cơ bản}
-Demo chạy trên database riêng \code{demo\_nhom7} với 20.000 vận đơn, không dùng bảng của các thí nghiệm. Cùng một kịch bản chạy trên cả hai hệ.
-\ghichu{Chạy \path{scripts/demo_co_ban.py} trên M2, đầu ra ở \path{results/runs}. Trích phần chính vào báo cáo, toàn bộ đầu ra dẫn sang Phụ lục C. Đây là demo chức năng, không phải phép đo hiệu năng.}
+
+Demo chạy ngày 25/11/2026 trên máy M2, hồ sơ XS, trong một project Docker và một database riêng (\code{demo\_nhom7}) với 20.000 vận đơn, nên không dùng chung dữ liệu với các thí nghiệm. Cùng một kịch bản chạy trên MySQL 8.4.11 và TiDB v8.5.5. Đây là demo chức năng, không phải phép đo hiệu năng. Script tự kiểm tra kết quả COMMIT, ROLLBACK và ràng buộc UNIQUE, và dừng nếu sai. Bảng~\ref{tab:demo-co-ban} tóm tắt kết quả; toàn bộ kịch bản được dẫn ở Phụ lục~C.
 
 \begin{table}[!htp]
 \centering\bangfont
-\caption{Các chức năng được demo}\label{tab:demo-co-ban}
-\begin{tabular}{|L{4.2cm}|L{5.6cm}|C{2.2cm}|C{2.2cm}|}
+\caption{Các chức năng được demo và kết quả}\label{tab:demo-co-ban}
+\begin{tabular}{|L{3.6cm}|L{5.6cm}|C{2.5cm}|C{2.5cm}|}
 \hline
 \dongdau \textbf{Chức năng} & \textbf{Kiểm tra} & \textbf{MySQL} & \textbf{TiDB} \\ \hline
-Kết nối, phiên bản & Đọc được phiên bản, 3 store Up (TiDB) & \chuaco & \chuaco \\ \hline
-Tạo bảng & \code{SHOW CREATE TABLE} & \chuaco & \chuaco \\ \hline
-Thêm, đọc, sửa, xóa & Dòng thay đổi đúng như lệnh & \chuaco & \chuaco \\ \hline
-Giao dịch ROLLBACK & Dữ liệu giữ giá trị cũ & \chuaco & \chuaco \\ \hline
-Giao dịch COMMIT & Dữ liệu đổi sang giá trị mới & \chuaco & \chuaco \\ \hline
-Ràng buộc UNIQUE & Từ chối mã vận đơn trùng & \chuaco & \chuaco \\ \hline
-Tạo chỉ mục & Kế hoạch đổi sau khi tạo chỉ mục & \chuaco & \chuaco \\ \hline
+Kết nối, phiên bản & Đọc được phiên bản; TiDB có 3 store Up & 8.4.11 & v8.5.5, 3 store Up \\ \hline
+Tạo bảng & \code{SHOW CREATE TABLE} & Đạt & Đạt \\ \hline
+Thêm, đọc, sửa, xóa & Dòng thay đổi đúng như lệnh & Đạt & Đạt \\ \hline
+Giao dịch ROLLBACK & Dữ liệu giữ giá trị cũ & Đạt & Đạt \\ \hline
+Giao dịch COMMIT & Dữ liệu đổi sang giá trị mới & Đạt & Đạt \\ \hline
+Ràng buộc UNIQUE & Từ chối mã vận đơn trùng (lỗi 1062) & Đạt & Đạt \\ \hline
+Tạo chỉ mục & Kế hoạch đổi sau khi tạo chỉ mục & Đạt & Đạt \\ \hline
 \end{tabular}
 \end{table}
 
 \subsubsection{Thêm, đọc, sửa, xóa và giao dịch}
-\ghichu{Trích lệnh và kết quả.}
+
+Các lệnh SQL giống hệt nhau trên hai hệ, trừ từ khóa \code{CLUSTERED} của khóa chính trên TiDB. Đoạn mã dưới đây trích phần giao dịch trên TiDB; MySQL cho cùng giá trị. Sau \code{ROLLBACK}, hai đơn trở về giá trị cũ; sau \code{COMMIT}, giá trị mới được giữ. Khi sửa mã vận đơn của đơn 2 thành mã của đơn 1, cả hai hệ đều từ chối với lỗi 1062.
+
+\begin{lstlisting}[caption={Giao dịch ROLLBACK và COMMIT trên TiDB (trích đầu ra)}]
+sql> SELECT id, status, cod_amount FROM shipments WHERE id IN (1, 2) ORDER BY id
+  1 | 5 | 9641779
+  2 | 5 | 9453603
+sql> START TRANSACTION
+sql> UPDATE shipments SET cod_amount = cod_amount + 1000 WHERE id IN (1, 2)
+  OK, 2 rows affected
+sql> ROLLBACK
+sql> SELECT ...        -- gia tri cu
+  1 | 5 | 9641779
+  2 | 5 | 9453603
+sql> START TRANSACTION
+sql> UPDATE shipments SET cod_amount = cod_amount + 1000 WHERE id IN (1, 2)
+sql> COMMIT
+sql> SELECT ...        -- gia tri moi
+  1 | 5 | 9642779
+  2 | 5 | 9454603
+\end{lstlisting}
 
 \subsubsection{Chỉ mục và kế hoạch thực thi}
-\ghichu{Trích \code{EXPLAIN} ba lần: chưa có chỉ mục, có chỉ mục không covering, có chỉ mục covering. Chỉ nêu toán tử, không nêu thời gian.}
+
+Demo dùng truy vấn ``20 đơn mới nhất của một shop'', với ba trạng thái: chưa có chỉ mục trên \code{sender\_id}, có chỉ mục không covering, và có chỉ mục covering. Hai trạng thái sau dùng hint \code{FORCE INDEX}. Bảng~\ref{tab:demo-explain} cho thấy cả hai hệ đi từ quét toàn bảng, sang đọc chỉ mục rồi lấy dòng, và cuối cùng là chỉ đọc chỉ mục. Chi phí của từng đường truy cập được đo ở Chương~\ref{sec:doc}.
+
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Kế hoạch thực thi trước và sau khi tạo chỉ mục}\label{tab:demo-explain}
+\begin{tabular}{|L{3.6cm}|L{5.2cm}|L{5.6cm}|}
+\hline
+\dongdau \textbf{Trạng thái} & \textbf{MySQL} & \textbf{TiDB} \\ \hline
+Chưa có chỉ mục & \code{type=ALL}, \code{Using where; Using filesort} & \code{TableReader}, \code{TableFullScan} \\ \hline
+\code{idx\_sender\_created} (không covering) & \code{type=range}, \code{Using index condition; Backward index scan} & \code{IndexLookUp}: \code{IndexRangeScan} rồi \code{TableRowIDScan} \\ \hline
+\code{idx\_sender\_cov} (covering) & \code{type=range}, \code{Using where; Backward index scan; Using index} & \code{IndexReader}: chỉ \code{IndexRangeScan} \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}[caption={Kế hoạch trên TiDB (trích cột id, task, access object)}]
+-- Chua co chi muc
+TopN_8                      root
+  TableReader_16            root
+    TopN_15                 cop[tikv]
+      Selection_14          cop[tikv]
+        TableFullScan_13    cop[tikv]  table:shipments
+
+-- idx_sender_created: khong covering
+IndexLookUp_20              root
+  Limit_19(Build)           cop[tikv]
+    IndexRangeScan_17       cop[tikv]  index:idx_sender_created(sender_id, created_at)
+  TableRowIDScan_18(Probe)  cop[tikv]  table:shipments
+
+-- idx_sender_cov: covering
+Limit_11                    root
+  IndexReader_18            root
+    Limit_17                cop[tikv]
+      IndexRangeScan_16     cop[tikv]  index:idx_sender_cov(sender_id, created_at, status, cod_amount)
+\end{lstlisting}
+
+Demo cũng cho thấy cách TiDB đặt chỉ mục: sau khi tạo ba chỉ mục, \code{SHOW TABLE shipments REGIONS} trả về 7 Region. Khóa của từng chỉ mục (\code{t\_114\_i\_1}, \code{t\_114\_i\_2}, \code{t\_114\_i\_3}) và khóa của các dòng nằm ở những Region khác nhau, dù bảng chỉ có 20.000 dòng. Chi tiết này được dùng lại khi thảo luận chi phí ghi ở Chương~\ref{sec:ghi}.

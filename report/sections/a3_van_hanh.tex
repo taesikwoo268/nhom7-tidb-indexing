@@ -40,9 +40,8 @@ Trong quá trình đo RQ4, các truy vấn này đã phát hiện hai tình hu�
 
 \subsubsection{Giám sát bằng TiDB Dashboard}
 
-TiDB Dashboard chạy sẵn trong PD, truy cập tại \url{http://localhost:2379/dashboard}. Trang Cluster Info cho biết phiên bản và trạng thái của từng thành phần; trang Key Visualizer hiển thị lưu lượng đọc, ghi theo dải khóa và giúp nhận ra điểm nóng.
-\ghichu{Chụp hai ảnh khi chạy demo trên hồ sơ XS, rồi thay hai khung dưới đây bằng \code{\textbackslash hinh}.}
+TiDB Dashboard chạy sẵn trong PD, truy cập tại \url{http://localhost:2379/dashboard}. Trang Cluster Info cho biết phiên bản và trạng thái của từng thành phần; trang Key Visualizer hiển thị lưu lượng đọc, ghi theo dải khóa và giúp nhận ra điểm nóng. Hình~\ref{fig:dashboard} cho thấy cụm có đúng 1 PD, 1 TiDB server và 3 TiKV, đều ở trạng thái Up và cùng phiên bản v8.5.5; \code{tikv2} có thời điểm khởi động muộn hơn vì vừa được bật lại trong demo chịu lỗi. Trong Hình~\ref{fig:keyviz}, trục ngang là thời gian, trục dọc là dải khóa, màu càng sáng thì byte ghi càng nhiều. Các ô màu cam trên bảng \code{shipments} xuất hiện trong thời gian chạy demo thêm node, khi 100.000 đơn được nạp vào bảng đã tách sẵn Region và các Region được chuyển sang node mới. Các vệt sáng hẹp là nơi ghi dồn vào ít khóa, trong đó vệt phía dưới thuộc dải khóa của các bảng hệ thống.
 
-\hinhcho{Ảnh TiDB Dashboard: 1 PD, 1 TiDB, 3 TiKV ở trạng thái Up}{TiDB Dashboard trên máy M2}{fig:dashboard}
+\hinh{tidb_dashboard.png}{0.92}{TiDB Dashboard trên máy M2 (25/11/2026, hồ sơ XS): 1 PD, 1 TiDB, 3 TiKV}{fig:dashboard}
 
-\hinhcho{Ảnh Key Visualizer}{Key Visualizer trên máy M2}{fig:keyviz}
+\hinh{tidb_key_visualizer.png}{0.92}{Key Visualizer trên máy M2, byte ghi theo dải khóa trong lúc demo (25/11/2026)}{fig:keyviz}

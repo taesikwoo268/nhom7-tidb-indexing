@@ -13,7 +13,7 @@ Mỗi người chỉ sửa file của mình trong `sections/`. Không sửa `mai
 | `c1_dat_van_de.tex` | Chương 1 | TV1 |
 | `a1_du_lieu.tex`, `a0_tong_quan.tex`, `a2_kien_truc.tex` | Chương 2, dữ liệu, tổng quan, kiến trúc (A.1, A.2) | TV1 |
 | `a3_cai_dat.tex`, `a3_van_hanh.tex`, `a3_demo_co_ban.tex` | Chương 3, cài đặt, vận hành, demo cơ bản (A.3) | TV2 |
-| `a3_demo.tex` | Chương 3, demo bổ sung (A.3) | TV3 |
+| `a3_demo.tex` | Chương 3, demo bổ sung (A.3) | TV2 |
 | `p2_van_de_co_che.tex` | Chương 4, vấn đề và cơ chế | TV1 |
 | `p2_phuong_phap.tex` | Chương 4, phương pháp và kịch bản | TV2 |
 | `b0_so_bo.tex` | Chương 5, thực nghiệm sơ bộ (B.0) | TV3 |

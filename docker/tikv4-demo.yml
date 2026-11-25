@@ -1,0 +1,21 @@
+# Extra manifest used only by scripts/demo_mo_rong.py. Measurements never load it.
+services:
+  tikv4:
+    extends:
+      file: ./profiles/${PROFILE:-XS}.yml
+      service: tikv
+    image: nhom7/tikv:v8.5.5-nodebug
+    depends_on: [pd]
+    command:
+      - --addr=0.0.0.0:20160
+      - --advertise-addr=tikv4:20160
+      - --status-addr=0.0.0.0:20180
+      - --advertise-status-addr=tikv4:20180
+      - --pd-endpoints=pd:2379
+      - --data-dir=/data
+      - --config=/tikv.toml
+    volumes:
+      - tikv4_data:/data
+      - ./profiles/tikv-${PROFILE:-XS}.toml:/tikv.toml:ro
+volumes:
+  tikv4_data:
