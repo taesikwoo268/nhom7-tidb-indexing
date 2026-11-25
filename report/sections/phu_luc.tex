@@ -12,7 +12,7 @@ Các lệnh chạy trong thư mục gốc của dự án, trên PowerShell. Nế
 \begin{lstlisting}[caption={Lệnh PowerShell chạy lại các thí nghiệm}]
 .venv\Scripts\python -m bench.cli check
 
-# RQ1: 1 trieu dong (M3) va 3 trieu dong (M1)
+# RQ1: 1 trieu dong (M3) va 3 trieu dong (M2, M1)
 .\scripts\rq1_official.ps1
 .\scripts\rq1_official.ps1 -Rows 3000000
 .venv\Scripts\python -m experiments.rq1_summary results/rq1_M3.csv
@@ -42,7 +42,8 @@ $env:PROFILE = "XS"; $env:DB_NAME = "logistics_bin"   # database tao voi COLLATE
 \hline
 \dongdau \textbf{Phần} & \textbf{Máy} & \textbf{File} & \textbf{Commit lúc đo} \\ \hline
 B.1 & M1 & results/b1\_storage\_M1.csv & \chuaco \\ \hline
-RQ1 & M1 & results/rq1\_M1.csv & \chuaco \\ \hline
+RQ1 & M2 & results/rq1\_M2.csv: 3 triệu dòng, số chính & c8c4d94 \\ \hline
+RQ1 & M1 & results/rq1\_M1.csv: 3 triệu dòng, lần đối chiếu & \chuaco \\ \hline
 RQ1 & M3 & results/rq1\_M3.csv & \chuaco \\ \hline
 RQ2 & M3 & results/rq2\_M3.csv & \chuaco \\ \hline
 RQ4 & M2 & results/rq4\_official\_bin.csv và file summary: 36 lượt MySQL bin, 48 lượt TiDB & 81a97de (MySQL), 317f0a6 (TiDB) \\ \hline

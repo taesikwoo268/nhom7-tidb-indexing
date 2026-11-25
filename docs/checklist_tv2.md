@@ -56,7 +56,8 @@ Code RQ1 cho TV1 và TV3:
 
 - [x] Viết `experiments/rq1_covering.py`, `experiments/rq1_summary.py`, `scripts/rq1_official.ps1` và hướng dẫn trong README. Chạy thử 170/170 lượt ở 1 triệu dòng trên M2 (không dùng cho báo cáo).
 - [x] Kiểm tra RQ1 chính thức của TV1 ở 3 triệu dòng: 170/170 lượt, đúng cấu hình và dữ liệu, tổng hợp lại ra kết quả giống hệt. Dữ liệu còn nhiễu (p50 của MySQL chênh trung vị 1,77 lần giữa các vòng).
-- [ ] Nhắn TV1: đo lại RQ1 khi máy yên, nếu không làm chậm B.1. Hai hệ khác collation ở Q1 nên chỉ so tỉ số trong từng hệ.
+- [x] **25/11** — Đo lại RQ1 ở 3 triệu dòng trên M2 (`results/rq1_M2.csv`, 170/170 lượt, commit c8c4d94). Chốt trước khi đo: M2 là số chính ở 3 triệu dòng, M1 là lần đối chiếu. p50 của MySQL chênh trung vị 1,05 lần giữa các vòng (M1: 1,77).
+- [ ] Báo TV1 và TV3 dùng `results/rq1_M2_summary.csv` cho 3 triệu dòng và nêu cả M1. Hai hệ khác collation ở Q1 nên chỉ so tỉ số trong từng hệ. TV1 không phải đo lại RQ1.
 - [ ] Kiểm tra RQ1 chính thức của TV3 ở 1 triệu dòng khi có trên GitHub.
 
 ## 24–25/11 · Viết A.3, Chương 4 và B.3
