@@ -41,7 +41,8 @@
 \usepackage[unicode,hidelinks]{hyperref}
 \urlstyle{same}
 
-\renewcommand{\normalsize}{\fontsize{13}{19.5}\selectfont}
+% Nội dung cỡ 13 như trong Word (bp là điểm PDF), giãn dòng 1,5.
+\renewcommand{\normalsize}{\fontsize{13bp}{19.5bp}\selectfont}
 \AtBeginDocument{\normalsize}
 \setlength{\parindent}{0.5cm}
 \setlength{\parskip}{4pt}
@@ -143,10 +144,10 @@
 \biensoantrue
 % \phutrach{TV2} : người viết mục
 \newcommand{\phutrach}[1]{\ifbiensoan
-  {\small\noindent\textbf{[Phụ trách: #1]}\par\vspace{2pt}}\fi}
+  {\noindent\textbf{[Phụ trách: #1]}\par\vspace{2pt}}\fi}
 % \ghichu{Nội dung ... Nguồn: ...}
 \newcommand{\ghichu}[1]{\ifbiensoan
-  {\small\itshape\noindent\textbf{Ghi chú biên soạn:} #1\par\vspace{6pt}}\fi}
+  {\itshape\noindent\textbf{Ghi chú biên soạn:} #1\par\vspace{6pt}}\fi}
 % \hinhcho{mô tả}{chú thích}{nhãn} : khung giữ chỗ, thay bằng \hinh khi có ảnh
 \newcommand{\hinhcho}[3]{%
   \begin{figure}[!htp]
@@ -202,17 +203,17 @@
 \input{sections/00_mo_dau}
 
 \clearpage
-{\setlength{\parskip}{0pt}\setlength{\cftbeforesecskip}{4pt}\fontsize{12.5}{17}\selectfont\tableofcontents}
+{\setlength{\parskip}{0pt}\setlength{\cftbeforesecskip}{4pt}\fontsize{13bp}{17.5bp}\selectfont\tableofcontents}
 
 \clearpage
 \phantomsection
 \addcontentsline{toc}{section}{\listfigurename}
-{\setlength{\parskip}{0pt}\fontsize{12.5}{17.5}\selectfont\listoffigures}
+{\setlength{\parskip}{0pt}\fontsize{13bp}{17.5bp}\selectfont\listoffigures}
 
 \clearpage
 \phantomsection
 \addcontentsline{toc}{section}{\listtablename}
-{\setlength{\parskip}{0pt}\fontsize{12.5}{17.5}\selectfont\listoftables}
+{\setlength{\parskip}{0pt}\fontsize{13bp}{17.5bp}\selectfont\listoftables}
 
 \input{sections/00_viet_tat}
 
