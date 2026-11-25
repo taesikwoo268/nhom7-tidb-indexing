@@ -1,22 +1,30 @@
 % Mục A.3 phần cài đặt. Phụ trách: TV2.
 \phutrach{TV2 -- mục A.3, phần cài đặt}
 
+Phần này trình bày tổng quát môi trường và cách cài đặt. Lệnh chi tiết, file cấu hình và mã nguồn được dẫn ở Phụ lục~C.
+
 \subsection{Ba máy thực nghiệm}
+
+Mỗi thành viên chạy phần đo của mình trên một máy (Bảng~\ref{tab:ba-may}). Trên mỗi máy, TiDB và MySQL được đo lần lượt trong cùng điều kiện. Số tuyệt đối chỉ được so giữa hai hệ trên cùng một máy; giữa các máy chỉ so tỉ lệ.
+
 \begin{table}[!htp]
 \centering\bangnho
-\caption{Ba máy thực nghiệm (Bảng A.3.1 trong kế hoạch)}\label{tab:ba-may}
-\begin{tabular}{|C{1.1cm}|L{2.9cm}|L{3.1cm}|C{1.5cm}|L{2.2cm}|L{3.0cm}|}
+\caption{Ba máy thực nghiệm}\label{tab:ba-may}
+\begin{tabular}{|C{1.1cm}|L{2.6cm}|L{3.2cm}|C{1.3cm}|L{2.4cm}|L{3.2cm}|}
 \hline
 \dongdau \textbf{Máy} & \textbf{Phần đo} & \textbf{CPU, số luồng} & \textbf{RAM} & \textbf{Ổ dữ liệu} & \textbf{Windows, Docker, WSL2} \\ \hline
 M1 & B.1; RQ1 (3 triệu dòng) & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-M2 & RQ4 (1 triệu dòng) & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+M2 & RQ4 (1 triệu dòng) & Intel Core Ultra 5 125H, 14 nhân, 18 luồng & 16 GB & SSD NVMe 512 GB (UMIS) & Windows 11 Home (10.0.26300); Docker 29.8.0; WSL2 10 GB RAM, 4 GB swap \\ \hline
 M3 & RQ1 (1 triệu dòng); RQ2 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
 \end{tabular}
 \end{table}
-\ghichu{TV1 và TV3 gửi thông tin máy cho TV2. Số WSL2 là số thật lúc đo, không chép bản nháp hồ sơ S.}
+\ghichu{Còn thiếu thông tin M1 và M3. TV1, TV3 gửi theo lệnh trong checklist.}
+
+Trên M2, Docker nhìn thấy 18 CPU và 9,7 GiB bộ nhớ. Máy được cắm sạc trong suốt lượt đo chính thức.
 
 \subsection{Cấu hình tài nguyên}
-Cả ba máy dùng hồ sơ XS (Bảng~\ref{tab:xs}). Mỗi lúc chỉ một hệ chạy.
+
+Cả ba máy dùng cùng một hồ sơ tài nguyên, gọi là XS (Bảng~\ref{tab:xs}). Hồ sơ này được chọn để cụm TiDB và MySQL chạy được trên máy 16 GB, mỗi lúc một hệ. Hai hệ có cùng tổng giới hạn CPU và có bộ nhớ đệm dữ liệu gần bằng nhau.
 
 \begin{table}[!htp]
 \centering\bangfont
@@ -28,16 +36,28 @@ PD & 0,4 & 512 & --- \\ \hline
 TiDB server v8.5.5 & 1,2 & 1.280 & --- \\ \hline
 TiKV v8.5.5 (3 node) & $3 \times 0{,}8$ & $3 \times 1.280$ & Block cache $3 \times 250$ MiB \\ \hline
 \textbf{Tổng cụm TiDB} & \textbf{4,0} & \textbf{5.632} & \textbf{750 MiB} \\ \hline
-MySQL 8.4.11 & 4,0 & 2.048 & Buffer pool 750M (giá trị cấu hình) \\ \hline
+MySQL 8.4.11 & 4,0 & 2.048 & Buffer pool 752 MiB (đặt 750M) \\ \hline
 sysbench (RQ4) & 2,0 & 512 & --- \\ \hline
 \end{tabular}
 \end{table}
-\ghichu{Nêu: tổng RAM hai hệ khác nhau (5,5 GiB và 2 GiB) dù bộ nhớ đệm gần bằng nhau; MySQL tắt binlog, \code{innodb\_flush\_log\_at\_trx\_commit=1}; image TiKV bỏ phần debug. Nguồn: \path{docker/profiles/XS.yml}, \path{docker/profiles/tikv-XS.toml}, \path{docker/mysql.cnf}, \path{docker/tikv.Dockerfile}.}
+
+Một số lựa chọn cấu hình cần được nêu rõ vì chúng ảnh hưởng tới cách đọc kết quả:
+
+\begin{itemize}
+  \item \textbf{RAM không bằng nhau.} Cụm TiDB có tổng giới hạn 5,5 GiB còn MySQL có 2 GiB. Nhóm cân bằng bộ nhớ đệm dữ liệu chứ không cân bằng tổng RAM, vì cụm TiDB gồm 5 tiến trình và mỗi tiến trình có phần bộ nhớ riêng.
+  \item \textbf{CPU chia cố định.} MySQL dùng được cả 4 CPU trong một tiến trình. TiDB chia 4 CPU cho 5 container, nên một TiKV không thể dùng quá 0,8 CPU dù các node khác rảnh.
+  \item \textbf{Độ bền.} MySQL đặt \code{innodb\_flush\_log\_at\_trx\_commit=1} và tắt binlog. TiDB giữ cấu hình ghi Raft log mặc định.
+  \item \textbf{TiKV.} Block cache mỗi node 250 MiB, \code{memory-usage-limit} 1.000 MiB, \code{write-buffer-size} 32 MiB cho hai column family chính. Image TiKV chính thức được loại phần debug, phần mã thực thi không đổi: trên M2, tiến trình gốc giữ khoảng 1,9 GB bộ nhớ khi cụm rỗng, bản đã loại giữ khoảng 0,16 GB.
+  \item \textbf{Buffer pool.} Giá trị đặt là 750M; MySQL làm tròn theo kích thước chunk thành 788.529.152 B, tức 752 MiB.
+\end{itemize}
 
 \subsection{Số node, số bản sao, quorum và khả năng chịu lỗi}
+
+Số node TiKV và số bản sao của mỗi Region là hai đại lượng khác nhau. Cả hai cấu hình TiDB trong đề tài đều có đúng 3 TiKV; nhóm chỉ thay đổi số bản sao bằng tham số \code{replication.max-replicas} của PD (Bảng~\ref{tab:ban-sao}).
+
 \begin{table}[!htp]
 \centering\bangnho
-\caption{Định nghĩa cấu hình bản sao (Bảng A.3.2 trong kế hoạch)}\label{tab:ban-sao}
+\caption{Định nghĩa cấu hình bản sao}\label{tab:ban-sao}
 \begin{tabular}{|C{1.4cm}|C{1.4cm}|C{2.0cm}|C{1.8cm}|C{1.7cm}|L{5.5cm}|}
 \hline
 \dongdau \textbf{Ký hiệu} & \textbf{TiKV} & \textbf{Bản sao mỗi Region} & \textbf{Quorum} & \textbf{Chịu mất} & \textbf{Dùng cho} \\ \hline
@@ -45,10 +65,53 @@ C3 & 3 & 3 & 2 trên 3 & 1 store & Mọi phép đo chính \\ \hline
 C1 & 3 & 1 & 1 trên 1 & Không & Tách chi phí nhân bản ở RQ4, bộ 0 và 5 chỉ mục \\ \hline
 \end{tabular}
 \end{table}
-\ghichu{Nêu: ba store là ba container trên một máy và một ổ đĩa, nên C3 chỉ chịu mất một tiến trình; PD và TiDB server chỉ có một node, là điểm lỗi đơn; 1 TiKV không thể là cấu hình 3 bản sao; điều kiện kiểm tra trước khi đo (\code{assert\_replicas}).}
+
+Ở C3, mỗi Region có ba peer trên ba store khác nhau. Một lệnh ghi được commit khi 2 trên 3 peer đã ghi Raft log~\cite{raft}, nên khi mất một store, Region còn đủ đa số để bầu leader và phục vụ tiếp. Ở C1, mỗi Region chỉ có một peer: quorum là 1 trên 1, và mất store chứa peer nào thì Region đó ngừng phục vụ. MySQL trong đề tài chạy một node, không có bản sao.
+
+Khả năng chịu lỗi này có ba giới hạn:
+
+\begin{itemize}
+  \item Ba TiKV là ba container trên một máy và một ổ đĩa, nên ``chịu mất 1 store'' ở C3 chỉ là chịu mất một tiến trình, không phải mất một máy hay một ổ đĩa.
+  \item Cụm chỉ có một PD và một TiDB server, nên hai thành phần này là điểm lỗi đơn ở cả C3 và C1.
+  \item Một TiKV duy nhất không thể tạo thành cấu hình 3 bản sao, vì các peer của một Region phải nằm trên các store khác nhau. Với hai TiKV, quorum là 2 trên 2 nên cũng không chịu được mất store nào.
+\end{itemize}
+
+Trước khi đo TiDB, chương trình kiểm tra ba điều kiện và dừng nếu không đạt: \code{max-replicas} đúng giá trị cần đo, đủ 3 store ở trạng thái \code{Up}, và mọi Region có đúng số peer. Khi đổi giữa C3 và C1, chương trình chờ đến khi không còn peer nào đang chờ hoặc hỏng.
 
 \subsection{Các bước cài đặt}
-\ghichu{Trình bày tổng quát, mỗi bước một câu: cài Docker Desktop và WSL2; lấy mã nguồn; tạo môi trường Python; đặt \code{MACHINE\_ID}, \code{PROFILE}; bật từng hệ; nạp dữ liệu. Lệnh chi tiết dẫn sang README của dự án (Phụ lục C).}
+
+Việc cài đặt gồm năm bước; toàn bộ cấu hình nằm trong Git để ba máy giống nhau.
+
+\begin{enumerate}
+  \item Cài Docker Desktop với WSL2, đặt \code{memory=10GB} và \code{swap=4GB} cho WSL2.
+  \item Lấy mã nguồn và tạo môi trường Python 3.10 trở lên.
+  \item Khai báo tên máy và hồ sơ (\code{MACHINE\_ID}, \code{PROFILE=XS}); đổi cổng MySQL nếu cổng 3306 đã bị chiếm. M2 dùng cổng 3307.
+  \item Chạy lệnh kiểm tra. Lệnh này từ chối khi sai hồ sơ, Docker thiếu bộ nhớ hoặc CPU, máy chạy pin, hoặc file cấu hình khác Git.
+  \item Bật từng hệ và nạp dữ liệu.
+\end{enumerate}
+
+\begin{lstlisting}[caption={Các lệnh cài đặt và nạp dữ liệu}]
+python -m pip install -e ".[dev]"
+python -m bench.cli check
+.\scripts\use_engine.ps1 -Engine mysql
+.\scripts\load.ps1 -Engine mysql -Rows 1000000
+.\scripts\use_engine.ps1 -Engine tidb -Switch
+.\scripts\load.ps1 -Engine tidb -Rows 1000000
+\end{lstlisting}
 
 \subsection{Minh chứng cài đặt}
-\ghichu{\code{SELECT tidb\_version()}; trạng thái 3 store \code{Up}; phiên bản MySQL; \code{SHOW CREATE TABLE shipments} của hai hệ.}
+
+Đoạn mã dưới đây là đầu ra thật trên M2 ngày 24/11/2026, trích từ log của lượt RQ4 chính thức. Hai hệ cùng nạp 1 triệu dòng với cùng tổng \code{cod\_amount} và cùng mã SHA-256 của file nguồn. Bản MySQL trả lời phiên bản 8.4.11; TiDB trả lời phiên bản tương thích MySQL 8.0.11 kèm phiên bản TiDB v8.5.5.
+
+\begin{lstlisting}[caption={Đầu ra khi kiểm tra và bật hai hệ trên M2}]
+machine=M2 profile=XS docker=18 CPU/9.7 GiB ac_power=True commit=317f0a6
+team_hash=fa4c12cdf33a
+DAT
+mysql SELECT 1 = 1; version=8.4.11; port=3307
+mysql: rows=1000000 sum_cod=5000968738439 seed=20261116
+  sha256=8ee11b63da2217d4b1d00137bd8e4f3ba647b9bed94a594468c990fe981f4827
+tidb SELECT 1 = 1; version=8.0.11-TiDB-v8.5.5; port=4000
+tidb: rows=1000000 sum_cod=5000968738439 seed=20261116
+  sha256=8ee11b63da2217d4b1d00137bd8e4f3ba647b9bed94a594468c990fe981f4827
+\end{lstlisting}
+\ghichu{Còn thiếu: \code{SELECT tidb\_version()}, trạng thái 3 store và \code{SHOW CREATE TABLE} của hai hệ. Lấy từ đầu ra của \path{scripts/demo_co_ban.py}.}

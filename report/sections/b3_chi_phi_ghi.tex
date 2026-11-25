@@ -1,11 +1,25 @@
-% Mục B.3. Phụ trách: TV2.
+% Mục B.3. Phụ trách: TV2. Số liệu: results/rq4_official.csv, results/rq4_official_summary.csv.
 \phutrach{TV2 -- mục B.3}
 
 \subsection{Câu hỏi và hai giả thuyết}
-\ghichu{(a) LSM-tree làm TiDB giảm ít hơn; (b) cặp KV qua prewrite, commit và Raft làm TiDB giảm nhiều hơn. Cách tách: MySQL $\to$ C1 $\to$ C3; W1 và W2; covering và không covering.}
+
+RQ4 hỏi: khi thêm chỉ mục phụ, thông lượng ghi của mỗi hệ giảm bao nhiêu, và mức giảm đó đến từ đâu. Trước khi đo, nhóm đặt hai giả thuyết đối lập:
+
+\begin{itemize}
+  \item \textbf{Giả thuyết (a):} LSM-tree ghi nối tiếp, không đọc rồi sửa trang, nên mức giảm theo số chỉ mục của TiDB \emph{thấp hơn} MySQL.
+  \item \textbf{Giả thuyết (b):} mỗi mục chỉ mục là thêm một cặp KV phải qua prewrite, commit và Raft, nên mức giảm của TiDB \emph{cao hơn} MySQL.
+\end{itemize}
+
+Để tách nguyên nhân, thí nghiệm so sánh theo ba trục. Trục thứ nhất đi từ MySQL sang TiDB C1 rồi C3 (Bảng~\ref{tab:ban-sao}), nhằm tách phần của kiến trúc giao dịch phân tán khỏi phần nhân bản. Trục thứ hai so hai loại tải, trong đó W2 chỉ làm thay đổi những chỉ mục có chứa cột \code{status}. Trục thứ ba so một chỉ mục không covering với chỉ mục covering có cùng tiền tố khóa.
 
 \subsection{Thiết kế thí nghiệm}
-Thí nghiệm chạy trên máy M2 với 1 triệu dòng, 64 luồng, 60 giây mỗi lượt và 3 vòng. W1 thêm đơn mới; W2 cập nhật \code{status} và \code{updated\_at} theo \code{id}.
+
+Thí nghiệm chạy trên máy M2, hồ sơ XS (Bảng~\ref{tab:xs}), với 1 triệu dòng, 64 luồng, 60 giây mỗi lượt và 3 vòng. Mỗi giao dịch gồm một câu lệnh:
+
+\begin{itemize}
+  \item \textbf{W1 -- thêm đơn mới:} \code{INSERT} một vận đơn. \code{sender\_id} được chọn đều, khác với phân phối Zipf của dữ liệu nền.
+  \item \textbf{W2 -- cập nhật trạng thái:} \code{UPDATE} hai cột \code{status} và \code{updated\_at} của một \code{id} chọn đều trong 1 triệu dòng; \code{status} mới chọn đều từ 1 đến 6.
+\end{itemize}
 
 \begin{table}[!htp]
 \centering\bangfont
@@ -18,77 +32,210 @@ TiDB C3 & 0, 1, 3, 5, sender\_created, sender\_cov & $6 \times 2 \times 3 = 36$ 
 TiDB C1 & 0, 5 & $2 \times 2 \times 3 = 12$ \\ \hline
 \end{tabular}
 \end{table}
-\ghichu{Nêu: bảng mới cho mỗi lượt, chờ đĩa lắng, kiểm tra bản sao, thứ tự xáo theo vòng, vì sao bỏ 16 luồng. W2 chỉ làm thay đổi chỉ mục có chứa \code{status}. Nguồn: \path{bench/rq4.py}, \path{scripts/rq4_official.ps1}, commit 317f0a6.}
+
+Các bộ chỉ mục được định nghĩa ở Bảng~\ref{tab:bo-chi-muc}. Bảng~\ref{tab:rq4-so-muc} cho biết mỗi giao dịch phải ghi bao nhiêu mục chỉ mục phụ. Với W2, chỉ các chỉ mục chứa \code{status} bị ảnh hưởng, và cột \code{updated\_at} không nằm trong chỉ mục nào. Vì \code{status} mới được chọn ngẫu nhiên, trung bình một phần sáu số câu \code{UPDATE} giữ nguyên \code{status} và không làm thay đổi chỉ mục.
+
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Số chỉ mục phụ bị ảnh hưởng bởi mỗi loại giao dịch}\label{tab:rq4-so-muc}
+\begin{tabular}{|L{4.6cm}|C{1.2cm}|C{1.2cm}|C{1.2cm}|C{1.2cm}|C{2.2cm}|C{2.0cm}|}
+\hline
+\dongdau \textbf{Tải} & \textbf{0} & \textbf{1} & \textbf{3} & \textbf{5} & \textbf{sender\_ created} & \textbf{sender\_ cov} \\ \hline
+W1: thêm đơn & 0 & 1 & 3 & 5 & 1 & 1 \\ \hline
+W2: khi \code{status} đổi & 0 & 0 & 1 & 2 & 0 & 1 \\ \hline
+\end{tabular}
+\end{table}
+
+Mỗi lượt chạy trên một bảng mới: chép 1 triệu dòng từ bảng nền, kiểm tra số dòng và tổng \code{cod\_amount}, tạo chỉ mục, chạy \code{ANALYZE TABLE}, kiểm tra số bản sao của mọi Region (với TiDB), chờ lượng ghi đĩa nền xuống dưới 2 MB/s trong hai cửa sổ 10 giây liên tiếp, rồi mới chạy sysbench~\cite{sysbench}. Sau lượt đo, số dòng của bảng phải khớp với số giao dịch đã commit. Mỗi vòng bắt đầu bằng việc khởi động lại hệ, và thứ tự các lượt trong vòng được xáo theo một hạt giống cố định. Trên TiDB, ba vòng C3 chạy trước ba vòng C1.
+
+p95 và p99 lấy từ histogram độ trễ của sysbench. CPU và byte ghi là hiệu số của bộ đếm tích lũy của từng container trong cửa sổ đo. Thiết kế ban đầu có thêm mức 16 luồng; nhóm bỏ mức này vì trong các lượt chạy thử, MySQL nhảy giữa các trạng thái gom commit (group commit) khác nhau khiến TPS không ổn định. Nguyên nhân của hiện tượng này chưa được chứng minh.
+
+Các giá trị trong bảng là trung vị của 3 lượt, kèm khoảng nhỏ nhất -- lớn nhất trong ngoặc. Phần trăm thay đổi luôn tính so với mốc của chính hệ đó. Khi khoảng của hai cấu hình giao nhau, nhóm coi khác biệt là chưa phân định được với 3 lượt đo.
 
 \subsection{Kết quả thêm đơn mới (W1)}
-\begin{table}[!htp]
-\centering\bangfont
-\caption{W1: TPS trung vị theo số chỉ mục và thay đổi so với 0 chỉ mục}\label{tab:rq4-w1}
-\begin{tabular}{|C{2.3cm}|C{2.3cm}|C{2.3cm}|C{2.3cm}|C{2.3cm}|C{2.2cm}|}
-\hline
-\dongdau \textbf{Cấu hình} & \textbf{0} & \textbf{1} & \textbf{3} & \textbf{5} & \textbf{0 $\to$ 5} \\ \hline
-MySQL & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-TiDB C3 & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-TiDB C1 & \chuaco & --- & --- & \chuaco & \chuaco \\ \hline
-\end{tabular}
-\par\vspace{3pt}{\noindent\small\itshape Nguồn: results/rq4\_official\_summary.csv. Trung vị của 3 lượt.\par}
-\end{table}
 
-\hinh{rq4_tps_vs_indexes.png}{0.95}{TPS theo số chỉ mục, W1 và W2, 64 luồng}{fig:rq4}
-
-\subsection{Kết quả cập nhật trạng thái (W2)}
-\begin{table}[!htp]
-\centering\bangfont
-\caption{W2: TPS trung vị theo số chỉ mục và thay đổi so với 0 chỉ mục}\label{tab:rq4-w2}
-\begin{tabular}{|C{2.3cm}|C{2.3cm}|C{2.3cm}|C{2.3cm}|C{2.3cm}|C{2.2cm}|}
-\hline
-\dongdau \textbf{Cấu hình} & \textbf{0} & \textbf{1} & \textbf{3} & \textbf{5} & \textbf{0 $\to$ 5} \\ \hline
-MySQL & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-TiDB C3 & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-TiDB C1 & \chuaco & --- & --- & \chuaco & \chuaco \\ \hline
-\end{tabular}
-\par\vspace{3pt}{\noindent\small\itshape Nguồn: results/rq4\_official\_summary.csv. Trung vị của 3 lượt.\par}
-\end{table}
-
-\subsection{Chi phí ghi của covering index}
-\begin{table}[!htp]
-\centering\bangfont
-\caption{TPS với chỉ mục không covering và covering}\label{tab:rq4-covering}
-\begin{tabular}{|C{2.4cm}|C{1.8cm}|C{3.4cm}|C{3.4cm}|C{2.8cm}|}
-\hline
-\dongdau \textbf{Cấu hình} & \textbf{Tải} & \textbf{sender\_created} & \textbf{sender\_cov} & \textbf{Thay đổi} \\ \hline
-MySQL & W1 & \chuaco & \chuaco & \chuaco \\ \hline
-MySQL & W2 & \chuaco & \chuaco & \chuaco \\ \hline
-TiDB C3 & W1 & \chuaco & \chuaco & \chuaco \\ \hline
-TiDB C3 & W2 & \chuaco & \chuaco & \chuaco \\ \hline
-\end{tabular}
-\end{table}
-
-\subsection{Chi phí nhân bản: C1 và C3}
-\ghichu{C1 và C3 ở bộ 0 và 5. Đây là chi phí nhân bản Raft trên một máy và một ổ đĩa, không phải chi phí mạng. Nêu leader của C1 lệch.}
-
-\subsection{Độ trễ, byte ghi và tài nguyên}
 \begin{table}[!htp]
 \centering\bangnho
-\caption{p95, p99, byte ghi mỗi giao dịch và CPU của sysbench}\label{tab:rq4-chi-tiet}
-\begin{tabular}{|C{1.9cm}|C{1.2cm}|C{1.7cm}|C{1.9cm}|C{1.9cm}|C{2.5cm}|C{2.3cm}|}
+\caption{W1 (thêm đơn mới): TPS theo số chỉ mục phụ}\label{tab:rq4-w1}
+\begin{tabular}{|C{1.6cm}|C{2.75cm}|C{2.75cm}|C{2.75cm}|C{2.75cm}|C{1.4cm}|}
 \hline
-\dongdau \textbf{Cấu hình} & \textbf{Tải} & \textbf{Bộ chỉ mục} & \textbf{p95 (ms)} & \textbf{p99 (ms)} & \textbf{Byte ghi / giao dịch} & \textbf{CPU sysbench (\%)} \\ \hline
-MySQL & W1 & 0 / 5 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-MySQL & W2 & 0 / 5 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-TiDB C3 & W1 & 0 / 5 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-TiDB C3 & W2 & 0 / 5 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-TiDB C1 & W1 & 0 / 5 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-TiDB C1 & W2 & 0 / 5 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+\dongdau \textbf{Cấu hình} & \textbf{0 chỉ mục} & \textbf{1 chỉ mục} & \textbf{3 chỉ mục} & \textbf{5 chỉ mục} & \textbf{0 $\to$ 5} \\ \hline
+MySQL & 16.352\newline(15.992--16.553) & 15.460\newline(14.487--15.584) & 14.370\newline(14.326--14.512) & 13.481\newline(12.531--13.636) & $-17{,}6\%$ \\ \hline
+TiDB C3 & 2.600\newline(2.164--2.790) & 1.292\newline(894--1.353) & 595\newline(493--686) & 451\newline(410--459) & $-82{,}7\%$ \\ \hline
+TiDB C1 & 2.947\newline(2.849--3.108) & --- & --- & 608\newline(561--666) & $-79{,}4\%$ \\ \hline
 \end{tabular}
+\par\vspace{3pt}{\noindent\small\itshape Nguồn: results/rq4\_official.csv. Máy M2, 1 triệu dòng, 64 luồng. Trung vị của 3 lượt (nhỏ nhất -- lớn nhất).\par}
 \end{table}
-\ghichu{TiKV bận nhất ở C3 thường dùng 0,7--0,8 trên 0,8 CPU, MySQL khoảng 3,9 trên 4 CPU. Dung lượng chỉ mục TiDB trong CSV là ước tính thống kê.}
+
+Trên MySQL, TPS giảm đều theo số chỉ mục: $-5{,}5\%$, $-12{,}1\%$ và $-17{,}6\%$ ở 1, 3 và 5 chỉ mục (Bảng~\ref{tab:rq4-w1}, Hình~\ref{fig:rq4}). Trên TiDB C3, phần lớn mức giảm xảy ra ngay ở những chỉ mục đầu: $-50{,}3\%$ ở 1 chỉ mục, $-77{,}1\%$ ở 3 và $-82{,}7\%$ ở 5 chỉ mục. TiDB C1 giảm $79{,}4\%$ từ 0 lên 5 chỉ mục, gần với C3 dù không có nhân bản.
+
+Về giá trị tuyệt đối trên cùng máy M2, TPS trung vị của MySQL gấp 6,3 lần TiDB C3 khi không có chỉ mục phụ và gấp 29,9 lần khi có 5 chỉ mục. Hai con số này gắn với hồ sơ XS, bảng 1 triệu dòng và cách phân bổ CPU cho từng container; Mục~\ref{sec:rq4-thao-luan} phân tích giới hạn của chúng.
+
+\hinh{rq4_tps_vs_indexes.png}{0.98}{TPS so với mốc 0 chỉ mục của chính hệ theo số chỉ mục phụ, 64 luồng (trung vị; thanh: nhỏ nhất -- lớn nhất). Đường nét đứt của C1 chỉ nối hai điểm đo}{fig:rq4}
+
+\subsection{Kết quả cập nhật trạng thái (W2)}
+
+\begin{table}[!htp]
+\centering\bangnho
+\caption{W2 (cập nhật trạng thái): TPS theo số chỉ mục phụ}\label{tab:rq4-w2}
+\begin{tabular}{|C{1.6cm}|C{2.75cm}|C{2.75cm}|C{2.75cm}|C{2.75cm}|C{1.4cm}|}
+\hline
+\dongdau \textbf{Cấu hình} & \textbf{0 chỉ mục} & \textbf{1 chỉ mục} & \textbf{3 chỉ mục} & \textbf{5 chỉ mục} & \textbf{0 $\to$ 5} \\ \hline
+MySQL & 17.631\newline(16.680--18.167) & 16.471\newline(13.457--17.875) & 14.173\newline(13.970--15.266) & 13.245\newline(12.728--13.377) & $-24{,}9\%$ \\ \hline
+TiDB C3 & 1.884\newline(1.860--2.061) & 1.992\newline(1.738--2.105) & 727\newline(715--880) & 663\newline(596--768) & $-64{,}8\%$ \\ \hline
+TiDB C1 & 1.946\newline(1.940--2.105) & --- & --- & 942\newline(921--1.072) & $-51{,}6\%$ \\ \hline
+\end{tabular}
+\par\vspace{3pt}{\noindent\small\itshape Nguồn: results/rq4\_official.csv. Máy M2, 1 triệu dòng, 64 luồng. Trung vị của 3 lượt (nhỏ nhất -- lớn nhất).\par}
+\end{table}
+
+Kết quả W2 (Bảng~\ref{tab:rq4-w2}) bám theo số chỉ mục \emph{bị ảnh hưởng} hơn là tổng số chỉ mục. Với các bộ không có chỉ mục nào chứa \code{status} (bộ 1 và sender\_created), khoảng dao động của cả hai hệ đều giao với mốc 0 chỉ mục: MySQL $-6{,}6\%$ và $-1{,}6\%$, TiDB C3 $+5{,}8\%$ và $-7{,}2\%$. Các khác biệt này, kể cả mức $+5{,}8\%$ của C3, nằm trong mức nhiễu của 3 lượt đo.
+
+Khi có một chỉ mục bị ảnh hưởng (bộ 3, chứa \code{idx\_hub\_status}), MySQL giảm $19{,}6\%$ còn TiDB C3 giảm $61{,}4\%$. Thêm chỉ mục bị ảnh hưởng thứ hai (bộ 5) làm mức giảm thành $24{,}9\%$ trên MySQL và $64{,}8\%$ trên C3. Trên MySQL, khoảng của bộ 3 và bộ 5 không giao nhau. Trên C3 hai khoảng này giao nhau, nên số liệu chỉ cho thấy rõ bước nhảy từ không có sang có chỉ mục bị ảnh hưởng; phần tăng thêm từ một lên hai chưa phân định được. Bộ 3 và bộ 5 cũng khác nhau ở \code{idx\_cod}, nhưng W2 không làm thay đổi chỉ mục này.
+
+Cách đọc này quan trọng khi so W1 với W2: ở bộ 5, W1 phải ghi 5 mục chỉ mục còn W2 chỉ thay đổi 2 chỉ mục, nên hai mức giảm không đo cùng một lượng công việc.
+
+\subsection{Chi phí ghi của covering index}
+
+Bảng~\ref{tab:rq4-covering} so \code{idx\_sender\_created} (\code{sender\_id}, \code{created\_at}) với \code{idx\_sender\_cov}, có thêm hai cột \code{status} và \code{cod\_amount}. Hai chỉ mục có cùng tiền tố khóa và mỗi bảng chỉ có một chỉ mục phụ, nên khác biệt đến từ các cột được thêm.
+
+\begin{table}[!htp]
+\centering\bangnho
+\caption{TPS với chỉ mục không covering và covering}\label{tab:rq4-covering}
+\begin{tabular}{|C{2.4cm}|C{1.6cm}|C{3.6cm}|C{3.6cm}|C{2.4cm}|}
+\hline
+\dongdau \textbf{Cấu hình} & \textbf{Tải} & \textbf{sender\_created} & \textbf{sender\_cov} & \textbf{Thay đổi} \\ \hline
+MySQL & W1 & 15.485\newline(14.860--16.259) & 15.664\newline(15.539--15.964) & $+1{,}2\%$ \\ \hline
+MySQL & W2 & 17.349\newline(17.055--18.039) & 11.334\newline(7.597--12.647) & $-34{,}7\%$ \\ \hline
+TiDB C3 & W1 & 1.167\newline(682--1.283) & 1.094\newline(1.071--1.289) & $-6{,}2\%$ \\ \hline
+TiDB C3 & W2 & 1.748\newline(1.488--2.050) & 671\newline(612--813) & $-61{,}6\%$ \\ \hline
+\end{tabular}
+\par\vspace{3pt}{\noindent\small\itshape Nguồn: results/rq4\_official.csv. Máy M2, 1 triệu dòng, 64 luồng. Trung vị của 3 lượt (nhỏ nhất -- lớn nhất).\par}
+\end{table}
+
+Với W1, cả hai thiết kế đều ghi một mục chỉ mục cho mỗi đơn. Khoảng dao động của hai thiết kế giao nhau trên cả hai hệ, nên mức $+1{,}2\%$ của MySQL và $-6{,}2\%$ của C3 không đủ để kết luận có khác biệt. Với W2, covering index chứa \code{status} nên phải cập nhật, còn chỉ mục không covering thì không. TPS giảm $34{,}7\%$ trên MySQL và $61{,}6\%$ trên TiDB C3, và khoảng dao động không giao nhau.
+
+Vì vậy cái giá khi ghi của covering index trong thí nghiệm này phụ thuộc chủ yếu vào việc \emph{cột được thêm có hay bị cập nhật hay không}. Lượt MySQL W2 với sender\_cov dao động mạnh, từ 7.597 đến 12.647 TPS, nên con số $-34{,}7\%$ cần được đọc cùng khoảng này. Lợi ích đọc tương ứng nằm ở Chương~\ref{sec:doc}, dung lượng thêm nằm ở Bảng~\ref{tab:dl-covering}.
+
+\subsection{Chi phí nhân bản: C1 và C3}
+
+C1 và C3 đều chạy trên 3 TiKV, chỉ khác số bản sao của mỗi Region. C1 vẫn đi qua TSO, giao dịch phân tán, Raft log của nhóm một peer và LSM-tree, nhưng không phải chờ đa số.
+
+\begin{table}[!htp]
+\centering\bangnho
+\caption{TPS của C1 và C3}\label{tab:rq4-nhan-ban}
+\begin{tabular}{|C{1.6cm}|C{2.2cm}|C{3.6cm}|C{3.6cm}|C{2.6cm}|}
+\hline
+\dongdau \textbf{Tải} & \textbf{Bộ chỉ mục} & \textbf{C1 (1 bản sao)} & \textbf{C3 (3 bản sao)} & \textbf{C3 so với C1} \\ \hline
+W1 & 0 & 2.947\newline(2.849--3.108) & 2.600\newline(2.164--2.790) & $-11{,}8\%$ \\ \hline
+W1 & 5 & 608\newline(561--666) & 451\newline(410--459) & $-25{,}9\%$ \\ \hline
+W2 & 0 & 1.946\newline(1.940--2.105) & 1.884\newline(1.860--2.061) & $-3{,}2\%$ \\ \hline
+W2 & 5 & 942\newline(921--1.072) & 663\newline(596--768) & $-29{,}7\%$ \\ \hline
+\end{tabular}
+\par\vspace{3pt}{\noindent\small\itshape Nguồn: results/rq4\_official.csv. Máy M2, 1 triệu dòng, 64 luồng. Trung vị của 3 lượt (nhỏ nhất -- lớn nhất).\par}
+\end{table}
+
+Ở bộ 0, C3 thấp hơn C1 $11{,}8\%$ với W1; với W2 mức chênh $3{,}2\%$ nằm trong khoảng giao nhau. Ở bộ 5, C3 thấp hơn C1 $25{,}9\%$ (W1) và $29{,}7\%$ (W2), khoảng dao động không giao nhau. Như vậy chi phí nhân bản đo được lớn hơn khi mỗi giao dịch ghi nhiều cặp KV hơn.
+
+Tuy nhiên, nhân bản không giải thích phần lớn mức giảm theo số chỉ mục: khi bỏ nhân bản, C1 vẫn giảm $79{,}4\%$ (W1) và $51{,}6\%$ (W2) từ 0 lên 5 chỉ mục, so với $82{,}7\%$ và $64{,}8\%$ của C3. Chênh lệch C1 -- C3 là chi phí nhân bản Raft trên \emph{một máy và một ổ đĩa}, gồm ghi và áp dụng log ba lần, CPU của các follower và tranh chấp đĩa; không có độ trễ mạng vật lý trong phép đo này. Hai điểm hạn chế phép so: C3 và C1 không chạy xen kẽ, và leader của C1 phân bố lệch (khoảng 230/60/50 leader trên ba store).
+
+\subsection{Độ trễ, CPU và byte ghi}
+
+\begin{table}[!htp]
+\centering\bangnho
+\caption{Độ trễ p95 và p99 ở 0 và 5 chỉ mục (ms)}\label{tab:rq4-tre}
+\begin{tabular}{|C{2.4cm}|C{1.6cm}|C{2.4cm}|C{2.4cm}|C{2.4cm}|C{2.4cm}|}
+\hline
+\dongdau \textbf{Cấu hình} & \textbf{Tải} & \textbf{p95, bộ 0} & \textbf{p95, bộ 5} & \textbf{p99, bộ 0} & \textbf{p99, bộ 5} \\ \hline
+MySQL & W1 & 8,0 & 14,2 & 53,9 & 58,9 \\ \hline
+MySQL & W2 & 3,6 & 18,6 & 53,9 & 60,0 \\ \hline
+TiDB C3 & W1 & 36,2 & 204,1 & 57,9 & 223,3 \\ \hline
+TiDB C3 & W2 & 60,0 & 161,5 & 73,1 & 183,2 \\ \hline
+TiDB C1 & W1 & 65,6 & 196,9 & 81,5 & 215,4 \\ \hline
+TiDB C1 & W2 & 80,0 & 104,8 & 97,6 & 116,8 \\ \hline
+\end{tabular}
+\par\vspace{3pt}{\noindent\small\itshape Nguồn: results/rq4\_official.csv. Máy M2, 1 triệu dòng, 64 luồng. Trung vị của 3 lượt.\par}
+\end{table}
+
+Ở bộ 5, p95 của TiDB C3 là 204 ms (W1) và 162 ms (W2), so với 14 ms và 19 ms của MySQL (Bảng~\ref{tab:rq4-tre}). Phân phối độ trễ của MySQL có đuôi dài: p95 từ 3,6 đến 18,6 ms ở mọi cấu hình trừ W2 với sender\_cov (47,5 ms), nhưng p99 trung vị nằm quanh 54--60 ms ở tất cả. Nguyên nhân của đuôi này chưa được xác định; container MySQL chạy sát giới hạn CPU nên việc bị giới hạn theo hạn ngạch CPU là một khả năng, nhưng nhóm không đo số lần bị hạn chế.
+
+\begin{table}[!htp]
+\centering\bangnho
+\caption{Số CPU sử dụng trung bình trong lượt đo}\label{tab:rq4-cpu}
+\begin{tabular}{|C{1.7cm}|C{1.0cm}|C{1.1cm}|C{2.0cm}|C{2.0cm}|C{1.9cm}|C{2.2cm}|C{1.6cm}|}
+\hline
+\dongdau \textbf{Cấu hình} & \textbf{Tải} & \textbf{Bộ} & \textbf{Cả hệ (trên 4)} & \textbf{TiDB server (trên 1,2)} & \textbf{TiKV bận nhất (trên 0,8)} & \textbf{Hai TiKV còn lại} & \textbf{sysbench (trên 2)} \\ \hline
+MySQL & W1 & 0 & 3,98 & --- & --- & --- & 0,99 \\ \hline
+MySQL & W1 & 5 & 3,97 & --- & --- & --- & 0,85 \\ \hline
+MySQL & W2 & 0 & 3,97 & --- & --- & --- & 0,79 \\ \hline
+MySQL & W2 & 5 & 3,91 & --- & --- & --- & 0,64 \\ \hline
+TiDB C3 & W1 & 0 & 1,90 & 0,78 & 0,67 & 0,18 và 0,17 & 0,14 \\ \hline
+TiDB C3 & W1 & 5 & 1,78 & 0,41 & 0,80 & 0,28 và 0,28 & 0,04 \\ \hline
+TiDB C3 & W2 & 0 & 2,09 & 0,75 & 0,74 & 0,22 và 0,21 & 0,08 \\ \hline
+TiDB C3 & W2 & 5 & 1,81 & 0,48 & 0,80 & 0,23 và 0,23 & 0,04 \\ \hline
+TiDB C1 & W1 & 0 & 1,88 & 0,83 & 0,63 & 0,17 và 0,12 & 0,16 \\ \hline
+TiDB C1 & W1 & 5 & 2,03 & 0,58 & 0,80 & 0,49 và 0,29 & 0,05 \\ \hline
+TiDB C1 & W2 & 0 & 1,75 & 0,67 & 0,80 & 0,11 và 0,04 & 0,08 \\ \hline
+TiDB C1 & W2 & 5 & 2,50 & 0,66 & 0,79 & 0,65 và 0,05 & 0,05 \\ \hline
+\end{tabular}
+\par\vspace{3pt}{\noindent\small\itshape Nguồn: results/rq4\_official.csv và results/raw. Máy M2, 1 triệu dòng, 64 luồng. Trung vị của 3 lượt.\par}
+\end{table}
+
+Bảng~\ref{tab:rq4-cpu} cho thấy hai hệ bị giới hạn theo hai cách khác nhau. MySQL dùng 3,72--3,99 trên 4 CPU trong mọi lượt, tức gần hết ngân sách. Cụm TiDB chỉ dùng 1,67--2,71 trên 4 CPU, nhưng một TiKV dùng gần hết giới hạn 0,8 CPU của riêng nó: trong 33 trên 36 lượt C3, TiKV bận nhất dùng từ 0,7 CPU trở lên (trung vị 0,78), trong khi hai TiKV còn lại của C3 có trung vị chỉ khoảng 0,17--0,28. Container sysbench dùng tối đa 1,02 trên 2 CPU, nên bộ sinh tải không chạm giới hạn CPU của nó.
+
+\begin{table}[!htp]
+\centering\bangnho
+\caption{Byte ghi đĩa trên mỗi giao dịch (KB, 1 KB = 1.000 B)}\label{tab:rq4-byte}
+\begin{tabular}{|C{2.4cm}|C{1.6cm}|C{4.2cm}|C{4.2cm}|}
+\hline
+\dongdau \textbf{Cấu hình} & \textbf{Tải} & \textbf{Bộ 0} & \textbf{Bộ 5} \\ \hline
+MySQL & W1 & 1,5\newline(1,3--1,7) & 4,1\newline(4,1--5,1) \\ \hline
+MySQL & W2 & 3,9\newline(3,8--4,2) & 5,5\newline(4,8--5,6) \\ \hline
+TiDB C3 & W1 & 5,2\newline(2,6--6,2) & 43,3\newline(11,5--62,6) \\ \hline
+TiDB C3 & W2 & 2,7\newline(2,4--3,5) & 9,0\newline(8,4--9,3) \\ \hline
+TiDB C1 & W1 & 6,6\newline(4,1--9,2) & 19,2\newline(8,0--33,4) \\ \hline
+TiDB C1 & W2 & 4,1\newline(3,0--5,6) & 11,1\newline(9,3--20,4) \\ \hline
+\end{tabular}
+\par\vspace{3pt}{\noindent\small\itshape Nguồn: results/rq4\_official.csv. Máy M2, 1 triệu dòng, 64 luồng. Trung vị của 3 lượt (nhỏ nhất -- lớn nhất).\par}
+\end{table}
+
+Byte ghi trên mỗi giao dịch (Bảng~\ref{tab:rq4-byte}) của MySQL tăng theo số chỉ mục, từ khoảng 1,5 KB lên 4,1 KB với W1. Số của TiDB dao động rất lớn giữa các vòng của cùng một cấu hình, ví dụ 11,5--62,6 KB ở C3, W1, bộ 5, vì cửa sổ 60 giây có lúc chứa và có lúc không chứa việc ghi nền như flush và compaction. Số byte của C3 cũng gồm cả ba bản sao và Raft log. Vì vậy nhóm chỉ báo cáo số byte quan sát được, không tính hệ số khuếch đại ghi và không xếp hạng hai hệ theo chỉ số này.
 
 \subsection{Các điểm bất thường}
-\ghichu{Nêu đủ danh sách trong \path{docs/checklist_tv2.md}. Không bỏ lượt nào; bỏ thử 6 lượt bị nhiễu thì hướng kết luận không đổi.}
+
+Nhóm giữ toàn bộ 84 lượt. Các điểm dưới đây có thể ảnh hưởng tới kết quả:
+
+\begin{itemize}
+  \item \textbf{Năm lượt C3 ở vòng 2 chạy khi \code{tikv1} không giữ leader nào.} PD đã chuyển leader khỏi store này bằng cơ chế evict-slow-store lúc 03:08 ngày 24/11/2026. Các lượt này là W1 bộ 0, 1, 3, sender\_cov và W2 sender\_created.
+  \item \textbf{Một lượt C1} (W1, bộ 5, vòng 1) trùng thời điểm với các lệnh chẩn đoán.
+  \item \textbf{Ba lượt C1 được đo lại} sau khi nạp lại dữ liệu, vì lần đầu đĩa chưa lắng sau 10 phút nên chương trình không ghi nhận (W2 bộ 0 vòng 1 và 3; W1 bộ 0 vòng 2).
+  \item \textbf{Một dòng C3} (W2, bộ 3, vòng 3) ghi \code{tikv\_stores=2} do trạng thái được đọc sớm sau khi khởi động lại; trước khi đo, chương trình kiểm tra đủ 3 store và đủ bản sao.
+  \item \textbf{Leader của C1 lệch} trong mọi lượt, khoảng 230/60/50.
+  \item \textbf{Dao động lớn} ở C3 W1 sender\_created (682--1.283 TPS), C3 W1 bộ 1 (894--1.353) và MySQL W2 sender\_cov (7.597--12.647).
+  \item \textbf{Bộ nhớ:} container TiDB server lên tới 1.156 trên 1.280 MiB trong lúc đo.
+  \item \textbf{Dung lượng chỉ mục của TiDB} trong file kết quả là ước tính từ thống kê, nên không được dùng trong chương này.
+\end{itemize}
+
+Nếu bỏ thử 6 lượt bị nhiễu ở hai mục đầu, chiều của mọi so sánh trong chương không đổi. Thay đổi lớn nhất là C3 W2 sender\_created so với mốc 0, từ $-7{,}2\%$ thành $-14{,}1\%$; mọi phần trăm khác trong chương thay đổi không quá 3,3 điểm phần trăm.
 
 \subsection{Thảo luận}
-\ghichu{Giả thuyết nào được số liệu ủng hộ, điểm nào chưa giải thích được. Phân biệt số đo và cách giải thích. Không quy chênh lệch cho mạng.}
+\label{sec:rq4-thao-luan}
+
+\textbf{Giả thuyết nào được ủng hộ.} Trong cấu hình này, giả thuyết (a) không được số liệu ủng hộ: TiDB giảm TPS nhiều hơn MySQL ở cả hai tải. Giả thuyết (b) đúng về chiều, nhưng phần ``qua Raft trên ba bản sao'' không phải nguyên nhân chính, vì C1 giảm gần như C3 ở W1.
+
+\textbf{Điều đo được và cách giải thích.} Số đo cho thấy mức giảm tăng theo số mục chỉ mục phải ghi, và có một TiKV chạm giới hạn CPU. Từ đó có thể nêu ba cách giải thích, nhưng thí nghiệm chưa tách riêng từng cách:
+
+\begin{itemize}
+  \item \textbf{Thêm cặp KV trong mỗi giao dịch.} Mỗi mục chỉ mục phải qua prewrite và commit cùng với dòng dữ liệu, nên khối lượng việc ở TiKV tăng theo số chỉ mục.
+  \item \textbf{Mất đường commit một pha.} TiDB có thể commit một pha khi giao dịch chỉ chạm một Region~\cite{tidb_sysvars}. Mục chỉ mục có thể nằm ở Region khác với dòng, khi đó giao dịch phải đi đường commit phân tán đầy đủ hơn. Cách này phù hợp với bước nhảy lớn ở chỉ mục đầu tiên (W1) và ở chỉ mục bị ảnh hưởng đầu tiên (W2). Nhóm không đổi biến \code{tidb\_enable\_1pc} nhưng cũng chưa đo tỉ lệ giao dịch commit một pha, nên đây mới là giả thuyết.
+  \item \textbf{Điểm nóng ghi.} Với khóa chính số nguyên tăng dần, các dòng mới dồn vào cuối bảng và tạo điểm nóng ở một Region~\cite{tidb_hotspot}. Điều này phù hợp với việc một TiKV bận hơn hẳn hai TiKV kia ở W1. W2 chọn \code{id} đều nhưng vẫn có một TiKV bận hơn; bảng 1 triệu dòng chỉ gồm ít Region, nên tải có thể không trải đều trên ba store. Nhóm chưa đo số Region và lưu lượng theo Region của bảng thử.
+\end{itemize}
+
+\textbf{Vì sao MySQL giảm ít hơn.} Theo thống kê của MySQL, tổng dung lượng bảng và chỉ mục của một bảng thử không quá 659 MB, nhỏ hơn buffer pool 789 MB, nên việc sửa trang chỉ mục diễn ra trong bộ nhớ và chi phí bền vững dồn vào redo log. Với \code{innodb\_flush\_log\_at\_trx\_commit=1}, mỗi commit phải chờ redo log được ghi bền~\cite{mysql_trx}, nhưng số lần fsync redo log đo được chỉ khoảng 0,032--0,039 trên mỗi giao dịch, tức khoảng 25--31 giao dịch cho mỗi lần fsync. Change buffer mặc định không hoạt động ở MySQL 8.4~\cite{mysql_params} và nhóm không bật, nên nó không phải lời giải thích. Kết quả này không suy ra được cho trường hợp chỉ mục lớn hơn bộ nhớ đệm.
+
+\textbf{Không quy chênh lệch cho mạng.} Mọi container nằm trên một máy và thí nghiệm không đo riêng thời gian gRPC. Với một TiKV chạy sát giới hạn 0,8 CPU, giới hạn CPU của từng node là yếu tố quan sát được trực tiếp; phần của gRPC, TSO và compaction chưa được tách.
+
+\textbf{Giới hạn của phép so.} Hai hệ có cùng tổng 4 CPU nhưng MySQL dùng được cả 4 CPU trong một tiến trình, còn TiDB chia cố định cho 5 container. Hệ nhanh hơn cũng chèn nhiều dòng hơn trong cùng 60 giây: sau W1 bộ 0, bảng MySQL có khoảng 1,96--1,99 triệu dòng, bảng C3 có 1,13--1,17 triệu dòng. Thí nghiệm chỉ có một quy mô, một mức luồng và 3 vòng. TiDB có các cách giảm điểm nóng (chẳng hạn \code{AUTO\_RANDOM}) không được thử vì lược đồ phải giống nhau trên hai hệ.
 
 \subsection{Kết luận chương}
-\ghichu{Ba đến bốn câu, mỗi câu kèm số.}
+
+Trên máy M2 với 1 triệu dòng và 64 luồng, thêm 5 chỉ mục phụ làm TPS thêm đơn giảm $17{,}6\%$ trên MySQL, $82{,}7\%$ trên TiDB C3 và $79{,}4\%$ trên TiDB C1; với tải cập nhật trạng thái, các mức giảm là $24{,}9\%$, $64{,}8\%$ và $51{,}6\%$. Với tải cập nhật, yếu tố quyết định là cột được cập nhật có nằm trong chỉ mục hay không. Covering index không cho thấy khác biệt phân định được khi thêm đơn, nhưng khi \code{status} bị cập nhật thì làm TPS giảm $34{,}7\%$ trên MySQL và $61{,}6\%$ trên C3. Nhân bản làm C3 thấp hơn C1 khoảng $26$--$30\%$ ở bộ 5 chỉ mục, nhưng phần lớn mức giảm theo số chỉ mục đã có ngay khi không nhân bản.

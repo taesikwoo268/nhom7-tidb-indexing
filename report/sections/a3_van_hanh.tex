@@ -2,28 +2,46 @@
 \phutrach{TV2 -- mục A.3, phần vận hành}
 
 \subsection{Vận hành cụm}
-\ghichu{Trình bày tổng quát, mỗi việc một đến hai câu kèm lệnh; chi tiết dẫn sang Phụ lục C.}
+
+Mỗi lúc chỉ một hệ được chạy, vì hai hệ cùng chạy sẽ tranh CPU, RAM và đĩa. Script chuyển hệ kiểm tra điều này: nếu hệ kia đang chạy, nó báo lỗi và chỉ dừng hệ kia khi có tham số \code{-Switch}. Sau khi bật, script chờ đến khi hệ trả lời \code{SELECT 1} và kiểm tra cổng đang nối đúng loại máy chủ. Dữ liệu nằm trong volume của Docker nên được giữ lại khi chuyển hệ. Bảng~\ref{tab:van-hanh} tóm tắt các thao tác.
 
 \begin{table}[!htp]
 \centering\bangnho
 \caption{Các thao tác vận hành thường dùng}\label{tab:van-hanh}
-\begin{tabular}{|L{4.4cm}|L{7.0cm}|L{3.2cm}|}
+\begin{tabular}{|L{3.4cm}|L{5.6cm}|L{5.4cm}|}
 \hline
-\dongdau \textbf{Thao tác} & \textbf{Lệnh} & \textbf{Kết quả mong đợi} \\ \hline
-Bật TiDB, tắt MySQL & \code{.\textbackslash scripts\textbackslash use\_engine.ps1 -Engine tidb -Switch} & \chuaco \\ \hline
-Bật MySQL, tắt TiDB & \code{.\textbackslash scripts\textbackslash use\_engine.ps1 -Engine mysql -Switch} & \chuaco \\ \hline
-Xem dịch vụ đang chạy & \code{.\textbackslash scripts\textbackslash use\_engine.ps1 -Status} & \chuaco \\ \hline
-Dừng tất cả, giữ dữ liệu & \code{.\textbackslash scripts\textbackslash use\_engine.ps1 -Stop} & \chuaco \\ \hline
-Kiểm tra cấu hình chung & \code{python -m bench.cli check} & \chuaco \\ \hline
-Nạp dữ liệu & \code{.\textbackslash scripts\textbackslash load.ps1 -Engine tidb -Rows 1000000} & \chuaco \\ \hline
+\dongdau \textbf{Thao tác} & \textbf{Lệnh} & \textbf{Kết quả} \\ \hline
+Bật TiDB, tắt MySQL & \code{use\_engine.ps1 -Engine tidb -Switch} & Dừng MySQL, bật 5 container của TiDB, chờ \code{SELECT 1} \\ \hline
+Bật MySQL, tắt TiDB & \code{use\_engine.ps1 -Engine mysql -Switch} & Dừng TiDB (chờ tối đa 90 giây để TiKV đóng sạch), bật MySQL \\ \hline
+Xem dịch vụ đang chạy & \code{use\_engine.ps1 -Status} & Danh sách dịch vụ đang chạy \\ \hline
+Dừng tất cả & \code{use\_engine.ps1 -Stop} & Dừng mọi container, giữ dữ liệu \\ \hline
+Kiểm tra cấu hình & \code{python -m bench.cli check} & In \code{team\_hash} và \code{DAT}, hoặc danh sách điểm sai \\ \hline
+Nạp dữ liệu & \code{load.ps1 -Engine tidb -Rows 1000000} & Số dòng, tổng \code{cod\_amount}, SHA-256; báo lỗi nếu khác file nguồn \\ \hline
 \end{tabular}
 \end{table}
 
-\subsubsection{Kiểm tra trạng thái}
-\ghichu{Trạng thái store và số bản sao của Region: \code{information\_schema.tikv\_store\_status}, \code{information\_schema.tikv\_region\_peers}, \code{SHOW CONFIG}. Trích kết quả thật trên M2.}
+\subsubsection{Kiểm tra trạng thái cụm TiDB}
+
+Trạng thái cụm đọc được bằng SQL thông thường qua TiDB server:
+
+\begin{lstlisting}[language=SQL,caption={Kiểm tra store, số bản sao và cấu hình}]
+SELECT store_id, address, store_state_name, region_count, leader_count
+FROM information_schema.tikv_store_status;
+
+SELECT region_id, COUNT(*) AS peers
+FROM information_schema.tikv_region_peers
+GROUP BY region_id HAVING peers <> 3;   -- C3: phai tra ve 0 dong
+
+SHOW CONFIG WHERE type='pd' AND name='replication.max-replicas';
+SHOW CONFIG WHERE type='tikv' AND name='storage.block-cache.capacity';
+\end{lstlisting}
+
+Trong quá trình đo RQ4, các truy vấn này đã phát hiện hai tình huống vận hành đáng chú ý. Thứ nhất, ở C1 số leader phân bố lệch giữa ba store, khoảng 230/60/50. Thứ hai, trong năm lượt đo, store \code{tikv1} không giữ leader nào vì PD tạm chuyển leader khỏi store bị đánh giá là chậm. Cả hai được báo cáo ở Chương~\ref{sec:ghi}.
 
 \subsubsection{Giám sát bằng TiDB Dashboard}
-\ghichu{Dashboard ở cổng 2379 của PD: Cluster Info, Key Visualizer, SQL Statements. Ảnh chụp trên hồ sơ XS, hoặc ghi rõ hồ sơ và ngày chụp.}
+
+TiDB Dashboard chạy sẵn trong PD, truy cập tại \url{http://localhost:2379/dashboard}. Trang Cluster Info cho biết phiên bản và trạng thái của từng thành phần; trang Key Visualizer hiển thị lưu lượng đọc, ghi theo dải khóa và giúp nhận ra điểm nóng.
+\ghichu{Chụp hai ảnh khi chạy demo trên hồ sơ XS, rồi thay hai khung dưới đây bằng \code{\textbackslash hinh}.}
 
 \hinhcho{Ảnh TiDB Dashboard: 1 PD, 1 TiDB, 3 TiKV ở trạng thái Up}{TiDB Dashboard trên máy M2}{fig:dashboard}
 
