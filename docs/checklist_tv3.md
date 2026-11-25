@@ -128,7 +128,7 @@ Mỗi người viết mục của mình trong file riêng để tránh xung đ�
 - [x] **A.3 demo** — TV2 nhận làm toàn bộ demo của A.3 (25/11). Bạn không phải làm phần này.
 - [ ] **B.2 RQ1** — Ba nguồn chênh lệch tách riêng: độ chọn lọc (R), đường truy cập (toán tử), chi phí gọi KV (cop task, RPC, xử lý, chờ, phần còn lại). Phần còn lại chỉ là xấp xỉ.
 - [ ] **B.2 RQ1** — Với Q1, so A2 và B để lấy hiệu ứng covering; so A và B là so với `Point_Get`. Trình bày đường chuẩn `SELECT 1` và tra khóa chính.
-- [ ] **B.2 RQ1** — Bảng lợi ích covering `t(A)/t(B)` trong từng hệ ở 1 triệu (M3) và 3 triệu dòng (M1, do TV1 gửi). Khớp `a + b×R` riêng cho từng máy, không gộp. Q3 chỉ có một mức R nên không khớp.
+- [ ] **B.2 RQ1** — Bảng lợi ích covering `t(A)/t(B)` trong từng hệ ở 1 triệu (M3) và 3 triệu dòng (số chính `results/rq1_M2_summary.csv`; đối chiếu `results/rq1_M1_summary.csv`, nêu cả chỗ hai máy khác nhau). Khớp `a + b×R` riêng cho từng máy, không gộp. Q3 chỉ có một mức R nên không khớp.
 - [ ] **B.2 RQ1** — Trích kế hoạch thực thi có và không covering của ít nhất Q2 và Q3 trên hai hệ. Dẫn tới B.3 (chi phí ghi của covering) và B.1 (dung lượng).
 - [ ] **B.2 RQ2** — Điểm giao nhau, điểm optimizer đổi phương án và nguồn chênh lệch. Không đặt trước hệ nào thắng.
 - [ ] **B.2** — Thay phần so sánh `EXPLAIN ANALYZE` `sbtest1` (dòng 260–302). Không viết "chịu phụ phí mạng gRPC"; mọi node chạy trên một máy.

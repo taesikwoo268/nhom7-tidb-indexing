@@ -17,10 +17,10 @@ Phần cứng và cấu hình được trình bày ở Chương~\ref{sec:cai-dat
 \dongdau \textbf{Máy} & \textbf{team\_hash} & \textbf{sum\_cod, 1 triệu dòng} & \textbf{sum\_cod, 3 triệu dòng} \\ \hline
 Giá trị chuẩn & fa4c12cdf33a & 5000968738439 & 15001281300461 \\ \hline
 M1 & \chuaco & \chuaco & 15001281300461 \\ \hline
-M2 & fa4c12cdf33a & 5000968738439 & --- \\ \hline
+M2 & fa4c12cdf33a & 5000968738439 & 15001281300461 \\ \hline
 M3 & \chuaco & \chuaco & \chuaco \\ \hline
 \end{tabular}
-\par\vspace{3pt}{\noindent\small\itshape Giá trị chuẩn sinh lại trực tiếp từ bộ sinh dữ liệu. M1: results/rq1\_M1.csv. M2: results/rq4\_official.csv.\par}
+\par\vspace{3pt}{\noindent\small\itshape Giá trị chuẩn sinh lại trực tiếp từ bộ sinh dữ liệu. M1: results/rq1\_M1.csv. M2: results/rq4\_official.csv và results/rq1\_M2.csv.\par}
 \end{table}
 \ghichu{Bổ sung ô còn trống khi TV1, TV3 gửi kết quả lệnh kiểm tra.}
 
@@ -45,7 +45,7 @@ Bảng~\ref{tab:kich-ban} tóm tắt các kịch bản. Thiết kế chi tiết 
 \hline
 \dongdau \textbf{Mã} & \textbf{Biến thay đổi} & \textbf{Máy} & \textbf{Số dòng} & \textbf{Chỉ số} & \textbf{Trình bày} \\ \hline
 B.1 & Số chỉ mục (0, 5) & M1 & 1 triệu, 3 triệu & Dung lượng, tài nguyên tạo chỉ mục & Chương~\ref{sec:dung-luong} \\ \hline
-RQ1 & Covering, R, truy vấn & M3, M1 & 1 triệu (M3), 3 triệu (M1) & Kế hoạch, độ trễ, cop task, RPC & Chương~\ref{sec:doc} \\ \hline
+RQ1 & Covering, R, truy vấn & M3, M2, M1 & 1 triệu (M3), 3 triệu (M2; M1 đối chiếu) & Kế hoạch, độ trễ, cop task, RPC & Chương~\ref{sec:doc} \\ \hline
 RQ2 & Độ chọn lọc, chế độ ép kế hoạch & M3 & 3 triệu & Độ trễ, điểm giao nhau & Chương~\ref{sec:doc} \\ \hline
 RQ4 & Số chỉ mục, tải, cấu hình bản sao & M2 & 1 triệu & TPS, p95, p99, CPU, byte ghi & Chương~\ref{sec:ghi} \\ \hline
 \end{tabular}
