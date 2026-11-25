@@ -20,6 +20,7 @@ from bench.config import get_machine_id  # noqa: E402
 from bench.datagen import COLUMNS, generate_rows  # noqa: E402
 from bench.db import analyze, connect  # noqa: E402
 from bench.environment import assert_engine, operation_lock  # noqa: E402
+from bench.rq4 import wait_settings  # noqa: E402
 from bench.schema import create_index_sql, shipments_ddl  # noqa: E402
 
 DATABASE = "demo_nhom7"
@@ -62,7 +63,11 @@ def demo(engine, out):
         run("SELECT VERSION()")
         if engine == "tidb":
             run("SELECT tidb_version()")
-            run("SELECT store_id, address, store_state_name FROM information_schema.tikv_store_status")
+            found = run(
+                "SELECT store_id, address, store_state_name FROM information_schema.tikv_store_status"
+            )
+            if len(found) != 3:
+                raise SystemExit("Expected exactly 3 stores. Run: demo.ps1 don")
 
         title("2. Create the table")
         run(f"DROP DATABASE IF EXISTS {DATABASE}", show=False)
@@ -151,6 +156,9 @@ def main():
     # The lock refuses to run while a measurement is in progress.
     with operation_lock():
         assert_engine(engine)
+        if engine == "tidb":
+            with connect(engine, server_only=True) as conn:
+                wait_settings(conn)  # right after a start, stores are not Up yet
         with path.open("w", encoding="utf-8") as out:
             demo(engine, out)
     print(f"Transcript: {path}")

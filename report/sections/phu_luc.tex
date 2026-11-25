@@ -19,13 +19,18 @@ Các lệnh chạy trong thư mục gốc của dự án, trên PowerShell. Nế
 
 # RQ4: 84 luot (M2)
 .\scripts\rq4_official.ps1
-.venv\Scripts\python -m experiments.rq4_summary results/rq4_official.csv
 
-# Demo chuc nang co ban
-.\scripts\use_engine.ps1 -Engine mysql -Switch
-.venv\Scripts\python scripts\demo_co_ban.py mysql
-.\scripts\use_engine.ps1 -Engine tidb -Switch
-.venv\Scripts\python scripts\demo_co_ban.py tidb
+# RQ4: 36 luot MySQL voi utf8mb4_bin, cung collation voi TiDB
+$env:PROFILE = "XS"; $env:DB_NAME = "logistics_bin"   # database tao voi COLLATE utf8mb4_bin
+.venv\Scripts\python -m bench.cli rq4 mysql 1000000 --seconds 60 --reps 3 --threads 64 --indexes 0 1 3 5 sender_created sender_cov --mode insert update --output results/rq4_official_mysql_bin.csv
+.venv\Scripts\python -m experiments.rq4_summary results/rq4_official_bin.csv --figure results/fig/rq4_tps_vs_indexes_bin.png
+
+# Demo (project Docker rieng nhom7demo)
+.\scripts\demo.ps1 co_ban_mysql
+.\scripts\demo.ps1 chiu_loi_mysql
+.\scripts\demo.ps1 co_ban_tidb
+.\scripts\demo.ps1 chiu_loi_tidb
+.\scripts\demo.ps1 them_node
 \end{lstlisting}
 \ghichu{TV1 thêm lệnh B.1, TV3 thêm lệnh RQ2.}
 
@@ -40,7 +45,8 @@ B.1 & M1 & results/b1\_storage\_M1.csv & \chuaco \\ \hline
 RQ1 & M1 & results/rq1\_M1.csv & \chuaco \\ \hline
 RQ1 & M3 & results/rq1\_M3.csv & \chuaco \\ \hline
 RQ2 & M3 & results/rq2\_M3.csv & \chuaco \\ \hline
-RQ4 & M2 & results/rq4\_official.csv, results/rq4\_official\_summary.csv & 317f0a6 \\ \hline
+RQ4 & M2 & results/rq4\_official\_bin.csv và file summary: 36 lượt MySQL bin, 48 lượt TiDB & 81a97de (MySQL), 317f0a6 (TiDB) \\ \hline
+RQ4 & M2 & results/rq4\_official.csv: lần đo đầu, MySQL unicode\_ci & 317f0a6 \\ \hline
 \end{tabular}
 \end{center}
 \ghichu{TV1 và TV3 điền commit in ra ở dòng đầu khi chạy lệnh kiểm tra.}
@@ -58,7 +64,7 @@ Cấu hình container & \path{docker/} \\ \hline
 Chương trình đo dùng chung & \path{bench/} \\ \hline
 Thí nghiệm RQ1, tổng hợp RQ4 & \path{experiments/} \\ \hline
 Kịch bản tải W1, W2 & \path{sysbench/shipments_write.lua} \\ \hline
-Demo chức năng cơ bản & \path{scripts/demo_co_ban.py} \\ \hline
+Demo & \path{scripts/demo.ps1}, \path{scripts/demo_co_ban.py}, \path{scripts/demo_mo_rong.py} \\ \hline
 Thiết kế kỹ thuật & \path{docs/2026-11-16-tidb-indexing-van-don.vi.md} \\ \hline
 \end{tabular}
 \end{center}

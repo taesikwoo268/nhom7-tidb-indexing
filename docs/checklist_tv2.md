@@ -47,6 +47,7 @@ Thiết kế cuối cùng là **84 lượt**, 64 luồng, hồ sơ XS, 1 triệu
 - [x] Rà `results/rq4_official.csv`: 84 dòng, mỗi tổ hợp đủ 3 lượt, mọi lượt có `settled=1`. Không bỏ lượt nào.
 - [x] Tính byte ghi trên mỗi giao dịch và phần trăm thay đổi TPS so với mốc của cùng hệ trong `results/rq4_official_summary.csv`.
 - [x] Xuất `results/fig/rq4_tps_vs_indexes.png`.
+- [x] **25/11** — Đo lại 36 lượt MySQL với `utf8mb4_bin` (cùng collation với TiDB), ghép thành `results/rq4_official_bin.csv`. Cả 12 cấu hình có khoảng giao với lần đo `unicode_ci`.
 - [x] Thử bỏ 6 lượt bị nhiễu (5 C3, 1 C1): hướng kết luận không đổi.
 
 Code RQ1 cho TV1 và TV3:
@@ -58,7 +59,7 @@ Code RQ1 cho TV1 và TV3:
 
 - [ ] Hoàn thiện **Bảng A.3.1** bằng thông tin M1, M2, M3 do mỗi thành viên cung cấp.
 - [ ] Viết **A.3 phần cài đặt**. Đính kèm kết quả `SELECT tidb_version()`, trạng thái 3 TiKV store, ảnh Dashboard (Topology và Key Visualizer) và `SHOW CREATE TABLE shipments` của hai hệ. TV3 phụ trách phần demo A.3.
-- [ ] Chạy demo chức năng cơ bản trên hai hệ bằng `scripts/demo_co_ban.py` và viết `a3_demo_co_ban.tex`.
+- [x] Chạy mọi demo của A.3 bằng `scripts/demo.ps1` (cơ bản, chịu lỗi, thêm node; phần demo bổ sung nhận từ TV3) và viết `a3_demo_co_ban.tex`, `a3_demo.tex`.
 - [ ] Viết **vận hành cụm** (`a3_van_hanh.tex`), **phương pháp và kịch bản** của Chương 4 (`p2_phuong_phap.tex`) và **Phụ lục C**.
 - [x] Viết **B.3** trong `report/sections/b3_chi_phi_ghi.tex` từ số đo M2, thay phần `sbtest1` cũ; TV1 nối bằng `\input{}`. Nêu mức giảm TPS khi tăng số index, đối chiếu W1 với W2, TiDB C1 với C3, và covering (`sender_cov`) với `sender_created`. Dùng p95/p99, byte ghi trên mỗi giao dịch và CPU sysbench để giải thích kết quả. Ghi rõ ba TiKV dùng chung ổ đĩa khi diễn giải chi phí sao chép.
 - [x] Trong B.3, nêu đủ các điểm bất thường: 5 lượt C3 vòng 2 chạy khi `tikv1` giữ 0 leader; 1 lượt C1 trùng lệnh chẩn đoán; 3 lượt C1 đo lại; 1 dòng C3 ghi `tikv_stores=2`; leader C1 lệch; MySQL `sender_cov` dao động 7.597–12.647 TPS; C3 cập nhật 1 index +6% nằm trong mức nhiễu; dung lượng index TiDB là ước tính; bỏ mức 16 luồng; TiDB dùng tới 1.156/1.280 MiB; TiKV bận nhất ở C3 thường dùng 0,7–0,8 trên 0,8 CPU, MySQL khoảng 3,9 trên 4 CPU.

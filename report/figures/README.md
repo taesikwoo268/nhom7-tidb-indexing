@@ -4,9 +4,10 @@
 
 | Hình | File | Người làm | Trạng thái |
 |---|---|---|---|
-| `fig:rq4` | `rq4_tps_vs_indexes.png` | TV2 | Đã có |
+| `fig:rq4` | `rq4_tps_vs_indexes_bin.png` | TV2 | Đã có |
+| `fig:dashboard`, `fig:keyviz`, `fig:dashboard4` | `tidb_dashboard.png`, `tidb_key_visualizer.png`, `tidb_dashboard_4_tikv.png` | TV2 | Đã có |
+| `fig:demo-loi-tidb` | `demo_chiu_loi_tidb_M2.png` | TV2 | Đã có |
 | `fig:kien-truc` | Sơ đồ kiến trúc cụm | TV1 | Chưa có |
-| `fig:dashboard`, `fig:keyviz` | Ảnh TiDB Dashboard, Key Visualizer | TV2 | Chưa có |
 | `fig:b1` | `b1_model_vs_measured.png` | TV1 | Chưa có |
 | `fig:covering` | `rq1_M3_covering.png` | TV3 | Chưa có |
 | `fig:rq2` | Hình RQ2 | TV3 | Chưa có |

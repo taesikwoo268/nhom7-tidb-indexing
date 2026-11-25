@@ -1,7 +1,7 @@
 # Checklist công việc TV3 — TiDB và MySQL
 
 **Máy M3 · hồ sơ XS · RQ1 ở 1 triệu dòng, RQ2 ở 3 triệu dòng · 24–27/11/2026**
-Bạn phụ trách RQ1 ở 1 triệu dòng, RQ2, các mục B.0, B.2, phần demo của A.3 và phần hạn chế của B.4. Khi hoàn thành một đầu việc, đổi `- [ ]` thành `- [x]` ở đúng dòng đó.
+Bạn phụ trách RQ1 ở 1 triệu dòng, RQ2, các mục B.0, B.2 và phần hạn chế của B.4. Khi hoàn thành một đầu việc, đổi `- [ ]` thành `- [x]` ở đúng dòng đó.
 
 Các mục đã đánh dấu là những gì có trên nhánh `main` ngày 24/11. Việc bạn đã làm nhưng chưa đẩy lên thì tự đánh dấu.
 
@@ -119,14 +119,13 @@ Trên `main` chưa có code RQ2. Kế hoạch ghi 10 triệu dòng ở hồ sơ 
 
 Nếu đến tối 25/11 RQ2 chưa xong ở 3 triệu dòng, đo ở 1 triệu dòng và ghi rõ quy mô.
 
-## 24–25/11 · Viết B.0, A.3 phần demo và B.2
+## 24–25/11 · Viết B.0 và B.2
 
-Mỗi người viết mục của mình trong file riêng để tránh xung đột; khung `main.tex` đã nối sẵn, xem `report/README.md`. Bạn dùng `report/sections/b0_so_bo.tex`, `a3_demo.tex` và `b2_chi_phi_doc.tex`.
+Mỗi người viết mục của mình trong file riêng để tránh xung đột; khung `main.tex` đã nối sẵn, xem `report/README.md`. Bạn dùng `report/sections/b0_so_bo.tex` và `b2_chi_phi_doc.tex`.
 
 - [ ] **B.0** — Kết quả sơ bộ `sbtest1`: MySQL cao hơn TiDB 13–32 lần ở `oltp_read_write`, 8–13 lần ở `oltp_update_index`; giả thuyết TiDB ổn định hơn ở 256–512 luồng không được xác nhận. Không có CSV giai đoạn 1 trong repo, nên gửi log gốc cho nhóm kiểm tra; số không có log thì bỏ.
 - [ ] **B.0** — Thay phần `02_phan_b.tex` dòng 308–333. Bản cũ ghi MySQL chỉ hơn 25–35%, P99 180 ms và 42 ms, và "TiDB giữ vững phong độ"; các câu này trái với kết quả trên.
-- [ ] **A.3 demo chịu lỗi** — Demo bổ sung (demo chức năng cơ bản do TV2 làm). C3, một đoạn ngắn: QPS bằng 0 trong 10 giây, về 90% sau 18,4 giây. MySQL một node không có bản sao nên so sánh không ngang hàng. Không dùng demo này cho kết luận về index. Bỏ các số "3–8 giây" và "RTO ≈ 5s" (`02_phan_b.tex` dòng 343–378).
-- [ ] **A.3 demo scale-out** — Một đoạn: Region đầu tiên chuyển sau 16 giây, TPS giảm 25% vì node mới không thêm phần cứng thật.
+- [x] **A.3 demo** — TV2 nhận làm toàn bộ demo của A.3 (25/11). Bạn không phải làm phần này.
 - [ ] **B.2 RQ1** — Ba nguồn chênh lệch tách riêng: độ chọn lọc (R), đường truy cập (toán tử), chi phí gọi KV (cop task, RPC, xử lý, chờ, phần còn lại). Phần còn lại chỉ là xấp xỉ.
 - [ ] **B.2 RQ1** — Với Q1, so A2 và B để lấy hiệu ứng covering; so A và B là so với `Point_Get`. Trình bày đường chuẩn `SELECT 1` và tra khóa chính.
 - [ ] **B.2 RQ1** — Bảng lợi ích covering `t(A)/t(B)` trong từng hệ ở 1 triệu (M3) và 3 triệu dòng (M1, do TV1 gửi). Khớp `a + b×R` riêng cho từng máy, không gộp. Q3 chỉ có một mức R nên không khớp.
@@ -138,13 +137,13 @@ Mỗi người viết mục của mình trong file riêng để tránh xung đ�
 ## 25–26/11 · Đọc chéo và B.4
 
 - [ ] **25/11** — Đọc chéo B.3 và gửi góp ý cho TV2.
-- [ ] **26/11** — Đối chiếu B.1 với `results/b1_storage_M1.csv` và B.3 với `results/rq4_official_summary.csv`: mỗi kết luận phải có số đo và cơ chế đi kèm.
+- [ ] **26/11** — Đối chiếu B.1 với `results/b1_storage_M1.csv` và B.3 với `results/rq4_official_bin_summary.csv`: mỗi kết luận phải có số đo và cơ chế đi kèm.
 - [ ] **26/11** — Viết phần hạn chế của B.4: mọi node trên một máy và một ổ đĩa; CPU chia cố định theo container; không có độ trễ mạng vật lý; C1 không chịu lỗi; ba máy khác nhau nên không so số tuyệt đối; RQ4 chỉ ở 1 triệu dòng, 64 luồng, 3 vòng; không có số đo 10 triệu dòng.
 - [ ] **26/11** — Sửa B.2 theo góp ý của TV2.
 
 ## 27/11 · Nộp và thuyết trình
 
-- [ ] Kiểm tra hình và số của B.0, B.2, A.3 demo trong bản PDF cuối.
+- [ ] Kiểm tra hình và số của B.0, B.2 trong bản PDF cuối.
 - [ ] Tập thuyết trình cùng nhóm.
 
 Phân công theo kế hoạch nhóm bản 2 (bản trong Git là [kế hoạch 1,5 tuần, 3 máy](ke_hoach_do_an_tidb_vs_mysql_1.md)). Chi tiết ở Task 6, 7, 8 và 12 của [tài liệu kỹ thuật](2026-11-16-tidb-indexing-van-don.vi.md).

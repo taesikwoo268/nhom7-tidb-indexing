@@ -48,6 +48,7 @@ Một số lựa chọn cấu hình cần được nêu rõ vì chúng ảnh hư
   \item \textbf{CPU chia cố định.} MySQL dùng được cả 4 CPU trong một tiến trình. TiDB chia 4 CPU cho 5 container, nên một TiKV không thể dùng quá 0,8 CPU dù các node khác rảnh.
   \item \textbf{Độ bền.} MySQL đặt \code{innodb\_flush\_log\_at\_trx\_commit=1} và tắt binlog. TiDB giữ cấu hình ghi Raft log mặc định.
   \item \textbf{TiKV.} Block cache mỗi node 250 MiB, \code{memory-usage-limit} 1.000 MiB, \code{write-buffer-size} 32 MiB cho hai column family chính. Image TiKV chính thức được loại phần debug, phần mã thực thi không đổi: trên M2, tiến trình gốc giữ khoảng 1,9 GB bộ nhớ khi cụm rỗng, bản đã loại giữ khoảng 0,16 GB.
+  \item \textbf{Collation.} Lược đồ không chỉ định collation nên mỗi hệ dùng mặc định của nó: \code{utf8mb4\_unicode\_ci} trên MySQL (đặt trong file cấu hình) và \code{utf8mb4\_bin} trên TiDB. So sánh và sắp xếp chuỗi vì vậy không hoàn toàn tương đương giữa hai hệ; trong các truy vấn và chỉ mục của đề tài, chỉ \code{tracking\_code} là cột chuỗi. Riêng RQ4, MySQL được đo lại với \code{utf8mb4\_bin}, và không thấy khác biệt lớn hơn mức nhiễu (Mục~\ref{sec:rq4-collation}). RQ1 ở truy vấn Q1 vẫn dùng collation mặc định, nên chỉ so tỉ số trong từng hệ.
   \item \textbf{Buffer pool.} Giá trị đặt là 750M; MySQL làm tròn theo kích thước chunk thành 788.529.152 B, tức 752 MiB.
 \end{itemize}
 
@@ -114,4 +115,30 @@ tidb SELECT 1 = 1; version=8.0.11-TiDB-v8.5.5; port=4000
 tidb: rows=1000000 sum_cod=5000968738439 seed=20261116
   sha256=8ee11b63da2217d4b1d00137bd8e4f3ba647b9bed94a594468c990fe981f4827
 \end{lstlisting}
-\ghichu{Còn thiếu: \code{SELECT tidb\_version()}, trạng thái 3 store và \code{SHOW CREATE TABLE} của hai hệ. Lấy từ đầu ra của \path{scripts/demo_co_ban.py}.}
+Kết quả \code{SELECT tidb\_version()}, trạng thái store và lược đồ thực tế được lấy khi chạy demo ngày 25/11/2026 trên M2, cùng hồ sơ XS.
+
+\begin{lstlisting}[caption={Phiên bản TiDB và trạng thái ba store}]
+Release Version: v8.5.5
+Edition: Community
+Git Commit Hash: 1fa258b833ff113883beeba40bc130be7ce66610
+Store: tikv
+
+store_id | address     | store_state_name
+1        | tikv1:20160 | Up
+2        | tikv2:20160 | Up
+3        | tikv3:20160 | Up
+\end{lstlisting}
+
+\begin{lstlisting}[caption={SHOW CREATE TABLE shipments: những dòng khác nhau giữa hai hệ}]
+-- MySQL 8.4.11
+`tracking_code` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+
+-- TiDB v8.5.5
+`tracking_code` varchar(20) NOT NULL,
+PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+\end{lstlisting}
+
+Tên cột và kiểu dữ liệu giống nhau; khác biệt collation lặp lại ở các cột chuỗi khác. TiDB in \code{ENGINE=InnoDB} để tương thích cú pháp; dữ liệu thực tế nằm trong TiKV (\code{Store: tikv}).
