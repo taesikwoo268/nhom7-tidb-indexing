@@ -6,11 +6,26 @@
 
 \subsection*{A. Lệnh chạy lại thí nghiệm}
 \addcontentsline{toc}{subsection}{A. Lệnh chạy lại thí nghiệm}
+
+Các lệnh chạy trong thư mục gốc của dự án, trên PowerShell. Nếu một lượt đo bị ngắt, chạy lại đúng lệnh đó để đo tiếp phần còn thiếu.
+
 \begin{lstlisting}[caption={Lệnh PowerShell chạy lại các thí nghiệm}]
 .venv\Scripts\python -m bench.cli check
-.\scripts\rq1_official.ps1                  # RQ1, 1 trieu dong
-.\scripts\rq1_official.ps1 -Rows 3000000    # RQ1, 3 trieu dong
-.\scripts\rq4_official.ps1                  # RQ4, 84 luot
+
+# RQ1: 1 trieu dong (M3) va 3 trieu dong (M1)
+.\scripts\rq1_official.ps1
+.\scripts\rq1_official.ps1 -Rows 3000000
+.venv\Scripts\python -m experiments.rq1_summary results/rq1_M3.csv
+
+# RQ4: 84 luot (M2)
+.\scripts\rq4_official.ps1
+.venv\Scripts\python -m experiments.rq4_summary results/rq4_official.csv
+
+# Demo chuc nang co ban
+.\scripts\use_engine.ps1 -Engine mysql -Switch
+.venv\Scripts\python scripts\demo_co_ban.py mysql
+.\scripts\use_engine.ps1 -Engine tidb -Switch
+.venv\Scripts\python scripts\demo_co_ban.py tidb
 \end{lstlisting}
 \ghichu{TV1 thêm lệnh B.1, TV3 thêm lệnh RQ2.}
 
@@ -25,9 +40,10 @@ B.1 & M1 & results/b1\_storage\_M1.csv & \chuaco \\ \hline
 RQ1 & M1 & results/rq1\_M1.csv & \chuaco \\ \hline
 RQ1 & M3 & results/rq1\_M3.csv & \chuaco \\ \hline
 RQ2 & M3 & results/rq2\_M3.csv & \chuaco \\ \hline
-RQ4 & M2 & results/rq4\_official.csv & 317f0a6 \\ \hline
+RQ4 & M2 & results/rq4\_official.csv, results/rq4\_official\_summary.csv & 317f0a6 \\ \hline
 \end{tabular}
 \end{center}
+\ghichu{TV1 và TV3 điền commit in ra ở dòng đầu khi chạy lệnh kiểm tra.}
 
 \subsection*{C. Tài liệu bổ sung}
 \addcontentsline{toc}{subsection}{C. Tài liệu bổ sung}
@@ -39,6 +55,9 @@ RQ4 & M2 & results/rq4\_official.csv & 317f0a6 \\ \hline
 Mã nguồn, cấu hình, kết quả & \url{https://github.com/taesikwoo268/nhom7-tidb-indexing} \\ \hline
 Hướng dẫn cài đặt và chạy & \path{README.md} \\ \hline
 Cấu hình container & \path{docker/} \\ \hline
+Chương trình đo dùng chung & \path{bench/} \\ \hline
+Thí nghiệm RQ1, tổng hợp RQ4 & \path{experiments/} \\ \hline
+Kịch bản tải W1, W2 & \path{sysbench/shipments_write.lua} \\ \hline
 Demo chức năng cơ bản & \path{scripts/demo_co_ban.py} \\ \hline
 Thiết kế kỹ thuật & \path{docs/2026-11-16-tidb-indexing-van-don.vi.md} \\ \hline
 \end{tabular}
