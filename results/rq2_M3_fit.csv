@@ -1,0 +1,5 @@
+engine,rows,mode,points,a_ms,b_us_per_row,r2,max_relative_residual
+mysql,3000000,index,10,0.5961,2.49,0.9995,0.062
+mysql,3000000,scan,10,397.4398,0.4166,0.9824,0.088
+tidb,3000000,index,10,3.046,7.166,0.5588,0.592
+tidb,3000000,scan,10,889.8616,0.2957,0.6019,0.283
