@@ -68,7 +68,28 @@ Q3 & 15.000 & 28,266 & 1,685 & 111,876 & 6,634 & 16,78 & 16,86 \\ \hline
 \end{table}
 
 \hinh{rq1_M2_covering.png}{0.95}{Lợi ích covering theo truy vấn và $R$, 3 triệu dòng (M2)}{fig:covering}
-\ghichu{Khi có số của M3 (1 triệu dòng), thêm bảng tương tự và hình rq1\_M3\_covering.png.}
+Cùng phép đo ở 1 triệu dòng trên M3 (Bảng~\ref{tab:covering-m3}, Hình~\ref{fig:covering-m3}) cho cùng dạng với M2 ở các điểm có $R$ vừa và nhỏ: TiDB lợi hơn ở $R$ nhỏ (1,77 ở Q2 và 1,72 ở Q2R với $R = 10$, so với 1,10 và 1,07 của MySQL), còn MySQL lợi hơn từ $R = 1.000$ (2,41 so với 1,92). Ở $R = 10.000$ hai hệ gần nhau hơn trên M3 (4,03 ở MySQL, 3,80 ở TiDB) so với M2 (5,91 và 3,31). Q1 với chỉ mục không UNIQUE (A2) lợi 1,37 ở TiDB và 1,00 ở MySQL; Q1 với chỉ mục UNIQUE (\code{Point\_Get} trên TiDB) cho 0,94, tức không cần covering.
+
+\begin{table}[!htp]
+\centering\bangnho
+\caption[Lợi ích covering, 1 triệu dòng (M3)]{Độ trễ p50 và lợi ích covering $t(A)/t(B)$ trong từng hệ, 1 triệu dòng (M3)}\label{tab:covering-m3}
+\begin{tabular}{|C{1.5cm}|C{1.4cm}|C{1.8cm}|C{1.8cm}|C{1.8cm}|C{1.8cm}|C{1.6cm}|C{1.6cm}|}
+\hline
+\dongdau \textbf{Truy vấn} & \textbf{R} & \textbf{MySQL A (ms)} & \textbf{MySQL B (ms)} & \textbf{TiDB A (ms)} & \textbf{TiDB B (ms)} & \textbf{Lợi ích MySQL} & \textbf{Lợi ích TiDB} \\ \hline
+Q1 (A2) & 1 & 0,463 & 0,461 & 2,376 & 1,735 & 1,00 & 1,37 \\ \hline
+Q2 & 20 & 0,549 & 0,499 & 3,340 & 1,885 & 1,10 & 1,77 \\ \hline
+Q2R & 10 & 0,543 & 0,506 & 3,350 & 1,952 & 1,07 & 1,72 \\ \hline
+Q2R & 100 & 0,828 & 0,580 & 3,431 & 2,061 & 1,43 & 1,66 \\ \hline
+Q2R & 1.000 & 2,436 & 1,010 & 7,253 & 3,777 & 2,41 & 1,92 \\ \hline
+Q2R & 10.000 & 16,114 & 4,000 & 48,941 & 12,872 & 4,03 & 3,80 \\ \hline
+Q3 & 5.000 & 8,001 & 0,928 & 90,608 & 3,684 & 8,62 & 24,59 \\ \hline
+\end{tabular}
+\par\vspace{3pt}{\noindent\small\itshape Nguồn: results/rq1\_M3\_summary.csv. Chỉ so lợi ích trong từng hệ; không so độ trễ tuyệt đối giữa các máy.\par}
+\end{table}
+
+\hinh{rq1_M3_covering.png}{0.95}{Lợi ích covering theo truy vấn và $R$, 1 triệu dòng (M3)}{fig:covering-m3}
+
+\textbf{Q3 trên TiDB không đáng tin để so.} Ở thiết kế A, p50 của 5 lượt là 99,4; 90,6; 102,8; 31,6 và 31,6 ms: ba lượt đầu chậm gấp khoảng ba lần hai lượt cuối (khoảng tứ phân vị 67,8 ms), và số lần đọc block ngoài bộ nhớ đệm bằng 0 ở cả năm lượt. Q2R với $R = 10.000$ ở thiết kế A cũng giảm theo cùng chiều (91,1; 48,9; 74,8; 44,5 và 42,8 ms). Nhóm không xác định được nguyên nhân. Trung vị là 90,6 ms nên tỉ số 24,6 phụ thuộc vào ba lượt chậm; nếu dùng hai lượt nhanh thì tỉ số chỉ khoảng 8,6, gần bằng 8,6 của MySQL. Vì vậy báo cáo không kết luận hệ nào lợi hơn ở Q3 trên M3.
 
 \subsection{RQ1: chi phí cố định, chi phí mỗi dòng và chi phí gọi KV}
 \begin{table}[!htp]
@@ -85,10 +106,12 @@ M1, 3 triệu & MySQL & A & 0,677 & 2,552 & 0,967 & 43\% \\ \hline
 M1, 3 triệu & MySQL & B & 0,662 & 0,464 & 0,736 & 46\% \\ \hline
 M1, 3 triệu & TiDB C3 & A & 7,476 & 7,668 & 0,907 & 45\% \\ \hline
 M1, 3 triệu & TiDB C3 & B & 3,337 & 2,633 & 0,962 & 43\% \\ \hline
-M3, 1 triệu & MySQL & A / B & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-M3, 1 triệu & TiDB C3 & A / B & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+M3, 1 triệu & MySQL & A & 0,564 & 1,679 & 0,990 & 18\% \\ \hline
+M3, 1 triệu & MySQL & B & 0,540 & 0,364 & 0,994 & 18\% \\ \hline
+M3, 1 triệu & TiDB C3 & A & 3,095 & 4,619 & 0,818 & 46\% \\ \hline
+M3, 1 triệu & TiDB C3 & B & 2,024 & 1,164 & 0,985 & 25\% \\ \hline
 \end{tabular}
-\par\vspace{3pt}{\noindent\small\itshape Khớp trên Q2R ($R$ từ 10 đến 10.000), trọng số $1/t$. Nguồn: results/rq1\_M2\_fit.csv và rq1\_M1\_fit.csv. Không gộp hai máy.\par}
+\par\vspace{3pt}{\noindent\small\itshape Khớp trên Q2R ($R$ từ 10 đến 10.000), trọng số $1/t$. Nguồn: results/rq1\_M2\_fit.csv, rq1\_M1\_fit.csv và rq1\_M3\_fit.csv. Không gộp các máy.\par}
 \end{table}
 
 Mô hình hai tham số giải thích dạng phụ thuộc vào $R$ này. Ở $R$ nhỏ, tỉ số tiến về $a_A / a_B$; ở $R$ lớn, tiến về $b_A / b_B$. Trên M2, $a_A / a_B$ là 1,07 ở MySQL và 2,07 ở TiDB; $b_A / b_B$ là 6,89 và 3,19. Nói cách khác, quay về bảng làm tăng chi phí \emph{cố định} của TiDB thêm 2,02 ms (MySQL chỉ thêm 0,033 ms), còn chi phí \emph{mỗi dòng} tăng thêm 2,73 $\mu$s ở TiDB và 2,05 $\mu$s ở MySQL. Chi phí mỗi dòng của đường covering trên TiDB (1,25 $\mu$s) cao hơn nhiều so với MySQL (0,35 $\mu$s), nên tỉ số tiệm cận của TiDB thấp hơn.
@@ -137,7 +160,7 @@ Q3 & 15.000 & 29,560 & 2,445 & 109,196 & 11,980 & 12,09 & 9,11 \\ \hline
 \par\vspace{3pt}{\noindent\small\itshape Nguồn: results/rq1\_M1\_summary.csv. Chỉ so lợi ích trong từng hệ.\par}
 \end{table}
 
-\ghichu{Khi có số M3 (1 triệu dòng), so tỉ số covering ở 1 triệu dòng với 3 triệu dòng. Không so độ trễ tuyệt đối giữa các máy.}
+Trên M3 (1 triệu dòng), $a_A / a_B$ là 1,04 ở MySQL và 1,53 ở TiDB, còn $b_A / b_B$ là 4,62 và 3,97; so với M2 (3 triệu dòng), tỉ số $a_A / a_B$ của TiDB thấp hơn (1,53 so với 2,07) và tỉ số $b_A / b_B$ của MySQL thấp hơn (4,62 so với 6,89). Phép khớp của TiDB thiết kế A ở M3 kém ($R^2 = 0{,}82$, phần dư lớn nhất 46\%) vì điểm $R = 10.000$ dao động mạnh giữa các lượt (42,8 đến 91,1 ms). Vì M3 khác M2 cả về máy lẫn về số dòng, số liệu này không tách được ảnh hưởng của quy mô khỏi ảnh hưởng của máy; chỉ có thể nói dạng kết quả (TiDB lợi hơn ở $R$ nhỏ, MySQL lợi hơn ở $R$ vừa) lặp lại trên cả ba máy.
 
 \subsection{RQ1: lợi ích đọc phải đối chiếu với chi phí ghi và dung lượng}
 Các tỉ số ở trên chỉ nói về phía đọc. Chi phí đi kèm của covering index được đo ở hai mục khác, trên điều kiện khác (M2, 1 triệu dòng, 64 luồng), nên không cộng trực tiếp với số ở đây. Về ghi, Bảng~\ref{tab:rq4-covering} cho thấy khi cột được thêm vào chỉ mục (\code{status}) bị cập nhật, TPS giảm 29,5\% trên MySQL và 61,6\% trên TiDB C3; khi thêm đơn mới, khoảng dao động của hai thiết kế giao nhau nên chưa phân định được. Về dung lượng, Bảng~\ref{tab:dl-covering} sẽ cho kích thước của hai chỉ mục. Vì vậy lợi ích đọc lớn nhất của covering (Q3, $R = 15.000$) chỉ có ý nghĩa khi tải ghi ít cập nhật các cột nằm trong chỉ mục.
@@ -145,21 +168,69 @@ Các tỉ số ở trên chỉ nói về phía đọc. Chi phí đi kèm của c
 \subsection{RQ2: ngưỡng độ chọn lọc}
 
 \subsubsection{Thiết kế}
-\ghichu{Truy vấn theo khoảng \code{cod\_amount}, 10 mức chọn lọc, 3 chế độ, 3 triệu dòng trên M3. Nêu đúng số khoảng giá trị ở từng mức.}
+Câu hỏi là: khi truy vấn lấy một khoảng giá trị của \code{cod\_amount}, tỉ lệ dòng khớp bao nhiêu thì việc tra qua chỉ mục \code{idx\_cod} rồi quay về bảng bắt đầu chậm hơn quét cả bảng, và optimizer của mỗi hệ có đổi phương án đúng chỗ đó hay không. Nhóm không đặt trước một điểm giao nhau chung cho hai hệ.
+
+Truy vấn có dạng \code{SELECT id, tracking\_code, status, cod\_amount, created\_at FROM shipments WHERE cod\_amount BETWEEN lo AND hi}, chạy ở ba chế độ: \emph{index} (ép dùng \code{idx\_cod} bằng \code{FORCE INDEX}), \emph{scan} (loại chỉ mục bằng \code{IGNORE INDEX}) và \emph{auto} (không gợi ý, để optimizer chọn). Có 10 mức độ chọn lọc: 0,001; 0,01; 0,1; 0,5; 1; 2; 5; 10; 25 và 50\% số dòng. Khoảng \code{[lo, hi]} của từng mức được tính từ hạt giống 20261116 theo phân phối thực của cột, nên số dòng khớp trung bình $R$ nằm sát mục tiêu, từ 30 dòng (0,001\%) đến khoảng 1,5 triệu dòng (50\%); cột $R$ ở Bảng~\ref{tab:rq2-p50} là số dòng thực đo. Từ mức 2\% trở xuống, mỗi lượt chạy 20 khoảng khác nhau; từ mức 5\% trở lên chạy 3 khoảng vì mỗi truy vấn đã lâu. Mỗi ô chạy 5 lượt, tổng $2 \times 10 \times 3 \times 5 = 300$ lượt trên M3, hồ sơ XS, bảng 3 triệu dòng; trước mỗi lượt chương trình kiểm tra kế hoạch thực thi (đúng toán tử chỉ mục hoặc quét bảng) và số dòng trả về giữa ba chế độ. Các giá trị trong bảng là trung vị p50 của 5 lượt. Chỉ so hai hệ theo hình dạng đường cong và điểm giao nhau; không so độ trễ tuyệt đối với M1 hoặc M2.
 
 \subsubsection{Kết quả}
 \begin{table}[!htp]
-\centering\bangfont
-\caption{Điểm giao nhau và điểm optimizer đổi phương án}\label{tab:rq2}
-\begin{tabular}{|C{2.6cm}|C{3.8cm}|C{4.2cm}|C{3.4cm}|}
+\centering\bangnho
+\caption{Độ trễ p50 (ms) theo độ chọn lọc và chế độ, 3 triệu dòng (M3)}\label{tab:rq2-p50}
+\begin{tabular}{|C{1.3cm}|C{1.7cm}|C{1.45cm}|C{1.45cm}|C{1.45cm}|C{1.45cm}|C{1.45cm}|C{1.45cm}|}
 \hline
-\dongdau \textbf{Hệ} & \textbf{Điểm giao nhau (\%)} & \textbf{Điểm đổi phương án (\%)} & \textbf{Chênh lệch} \\ \hline
-MySQL & \chuaco & \chuaco & \chuaco \\ \hline
-TiDB C3 & \chuaco & \chuaco & \chuaco \\ \hline
+\dongdau & & \multicolumn{3}{c|}{\textbf{MySQL}} & \multicolumn{3}{c|}{\textbf{TiDB C3}} \\ \hline
+\dongdau \textbf{Mức} & \textbf{$R$} & \textbf{index} & \textbf{scan} & \textbf{auto} & \textbf{index} & \textbf{scan} & \textbf{auto} \\ \hline
+0,001\% & 30 & 0,656 & 386 & 0,785 & 4,32 & 882 & 3,89 \\ \hline
+0,01\% & 304 & 1,44 & 383 & 1,48 & 4,49 & 887 & 4,47 \\ \hline
+0,1\% & 3.011 & 7,66 & 393 & 7,65 & 18,9 & 901 & 17,5 \\ \hline
+0,5\% & 15.053 & 36,6 & 371 & 36,2 & 82,8 & 909 & 71,0 \\ \hline
+1\% & 29.987 & 76,6 & 435 & 76,0 & 198 & 911 & 184 \\ \hline
+2\% & 59.935 & 154 & 453 & 150 & 426 & 939 & 931 \\ \hline
+5\% & 150.029 & 368 & 489 & 374 & 2.097 & 981 & 980 \\ \hline
+10\% & 300.183 & 752 & 540 & 756 & 4.888 & 1.055 & 1.061 \\ \hline
+25\% & 749.587 & 1.898 & 722 & 529 & 10.874 & 866 & 842 \\ \hline
+50\% & 1.500.344 & 3.810 & 981 & 1.021 & 26.352 & 1.792 & 1.756 \\ \hline
 \end{tabular}
+\par\vspace{3pt}{\noindent\small\itshape Nguồn: results/rq2\_M3\_summary.csv. Trung vị của 5 lượt; ô auto của TiDB ở mức 2\% có kế hoạch lai (một phần truy vấn dùng chỉ mục, một phần quét bảng).\par}
 \end{table}
 
-\hinhcho{Độ trễ theo độ chọn lọc, trục x thang log, ba chế độ}{Ngưỡng độ chọn lọc của hai hệ}{fig:rq2}
+Ở độ chọn lọc thấp, chỉ mục thắng rất rõ: ở 0,001\% MySQL cần 0,66 ms (index) so với 386 ms (scan), TiDB cần 4,3 ms so với 882 ms. Chi phí quét bảng gần như không đổi theo $R$ (MySQL khoảng 0,37--0,54 s, TiDB khoảng 0,88--1,06 s cho tới 10\%), vì đây là chi phí đọc cả bảng; chi phí tra qua chỉ mục tăng theo $R$. Hai đường cắt nhau ở độ chọn lọc trung bình, và tăng $R$ thêm nữa thì quét bảng thắng.
+
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Điểm giao nhau và điểm optimizer đổi phương án}\label{tab:rq2}
+\begin{tabular}{|C{2.2cm}|C{3.0cm}|C{4.2cm}|C{5.2cm}|}
+\hline
+\dongdau \textbf{Hệ} & \textbf{Điểm giao nhau (\%)} & \textbf{Optimizer chuyển sang quét bảng} & \textbf{Hậu quả ở mức đo gần nhất} \\ \hline
+MySQL & 6,9 (giữa 5 và 10) & Giữa 10 và 25\%; ở 10\% vẫn dùng chỉ mục & Ở 10\%: auto 756 ms, scan 540 ms (auto chậm hơn 1,4 lần) \\ \hline
+TiDB C3 & 3,2 (giữa 2 và 5) & Từ 2\% (kế hoạch lai), hoàn toàn ở 5\% & Ở 2\%: auto 931 ms, index 426 ms (auto chậm hơn 2,2 lần) \\ \hline
+\end{tabular}
+\par\vspace{3pt}{\noindent\small\itshape Nguồn: results/rq2\_M3\_summary.csv. Điểm giao nhau nội suy tuyến tính trong thang log giữa hai mức đo liên tiếp; vì lưới thưa nên chỉ khoảng trong ngoặc là chắc chắn.\par}
+\end{table}
+
+\textbf{Điểm giao nhau.} MySQL giao ở khoảng 6,9\%: ở 5\% index nhanh hơn scan (368 so với 489 ms), ở 10\% chậm hơn (752 so với 540 ms). TiDB giao sớm hơn, khoảng 3,2\%: ở 2\% index nhanh hơn (426 so với 939 ms), ở 5\% chậm hơn nhiều (2.097 so với 981 ms). Với cả hai hệ, khoảng giữa hai mức đo không chồng lên khoảng nhỏ nhất--lớn nhất của các lượt, nên việc điểm giao nằm trong khoảng đó không phụ thuộc vào nhiễu; con số 6,9\% và 3,2\% chỉ là nội suy trong khoảng ấy.
+
+\textbf{Optimizer.} Hai hệ lệch khỏi điểm giao nhau theo hai chiều ngược nhau. MySQL giữ chỉ mục quá lâu: ở 10\% optimizer vẫn chọn chỉ mục dù quét bảng nhanh hơn, và chỉ đổi sang quét bảng ở mức 25\% (đo được trong khoảng từ 10 đến 25\%). TiDB đổi quá sớm: ở 2\%, mức mà chỉ mục còn nhanh gấp 2,2 lần, kế hoạch \code{auto} đã lẫn \code{IndexLookUp} với \code{TableReader} ở cả 5 lượt, và p50 của \code{auto} (931 ms) gần bằng \code{scan} (939 ms) thay vì \code{index} (426 ms). Khoảng nhỏ nhất--lớn nhất của \code{auto} và \code{index} ở mức này không chồng nhau (706--941 so với 412--595 ms). Số liệu không cho biết nguyên nhân: nhóm không đo thống kê mà optimizer dùng để ước lượng số dòng, nên không kết luận optimizer ước lượng sai chỗ nào.
+
+\textbf{Chi phí cố định và chi phí trên mỗi dòng.} Bảng~\ref{tab:rq2-fit} khớp mô hình $t = a + bR$ với 10 mức cho từng hệ và chế độ. Với MySQL, mô hình khớp tốt (R$^2$ = 0,9995 cho index): chi phí khoảng 2,5 $\mu$s mỗi dòng, hầu như không đổi trên toàn dải $R$ (từ 2,4 đến 2,6 $\mu$s). Với TiDB, mô hình tuyến tính khớp kém (R$^2$ = 0,56 cho index và 0,60 cho scan, phần dư lớn nhất 59\%). Lý do đọc được từ số liệu là chi phí trên mỗi dòng của TiDB không cố định: thời gian chia cho $R$ tăng từ khoảng 6,6 $\mu$s ở 1\% lên 14--18 $\mu$s từ 5\% trở lên. Vì vậy hệ số $b$ của TiDB (7,2 $\mu$s) chỉ là giá trị trung bình thô, và bảng này không được dùng để dự đoán $R$ nằm ngoài các mức đã đo. Nhóm chưa tách được phần nào của sự tăng này đến từ gửi dòng qua tầng coprocessor, từ giới hạn CPU của TiKV hay từ đọc đĩa; các bộ đếm chi tiết (\code{cop\_tasks}, \code{rpcs}, \code{block\_reads}) đã được lưu trong \path{results/rq2_M3.csv} để phân tích tiếp.
+
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Khớp $t = a + bR$ cho từng hệ và chế độ, 3 triệu dòng (M3)}\label{tab:rq2-fit}
+\begin{tabular}{|C{2.2cm}|C{2.0cm}|C{2.2cm}|C{2.8cm}|C{1.6cm}|C{2.4cm}|}
+\hline
+\dongdau \textbf{Hệ} & \textbf{Chế độ} & \textbf{$a$ (ms)} & \textbf{$b$ ($\mu$s/dòng)} & \textbf{$R^2$} & \textbf{Phần dư lớn nhất} \\ \hline
+MySQL & index & 0,60 & 2,49 & 0,9995 & 6\% \\ \hline
+MySQL & scan & 397 & 0,42 & 0,98 & 9\% \\ \hline
+TiDB C3 & index & 3,05 & 7,17 & 0,56 & 59\% \\ \hline
+TiDB C3 & scan & 890 & 0,30 & 0,60 & 28\% \\ \hline
+\end{tabular}
+\par\vspace{3pt}{\noindent\small\itshape Nguồn: results/rq2\_M3\_fit.csv. Khớp có trọng số $1/t$ trên 10 mức độ chọn lọc.\par}
+\end{table}
+
+\hinh{rq2_M3.png}{0.95}{Độ trễ p50 theo độ chọn lọc, thang log cả hai trục, ba chế độ; đường dọc là điểm giao nhau của từng hệ (M3, 3 triệu dòng)}{fig:rq2}
+
+\textbf{Độ tin cậy.} Quét bảng của TiDB dao động nhiều giữa các lượt: p50 giữa các lượt ở cùng một mức trải từ 656 đến 1.139 ms (ví dụ 679--889 ms ở 0,001\%), trong khi của MySQL hẹp hơn nhiều (359--389 ms ở cùng mức). Ở mức 25\%, cả \code{scan} và \code{auto} của MySQL đều chạy cùng kế hoạch quét bảng nhưng cho p50 là 722 và 529 ms, với khoảng 523--734 ms; vì vậy chênh lệch dưới khoảng một phần ba giữa hai chế độ cùng kế hoạch là nhiễu, và kết luận ở trên chỉ dựa trên các khác biệt lớn hơn khoảng dao động. Mỗi chế độ chỉ chạy trên một máy, một quy mô (3 triệu dòng, tỉ lệ dữ liệu trên bộ nhớ đệm khoảng 1,13) và một hồ sơ; điểm giao nhau có thể dịch chuyển khi dữ liệu nhỏ hơn hoặc lớn hơn bộ nhớ đệm.
 
 \subsection{Kết luận chương}
 \ghichu{Trả lời giả thuyết RQ1, RQ2 bằng số. Nêu các lượt bất thường.}
