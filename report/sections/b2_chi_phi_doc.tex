@@ -38,7 +38,69 @@ Q2, Q2R & A / B & A: \code{IndexAndRow(range)}; B: \code{CoveringIndex} & A: \co
 Q3 & A / B & A: \code{IndexAndRow(ref)}; B: \code{CoveringIndex} & A: \code{IndexLookUp}; B: \code{IndexReader} \\ \hline
 \end{tabular}
 \end{table}
-\ghichu{Trích nguyên văn một kế hoạch có và một kế hoạch không covering cho Q2 và Q3 trên mỗi hệ, lấy từ thư mục \path{results/raw} của lượt đo.}
+Các đoạn mã dưới đây trích từ tệp \code{EXPLAIN ANALYZE} của lượt đo trên M3 (thư mục \path{results/raw}, lần lặp 1, hồ sơ XS, 1 triệu dòng). Mỗi tệp chứa 10 truy vấn; ta lấy truy vấn đầu (\code{sender\_id=71} cho Q2, \code{dest\_hub\_id=149} cho Q3). Với TiDB, trích rút gọn: bỏ các cột bộ nhớ và đĩa, giữ các bộ đếm chính (\code{cop\_task}, \code{proc\_keys}, \code{tot\_proc}, \code{tot\_wait}, \code{rpc\_info}); ký hiệu dấu khung đổi sang ASCII và đơn vị \(\mu\)s viết là \code{us}. Phần cắt bỏ đánh dấu \code{[...]}.
+
+{\hyphenpenalty=0 \exhyphenpenalty=0 \needspace{6\baselineskip}
+\begin{lstlisting}[basicstyle=\ttfamily\fontsize{7.5}{9.5}\selectfont, caption={Q2 trên MySQL, thiết kế A (\code{idx\_sender\_created}) và B (\code{idx\_sender\_cov})}, label={lst:plan-q2-mysql}]
+-- A (khong covering)
+-> Limit: 20 row(s)  (cost=0.71 rows=1) (actual time=0.0253..0.0853 rows=20 loops=1)
+    -> Index range scan on shipments using idx_sender_created over (sender_id = 71 AND '2026-08-01 00:00:00' <= created_at) (reverse), with index condition: [...] (actual time=0.024..0.0831 rows=20 loops=1)
+-- B (covering)
+-> Limit: 20 row(s)  (cost=1.21 rows=1) (actual time=0.0156..0.0251 rows=20 loops=1)
+    -> Filter: [...] (cost=1.21 rows=1) (actual time=0.0148..0.0236 rows=20 loops=1)
+        -> Covering index range scan on shipments using idx_sender_cov over (sender_id = 71 AND '2026-08-01 00:00:00' <= created_at) (reverse)  (cost=1.21 rows=1) (actual time=0.013..0.0206 rows=20 loops=1)
+\end{lstlisting}}
+
+{\hyphenpenalty=0 \exhyphenpenalty=0 \needspace{6\baselineskip}
+\begin{lstlisting}[basicstyle=\ttfamily\fontsize{7.5}{9.5}\selectfont, caption={Q2 trên TiDB, thiết kế A và B (cột: toán tử, actRows, task, thông tin thực thi)}, label={lst:plan-q2-tidb}]
+-- A (khong covering)
+Projection_7          20  root       time:1.23ms, loops:2
+ +-IndexLookUp_20     20  root       time:1.23ms, index_task:{total_time:541.8us}, table_task:{total_time:627.5us, num:1, concurrency:5}
+   |-Limit_19(Build)  20  cop[tikv]  time:535.1us, cop_task:{num:1, max:515us, proc_keys:20, tot_proc:96.8us, tot_wait:47.7us, copr_cache:disabled}, rpc_info:{Cop:{num_rpc:1, total_time:503.5us}}
+   | +-IndexRangeScan_17  20  cop[tikv]  table:shipments, index:idx_sender_created(sender_id, created_at)  range:[71 2026-08-01 00:00:00,71 +inf], keep order:true, desc
+   +-TableRowIDScan_18(Probe)  20  cop[tikv]  time:565.9us, cop_task:{num:1, max:545.3us, proc_keys:20, tot_proc:135.5us, tot_wait:52.3us, copr_cache:disabled}, rpc_info:{Cop:{num_rpc:1, total_time:537.5us}}
+-- B (covering)
+Projection_7          20  root       time:559.6us, loops:2
+ +-Limit_11            20  root       time:552.7us, loops:2
+   +-IndexReader_18    20  root       time:550.7us, cop_task:{num:1, max:530.1us, proc_keys:20, tot_proc:135.6us, tot_wait:48.3us, copr_cache:disabled}, rpc_info:{Cop:{num_rpc:1, total_time:514.8us}}
+     +-Limit_17        20  cop[tikv]  [...]
+       +-IndexRangeScan_16  20  cop[tikv]  table:shipments, index:idx_sender_cov(sender_id, created_at, status, cod_amount)  range:[71 2026-08-01 00:00:00,71 +inf], keep order:true, desc
+\end{lstlisting}}
+
+{\hyphenpenalty=0 \exhyphenpenalty=0 \needspace{6\baselineskip}
+\begin{lstlisting}[basicstyle=\ttfamily\fontsize{7.5}{9.5}\selectfont, caption={Q3 trên MySQL, thiết kế A (\code{idx\_hub}) và B (\code{idx\_hub\_status})}, label={lst:plan-q3-mysql}]
+-- A (khong covering)
+-> Table scan on <temporary>  (actual time=7.15..7.15 rows=6 loops=1)
+    -> Aggregate using temporary table  (actual time=7.14..7.14 rows=6 loops=1)
+        -> Index lookup on shipments using idx_hub (dest_hub_id=149)  (cost=1751 rows=5003) (actual time=0.704..6.58 rows=5003 loops=1)
+-- B (covering)
+-> Group aggregate: count(0)  (cost=1008 rows=994) (actual time=0.0409..0.608 rows=6 loops=1)
+    -> Covering index lookup on shipments using idx_hub_status (dest_hub_id=149)  (cost=508 rows=5003) (actual time=0.0295..0.457 rows=5003 loops=1)
+\end{lstlisting}}
+
+{\hyphenpenalty=0 \exhyphenpenalty=0 \needspace{6\baselineskip}
+\begin{lstlisting}[basicstyle=\ttfamily\fontsize{7.5}{9.5}\selectfont, caption={Q3 trên TiDB, thiết kế A và B (cột: toán tử, actRows, task, thông tin thực thi)}, label={lst:plan-q3-tidb}]
+-- A (khong covering)
+Projection_5          6     root       time:88.3ms, loops:5
+ +-HashAgg_11          6     root       time:88.3ms, loops:5
+   +-IndexLookUp_12    42    root       time:88.1ms, index_task:{total_time:2.21ms}, table_task:{total_time:85.8ms, num:1, concurrency:5}, next:{wait_index:3.07ms, wait_table_lookup_resp:85ms}
+     |-IndexRangeScan_9(Build)  5003  cop[tikv]  table:shipments, index:idx_hub(dest_hub_id)  time:2.09ms, cop_task:{num:1, proc_keys:5003, tot_proc:1.49ms, tot_wait:60.3us}, range:[149,149]
+     +-HashAgg_7(Probe)  42    cop[tikv]  time:85ms, cop_task:{num:7, max:84.6ms, min:3.52ms, avg:40.4ms, tot_proc:253.3ms, tot_wait:20.9ms, copr_cache:disabled}, rpc_info:{Cop:{num_rpc:7, total_time:283ms}}
+       +-TableRowIDScan_10  5003  cop[tikv]  table:shipments
+-- B (covering)
+Projection_5          6     root       time:2.27ms, loops:5
+ +-HashAgg_12          6     root       time:2.26ms, loops:5
+   +-IndexReader_13    6     root       time:2.19ms, cop_task:{num:1, max:2.14ms, proc_keys:5003, tot_proc:1.44ms, tot_wait:73.4us, copr_cache:disabled}, rpc_info:{Cop:{num_rpc:1, total_time:2.1ms}}
+     +-HashAgg_6       6     cop[tikv]  [...]
+       +-IndexRangeScan_11  5003  cop[tikv]  table:shipments, index:idx_hub_status(dest_hub_id, status)  range:[149,149], keep order:false
+\end{lstlisting}}
+
+Các kế hoạch cho thấy cơ chế đằng sau Bảng~\ref{tab:ke-hoach}, trong một truy vấn mẫu (chưa phải thống kê của cả 5 lượt):
+\begin{itemize}
+  \item \textbf{Q2, TiDB:} thiết kế A cần hai pha coprocessor, mỗi pha một RPC (\code{num\_rpc:1} ở \code{Limit\_19} và ở \code{TableRowIDScan\_18}): một pha đọc chỉ mục, một pha đọc 20 dòng từ bảng. Thiết kế B chỉ còn một pha (\code{IndexReader}, một RPC). Thời gian của truy vấn mẫu là 1,23 ms so với 0,56 ms. Trên MySQL, cùng truy vấn mẫu đó mất 0,085 ms ở A và 0,025 ms ở B (Đoạn mã~\ref{lst:plan-q2-mysql}); lúc này cả hai chỉ khác nhau một lần tra dòng trong cùng tiến trình, không có RPC.
+  \item \textbf{Q3, TiDB:} cả hai thiết kế đều quét chỉ mục 5\,003 khóa, nhưng thiết kế A còn phải đọc bảng qua 7 cop task (\code{tot\_proc} 253,3 ms, tổng \code{rpc\_info} 283 ms), còn thiết kế B gộp phép đếm xuống tầng chỉ mục với một cop task (\code{tot\_proc} 1,44 ms). Thời gian truy vấn mẫu là 88,3 ms so với 2,27 ms. Trên MySQL là 7,15 ms so với 0,608 ms: thiết kế A phải tạo bảng tạm để gom nhóm theo \code{status}, còn B đọc \code{status} thẳng từ chỉ mục và dùng \code{Group aggregate}.
+  \item \textbf{Dao động của TiDB Q3 ở thiết kế A:} trong cùng tệp, 5 truy vấn đầu cho 88,3; 96,1; 95,4; 15,4 và 82,9 ms với cùng hình dạng kế hoạch (\code{IndexLookUp} cộng \code{HashAgg} đẩy xuống). Truy vấn 15,4 ms có \code{tot\_proc} của các cop task bảng là 30,9 ms, còn bốn truy vấn kia từ 232 đến 345,5 ms. Vậy thay đổi thời gian ở đây không đến từ việc kế hoạch đổi; nhóm chưa xác định được nguyên nhân bên trong TiKV nên chỉ ghi nhận hiện tượng.
+\end{itemize}
 
 \subsection{RQ1: lợi ích của covering}
 Ở 3 triệu dòng trên M2 (số chính), lợi ích covering phụ thuộc vào $R$ và khác nhau giữa hai hệ.
