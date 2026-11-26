@@ -1,0 +1,6 @@
+engine,pk_variant,rows,index_mib,bytes_per_entry,vs_bigint_clustered,primary_mib,isolated
+mysql,bigint_clustered,1000000,25.6,26.8,1.0,171.7,
+mysql,code_clustered,1000000,32.6,34.2,1.274,277.0,
+tidb,bigint_clustered,1000000,72.5,76.0,1.0,,1
+tidb,bigint_nonclustered,1000000,72.5,76.0,1.0,,1
+tidb,code_clustered,1000000,101.1,106.0,1.395,,1

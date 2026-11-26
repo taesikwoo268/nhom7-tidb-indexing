@@ -3,7 +3,7 @@
 
 \subsection{Vận hành cụm}
 
-Mỗi lúc chỉ một hệ được chạy, vì hai hệ cùng chạy sẽ tranh CPU, RAM và đĩa. Script chuyển hệ kiểm tra điều này: nếu hệ kia đang chạy, nó báo lỗi và chỉ dừng hệ kia khi có tham số \code{-Switch}. Sau khi bật, script chờ đến khi hệ trả lời \code{SELECT 1} và kiểm tra cổng đang nối đúng loại máy chủ. Dữ liệu nằm trong volume của Docker nên được giữ lại khi chuyển hệ. Bảng~\ref{tab:van-hanh} tóm tắt các thao tác.
+Hai hệ không bao giờ chạy cùng lúc, vì khi đó chúng sẽ tranh nhau CPU, RAM và đĩa. Script chuyển hệ kiểm tra điều này: nếu hệ kia còn chạy, script báo lỗi, và chỉ tự dừng hệ kia khi được gọi với tham số \code{-Switch}. Sau khi bật, script chờ hệ trả lời \code{SELECT 1} và kiểm tra cổng đang nối đúng loại máy chủ. Dữ liệu nằm trong volume của Docker nên vẫn còn sau mỗi lần chuyển hệ. Các thao tác thường dùng được tóm tắt ở Bảng~\ref{tab:van-hanh}.
 
 \begin{table}[!htp]
 \centering\bangnho
@@ -22,7 +22,7 @@ Nạp dữ liệu & \code{load.ps1 -Engine tidb -Rows 1000000} & Số dòng, t�
 
 \subsubsection{Kiểm tra trạng thái cụm TiDB}
 
-Trạng thái cụm đọc được bằng SQL thông thường qua TiDB server:
+Trạng thái cụm có thể đọc bằng SQL thông thường qua TiDB server, không cần công cụ riêng:
 
 \begin{lstlisting}[language=SQL,caption={Kiểm tra store, số bản sao và cấu hình}]
 SELECT store_id, address, store_state_name, region_count, leader_count
@@ -36,12 +36,14 @@ SHOW CONFIG WHERE type='pd' AND name='replication.max-replicas';
 SHOW CONFIG WHERE type='tikv' AND name='storage.block-cache.capacity';
 \end{lstlisting}
 
-Trong quá trình đo RQ4, các truy vấn này đã phát hiện hai tình huống vận hành đáng chú ý. Thứ nhất, ở C1 số leader phân bố lệch giữa ba store, khoảng 230/60/50. Thứ hai, trong năm lượt đo, store \code{tikv1} không giữ leader nào vì PD tạm chuyển leader khỏi store bị đánh giá là chậm. Cả hai được báo cáo ở Chương~\ref{sec:ghi}.
+Chính các truy vấn này đã giúp nhóm phát hiện hai hiện tượng trong lúc đo RQ4. Ở C1, leader phân bố lệch giữa ba store, khoảng 230/60/50. Còn trong năm lượt C3, store \code{tikv1} không giữ leader nào vì PD tạm chuyển leader khỏi store mà nó đánh giá là chậm. Cả hai được phân tích ở Chương~\ref{sec:ghi}.
 
 \subsubsection{Giám sát bằng TiDB Dashboard}
 
-TiDB Dashboard chạy sẵn trong PD, truy cập tại \url{http://localhost:2379/dashboard}. Trang Cluster Info cho biết phiên bản và trạng thái của từng thành phần; trang Key Visualizer hiển thị lưu lượng đọc, ghi theo dải khóa và giúp nhận ra điểm nóng. Hình~\ref{fig:dashboard} cho thấy cụm có đúng 1 PD, 1 TiDB server và 3 TiKV, đều ở trạng thái Up và cùng phiên bản v8.5.5; \code{tikv2} có thời điểm khởi động muộn hơn vì vừa được bật lại trong demo chịu lỗi. Trong Hình~\ref{fig:keyviz}, trục ngang là thời gian, trục dọc là dải khóa, màu càng sáng thì byte ghi càng nhiều. Các ô màu cam trên bảng \code{shipments} xuất hiện trong thời gian chạy demo thêm node, khi 100.000 đơn được nạp vào bảng đã tách sẵn Region và các Region được chuyển sang node mới. Các vệt sáng hẹp là nơi ghi dồn vào ít khóa, trong đó vệt phía dưới thuộc dải khóa của các bảng hệ thống.
+TiDB Dashboard chạy sẵn trong PD, mở tại \url{http://localhost:2379/dashboard}. Trang Cluster Info cho biết phiên bản và trạng thái của từng thành phần, còn trang Key Visualizer hiển thị lưu lượng đọc, ghi theo dải khóa, giúp nhận ra điểm nóng. Hình~\ref{fig:dashboard} cho thấy cụm có đúng 1 PD, 1 TiDB server và 3 TiKV, tất cả ở trạng thái Up và cùng phiên bản v8.5.5. \code{tikv2} có thời điểm khởi động muộn hơn vì nó vừa được bật lại sau demo chịu lỗi.
 
-\hinh{tidb_dashboard.png}{0.92}{TiDB Dashboard trên máy M2 (25/11/2026, hồ sơ XS): 1 PD, 1 TiDB, 3 TiKV}{fig:dashboard}
+Trong Hình~\ref{fig:keyviz}, trục ngang là thời gian, trục dọc là dải khóa, màu càng sáng thì càng nhiều byte được ghi. Các ô màu cam trên bảng \code{shipments} xuất hiện trong lúc chạy demo thêm node, khi 100.000 đơn được nạp vào bảng đã tách sẵn Region và các Region được chuyển sang node mới. Những vệt sáng hẹp là chỗ ghi dồn vào ít khóa; vệt phía dưới thuộc dải khóa của các bảng hệ thống.
 
-\hinh{tidb_key_visualizer.png}{0.92}{Key Visualizer trên máy M2, byte ghi theo dải khóa trong lúc demo (25/11/2026)}{fig:keyviz}
+\hinh{tidb_dashboard.png}{0.92}{TiDB Dashboard trên máy M2: 1 PD, 1 TiDB server và 3 TiKV (hồ sơ XS)}{fig:dashboard}
+
+\hinh{tidb_key_visualizer.png}{0.92}{Key Visualizer: byte ghi theo dải khóa trong lúc chạy demo}{fig:keyviz}

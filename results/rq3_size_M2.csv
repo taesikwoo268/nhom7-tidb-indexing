@@ -1,0 +1,6 @@
+run_id,machine,profile,engine,version,replica_config,rows,sum_cod,config_id,pk_variant,load_s,fast_reorg,build_s,index_bytes,index_entries,bytes_per_entry,index_leaf_pages,primary_bytes,other_unique_bytes,regions,isolated
+20261126T163853Z_M2_rq3_mysql,M2,XS,mysql,8.4.11,,1000000,5000968738439,d79d4b43c96a,bigint_clustered,5.2,,1.2,26804224,1000000,26.8,1386,180060160,33112064,,
+20261126T163853Z_M2_rq3_mysql,M2,XS,mysql,8.4.11,,1000000,5000968738439,d79d4b43c96a,code_clustered,10.4,,1.6,34160640,1000000,34.2,1819,290455552,28934144,,
+20261126T164112Z_M2_rq3_tidb,M2,XS,tidb,Release Version: v8.5.5,C3,1000000,5000968738439,562560d6905f,bigint_clustered,49.2,1,8.3,75999740,1000000,76.0,,,,4,1
+20261126T164112Z_M2_rq3_tidb,M2,XS,tidb,Release Version: v8.5.5,C3,1000000,5000968738439,562560d6905f,bigint_nonclustered,86.6,1,7.0,75999740,1000000,76.0,,,,4,1
+20261126T164112Z_M2_rq3_tidb,M2,XS,tidb,Release Version: v8.5.5,C3,1000000,5000968738439,562560d6905f,code_clustered,114.9,1,45.5,105999499,1000000,106.0,,,,4,1

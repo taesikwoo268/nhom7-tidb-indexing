@@ -18,12 +18,12 @@ Mỗi người chỉ sửa file của mình trong `sections/`. Không sửa `mai
 | `p2_phuong_phap.tex` | Chương 4, phương pháp và kịch bản | TV2 |
 | `b0_so_bo.tex` | Chương 5, thực nghiệm sơ bộ (B.0) | TV3 |
 | `b1_dung_luong.tex` | Chương 5, dung lượng (B.1) | TV1 |
+| `b1_rq3.tex` | Chương 5, RQ3: kiểu khóa chính | TV2 |
 | `b2_chi_phi_doc.tex` | Chương 6 (B.2) | TV3 |
 | `b3_chi_phi_ghi.tex` | Chương 7 (B.3) | TV2 |
 | `b4_tong_hop.tex` | Chương 8, giả thuyết và khuyến nghị (B.4) | TV1 |
 | `b4_han_che.tex` | Chương 8, hạn chế (B.4) | TV3 |
 | `ket_luan.tex` | Kết luận | TV1 |
-| `phu_luc.tex` | Phụ lục | TV2 |
 | `tai_lieu_tham_khao.tex` | Tài liệu tham khảo | Cả nhóm thêm, TV1 rà |
 
 `01_phan_a.tex`, `02_phan_b.tex`, `03_ket_luan.tex` và `04_phu_luc.tex` là bản cũ, không còn được biên dịch. Chỉ dùng để tham khảo, vì có nhiều số và nhận định chưa được kiểm chứng.
@@ -34,12 +34,12 @@ Mỗi người chỉ sửa file của mình trong `sections/`. Không sửa `mai
 |---|---|
 | Phần 1: tổng quan, kiến trúc, thành phần chính | Chương 2 |
 | Phần 1: cài đặt, cấu hình, vận hành, demo chức năng cơ bản | Chương 3 |
-| Phần 1: trình bày tổng quát, chi tiết dẫn ra ngoài | Phụ lục C |
+| Phần 1: trình bày tổng quát, chi tiết dẫn ra ngoài | Kho mã (dẫn ở đầu Chương 3) |
 | Phần 2: vấn đề đã đăng ký, cơ chế, phương pháp, kịch bản | Chương 4 và đầu Chương 5, 6, 7 |
 | Phần 2: phân tích kết quả | Chương 5, 6, 7, 8 |
-| Phần 2: dữ liệu và thực nghiệm thực tế (bắt buộc) | Chương 5, 6, 7; file trong `results/` ở Phụ lục B |
+| Phần 2: dữ liệu và thực nghiệm thực tế (bắt buộc) | Chương 5, 6, 7; mỗi bảng ghi file nguồn trong `results/` |
 
-Phần 1 viết tổng quát. Phần nào cần nhiều lệnh thì dẫn sang Phụ lục C.
+Phần 1 viết tổng quát. Phần nào cần nhiều lệnh thì dẫn sang kho mã. Báo cáo không có Phụ lục và không có mục trả lời nhận xét riêng (nhóm quyết định 26/11/2026); ba nhận xét của giảng viên được trả lời ngay trong Chương 3, 6, 7.
 
 ## Lệnh có sẵn
 

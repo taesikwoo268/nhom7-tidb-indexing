@@ -23,7 +23,8 @@ Bạn phụ trách môi trường dùng chung, thực nghiệm chi phí ghi RQ4,
 - [x] Nạp cùng bộ **1.000.000 dòng**, seed `20261116`, lần lượt vào TiDB và MySQL trên M2. Kiểm tra số dòng và tổng `cod_amount` khớp giữa hai hệ.
 - [x] M2: `team_hash=fa4c12cdf33a`, 1 triệu dòng `sum_cod=5000968738439` khớp giá trị chuẩn.
 - [x] M1: 3 triệu dòng `sum_cod=15001281300461` khớp giá trị chuẩn (lấy từ `results/rq1_M1.csv`).
-- [ ] Nhận `team_hash` của M1, và `team_hash` cùng checksum của M3; điền vào bảng trong `p2_phuong_phap.tex`.
+- [x] M3: `team_hash=fa4c12cdf33a`, 3 triệu dòng `sum_cod=15001281300461` khớp giá trị chuẩn; đã điền.
+- [ ] Nhận `team_hash` của M1; nhận tổng 1 triệu dòng của M3 khi TV3 chạy RQ1.
 
 ## 19–20/11 · Task 10 — Viết công cụ và chạy thử RQ4
 
@@ -62,23 +63,26 @@ Code RQ1 cho TV1 và TV3:
 
 ## 24–25/11 · Viết A.3, Chương 4 và B.3
 
-- [ ] Hoàn thiện **Bảng A.3.1**: dòng M2 đã có, còn chờ thông tin M1 (TV1) và M3 (TV3).
+- [ ] Hoàn thiện **Bảng A.3.1**: dòng M2, M3 đã có, còn chờ thông tin M1 (TV1).
 - [x] Viết **A.3 phần cài đặt** theo hồ sơ XS, dùng tên C3/C1: cấu hình, định nghĩa bản sao và quorum, `SELECT tidb_version()`, trạng thái 3 store, `SHOW CREATE TABLE` và khác biệt collation của hai hệ.
 - [x] Chạy mọi demo của A.3 bằng `scripts/demo.ps1` (cơ bản, chịu lỗi, thêm node; phần demo bổ sung nhận từ TV3) và viết `a3_demo_co_ban.tex`, `a3_demo.tex`.
-- [x] Viết **vận hành cụm** kèm ảnh Dashboard và Key Visualizer (`a3_van_hanh.tex`), **phương pháp và kịch bản** của Chương 4 (`p2_phuong_phap.tex`) và **Phụ lục C**.
+- [x] Viết **vận hành cụm** kèm ảnh Dashboard và Key Visualizer (`a3_van_hanh.tex`), **phương pháp và kịch bản** của Chương 4 (`p2_phuong_phap.tex`) và Phụ lục (26/11: nhóm bỏ Phụ lục và mục 8.5 trả lời nhận xét; link kho mã chuyển lên đầu Chương 3).
 - [x] Viết **B.3** trong `report/sections/b3_chi_phi_ghi.tex`, thay phần `sbtest1` cũ. Số MySQL lấy từ lần đo `utf8mb4_bin` ngày 25/11 (`results/rq4_official_bin.csv`); có mục kiểm tra collation và so với lần đo `unicode_ci`.
 - [x] Trong B.3, nêu đủ các điểm bất thường: 5 lượt C3 vòng 2 chạy khi `tikv1` giữ 0 leader; 1 lượt C1 trùng lệnh chẩn đoán; 3 lượt C1 đo lại; 1 dòng C3 ghi `tikv_stores=2`; leader C1 lệch; MySQL `sender_cov` ở lần đo cũ dao động 7.597–12.647 TPS; hai hệ đo khác ngày; C3 cập nhật 1 index +6% nằm trong mức nhiễu; dung lượng index TiDB là ước tính; bỏ mức 16 luồng; TiDB dùng tới 1.156/1.280 MiB; một TiKV của C3 chạy sát 0,8 CPU; byte ghi của TiDB dao động tới hơn 5 lần.
 - [x] Thay khung báo cáo theo mẫu và yêu cầu của giảng viên (Phần 1, Phần 2, 8 chương), mỗi thành viên một nhóm file riêng trong `report/sections/`.
 - [x] Bỏ các hình cũ không có file; mọi hình trong phần TV2 đã có trong `report/figures/`.
 - [ ] Biên dịch bản hiện tại trên Overleaf bằng XeLaTeX (khung ban đầu đã biên dịch được; bản có nội dung mới chưa thử).
-- [ ] Đọc lại Chương 3, phần phương pháp của Chương 4, Chương 7 và Phụ lục; mở các tài liệu tham khảo mới để đối chiếu.
+- [ ] Đọc lại Chương 3, phần phương pháp của Chương 4, Chương 7; mở các tài liệu tham khảo mới để đối chiếu.
 - [x] Đưa code, CSV, hình và phần viết lên `main` (PR #7, #8).
 - [ ] Báo TV1 phần TV2 đã sẵn sàng để ghép; nhắc lấy số RQ4 từ `results/rq4_official_bin_summary.csv`.
 
 ## 25–27/11 · Đọc chéo và thuyết trình
 
-- [ ] **25/11** — Hỏi tiến độ TV1 (B.1, RQ3 có làm không) và TV3 (RQ1 1 triệu dòng, RQ2, B.2).
-- [ ] **25/11** — Đọc chéo B.2 và gửi góp ý cho TV3. Đang chờ TV3 viết.
+- [ ] **25/11** — Hỏi tiến độ TV1 (B.1) và TV3 (RQ1 1 triệu dòng, RQ2, B.2).
+- [x] **26/11** — RQ3 do TV2 nhận vì đã có trong đề cương đăng ký (mục 2.3). Đo trên M2, 1 triệu dòng, 3 biến thể TiDB, 2 biến thể MySQL (`results/rq3_size_M2.csv`, `results/rq3_M2.csv`, bản tổng hợp `*_summary.csv`). Viết `report/sections/b1_rq3.tex`; thêm dòng RQ3 vào Bảng 1.1, bảng kịch bản và đoạn điều chỉnh so với đề cương ở Chương 1.
+- [ ] Nhắn TV1: RQ3 đã đo xong, TV1 không phải làm.
+- [x] **26/11** — Đọc chéo B.2 (bản PR #11): mọi số trong bảng covering M1, M2, chi phí gọi KV, đường chuẩn và mô hình $a + bR$ khớp CSV.
+- [ ] Góp ý TV3: `b4_han_che.tex` ghi cụm TiDB khoảng 5,25 GiB, hồ sơ XS thực tế là 5,5 GiB (5.632 MiB).
 - [ ] **26/11** — Đối chiếu từng con số trong B.1 với CSV của TV1.
 - [ ] **26/11** — Đối chiếu từng con số trong B.2 với CSV của TV3.
 - [ ] **26/11** — Soạn phần thuyết trình RQ4 và A.3, chuẩn bị câu hỏi bảo vệ.

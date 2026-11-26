@@ -1,11 +1,11 @@
 % Mục A.3 phần cài đặt. Phụ trách: TV2.
 \phutrach{TV2 -- mục A.3, phần cài đặt}
 
-Phần này trình bày tổng quát môi trường và cách cài đặt. Lệnh chi tiết, file cấu hình và mã nguồn được dẫn ở Phụ lục~C.
+Chương này chỉ trình bày môi trường và cách cài đặt ở mức tổng quát. Toàn bộ lệnh, file cấu hình, mã nguồn và kết quả đo nằm trong kho mã của nhóm (\url{https://github.com/taesikwoo268/nhom7-tidb-indexing}); muốn dựng lại môi trường, chỉ cần làm theo file \path{README.md}.
 
 \subsection{Ba máy thực nghiệm}
 
-Mỗi thành viên chạy phần đo của mình trên một máy (Bảng~\ref{tab:ba-may}). Trên mỗi máy, TiDB và MySQL được đo lần lượt trong cùng điều kiện. Số tuyệt đối chỉ được so giữa hai hệ trên cùng một máy; giữa các máy chỉ so tỉ lệ.
+Mỗi thành viên đo phần của mình trên máy cá nhân (Bảng~\ref{tab:ba-may}). Ba máy có phần cứng khác nhau, nên nhóm chỉ so số tuyệt đối giữa hai hệ trên cùng một máy; giữa các máy, nhóm chỉ so tỉ lệ.
 
 \begin{table}[!htp]
 \centering\bangnho
@@ -14,17 +14,17 @@ Mỗi thành viên chạy phần đo của mình trên một máy (Bảng~\ref{t
 \hline
 \dongdau \textbf{Máy} & \textbf{Phần đo} & \textbf{CPU, số luồng} & \textbf{RAM} & \textbf{Ổ dữ liệu} & \textbf{Windows, Docker, WSL2} \\ \hline
 M1 & B.1; RQ1 (3 triệu dòng, đối chiếu) & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-M2 & RQ4 (1 triệu dòng); RQ1 (3 triệu dòng) & Intel Core Ultra 5 125H, 14 nhân, 18 luồng & 16 GB & SSD NVMe 512 GB (UMIS) & Windows 11 Home (10.0.26300); Docker 29.8.0; WSL2 10 GB RAM, 4 GB swap \\ \hline
-M3 & RQ1 (1 triệu dòng); RQ2 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+M2 & RQ4, RQ3 (1 triệu dòng); RQ1 (3 triệu dòng) & Intel Core Ultra 5 125H, 14 nhân, 18 luồng & 16 GB & SSD NVMe 512 GB (UMIS) & Windows 11 Home (10.0.26300); Docker 29.8.0; WSL2 10 GB RAM, 4 GB swap \\ \hline
+M3 & RQ1 (1 triệu dòng); RQ2 & Intel Core i5-13420H, 8 nhân, 12 luồng & 16 GB & SSD NVMe 512 GB (SK hynix) & Windows 11 Home Single Language (10.0.26200); Docker 29.8.2; WSL2 10 GB RAM, 4 GB swap \\ \hline
 \end{tabular}
 \end{table}
-\ghichu{Còn thiếu thông tin M1 và M3. TV1, TV3 gửi theo lệnh trong checklist.}
+\ghichu{Còn thiếu thông tin M1. TV1 gửi theo lệnh trong checklist.}
 
-Trên M2, Docker nhìn thấy 18 CPU và 9,7 GiB bộ nhớ. Máy được cắm sạc trong suốt lượt đo chính thức.
+Với giới hạn WSL2 như trên, Docker thấy 18 CPU và 9,7 GiB bộ nhớ trên M2, 10 CPU và 9,7 GiB trên M3. Trong các lượt đo chính thức, máy luôn được cắm sạc để chế độ tiết kiệm pin không làm thay đổi hiệu năng.
 
 \subsection{Cấu hình tài nguyên}
 
-Cả ba máy dùng cùng một hồ sơ tài nguyên, gọi là XS (Bảng~\ref{tab:xs}). Hồ sơ này được chọn để cụm TiDB và MySQL chạy được trên máy 16 GB, mỗi lúc một hệ. Hai hệ có cùng tổng giới hạn CPU và có bộ nhớ đệm dữ liệu gần bằng nhau.
+Cả ba máy dùng chung một hồ sơ tài nguyên mà nhóm gọi là XS (Bảng~\ref{tab:xs}). Hồ sơ này được thu nhỏ để cụm TiDB chạy được trên laptop 16 GB, trong khi hai hệ vẫn có cùng tổng giới hạn CPU và bộ nhớ đệm dữ liệu gần bằng nhau. Mỗi lúc chỉ có một hệ chạy.
 
 \begin{table}[!htp]
 \centering\bangfont
@@ -41,20 +41,17 @@ sysbench (RQ4) & 2,0 & 512 & --- \\ \hline
 \end{tabular}
 \end{table}
 
-Một số lựa chọn cấu hình cần được nêu rõ vì chúng ảnh hưởng tới cách đọc kết quả:
+Có vài lựa chọn cấu hình ảnh hưởng tới cách đọc kết quả ở Phần 2. Trước hết, tổng RAM của hai hệ không bằng nhau: cụm TiDB được 5,5 GiB, MySQL chỉ có 2 GiB. Nhóm chọn cân bằng bộ nhớ đệm dữ liệu thay vì tổng RAM, vì cụm TiDB có năm tiến trình và tiến trình nào cũng cần một phần bộ nhớ riêng. Buffer pool của MySQL được đặt 750M; MySQL làm tròn theo kích thước chunk thành 788.529.152 B, tức 752 MiB.
 
-\begin{itemize}
-  \item \textbf{RAM không bằng nhau.} Cụm TiDB có tổng giới hạn 5,5 GiB còn MySQL có 2 GiB. Nhóm cân bằng bộ nhớ đệm dữ liệu chứ không cân bằng tổng RAM, vì cụm TiDB gồm 5 tiến trình và mỗi tiến trình có phần bộ nhớ riêng.
-  \item \textbf{CPU chia cố định.} MySQL dùng được cả 4 CPU trong một tiến trình. TiDB chia 4 CPU cho 5 container, nên một TiKV không thể dùng quá 0,8 CPU dù các node khác rảnh.
-  \item \textbf{Độ bền.} MySQL đặt \code{innodb\_flush\_log\_at\_trx\_commit=1} và tắt binlog. TiDB giữ cấu hình ghi Raft log mặc định.
-  \item \textbf{TiKV.} Block cache mỗi node 250 MiB, \code{memory-usage-limit} 1.000 MiB, \code{write-buffer-size} 32 MiB cho hai column family chính. Image TiKV chính thức được loại phần debug, phần mã thực thi không đổi: trên M2, tiến trình gốc giữ khoảng 1,9 GB bộ nhớ khi cụm rỗng, bản đã loại giữ khoảng 0,16 GB.
-  \item \textbf{Collation.} Lược đồ không chỉ định collation nên mỗi hệ dùng mặc định của nó: \code{utf8mb4\_unicode\_ci} trên MySQL (đặt trong file cấu hình) và \code{utf8mb4\_bin} trên TiDB. So sánh và sắp xếp chuỗi vì vậy không hoàn toàn tương đương giữa hai hệ; trong các truy vấn và chỉ mục của đề tài, chỉ \code{tracking\_code} là cột chuỗi. Riêng RQ4, MySQL được đo lại với \code{utf8mb4\_bin}, và không thấy khác biệt lớn hơn mức nhiễu (Mục~\ref{sec:rq4-collation}). RQ1 ở truy vấn Q1 vẫn dùng collation mặc định, nên chỉ so tỉ số trong từng hệ.
-  \item \textbf{Buffer pool.} Giá trị đặt là 750M; MySQL làm tròn theo kích thước chunk thành 788.529.152 B, tức 752 MiB.
-\end{itemize}
+CPU cũng được chia theo hai cách khác nhau. MySQL là một tiến trình nên dùng được cả 4 CPU, còn TiDB phải chia 4 CPU cho năm container. Vì vậy một TiKV không thể dùng quá 0,8 CPU, kể cả khi hai TiKV kia đang rảnh. Chương~\ref{sec:ghi} sẽ cho thấy giới hạn này có ảnh hưởng thật tới kết quả.
+
+Về độ bền, MySQL đặt \code{innodb\_flush\_log\_at\_trx\_commit=1} và tắt binlog, còn TiDB giữ cấu hình ghi Raft log mặc định. Mỗi TiKV có block cache 250 MiB, \code{memory-usage-limit} 1.000 MiB và \code{write-buffer-size} 32 MiB cho hai column family chính. Nhóm dùng image TiKV chính thức nhưng loại bỏ phần thông tin debug, phần mã thực thi giữ nguyên. Trên M2, nhờ vậy bộ nhớ một tiến trình TiKV chiếm khi cụm còn rỗng giảm từ khoảng 1,9 GB xuống khoảng 0,16 GB.
+
+Cuối cùng là collation. Lược đồ không chỉ định collation nên mỗi hệ dùng mặc định của mình: MySQL dùng \code{utf8mb4\_unicode\_ci} (đặt trong file cấu hình), TiDB dùng \code{utf8mb4\_bin}. Hai hệ vì vậy so sánh và sắp xếp chuỗi không hoàn toàn giống nhau, nhưng trong các truy vấn và chỉ mục của đề tài chỉ có \code{tracking\_code} là cột chuỗi. Với RQ4, nhóm đã đo lại MySQL bằng \code{utf8mb4\_bin} và không thấy khác biệt nào vượt mức nhiễu (Mục~\ref{sec:rq4-collation}). RQ1 vẫn dùng collation mặc định, nên ở truy vấn Q1 báo cáo chỉ so tỉ số trong từng hệ.
 
 \subsection{Số node, số bản sao, quorum và khả năng chịu lỗi}
 
-Số node TiKV và số bản sao của mỗi Region là hai đại lượng khác nhau. Cả hai cấu hình TiDB trong đề tài đều có đúng 3 TiKV; nhóm chỉ thay đổi số bản sao bằng tham số \code{replication.max-replicas} của PD (Bảng~\ref{tab:ban-sao}).
+Số node TiKV và số bản sao của mỗi Region là hai khái niệm khác nhau, nên cần nói rõ cả hai. Trong đề tài, cả hai cấu hình TiDB đều có đúng 3 TiKV; nhóm chỉ đổi số bản sao qua tham số \code{replication.max-replicas} của PD (Bảng~\ref{tab:ban-sao}).
 
 \begin{table}[!htp]
 \centering\bangnho
@@ -67,27 +64,21 @@ C1 & 3 & 1 & 1 trên 1 & Không & Tách chi phí nhân bản ở RQ4, bộ 0 và
 \end{tabular}
 \end{table}
 
-Ở C3, mỗi Region có ba peer trên ba store khác nhau. Một lệnh ghi được commit khi 2 trên 3 peer đã ghi Raft log~\cite{raft}, nên khi mất một store, Region còn đủ đa số để bầu leader và phục vụ tiếp. Ở C1, mỗi Region chỉ có một peer: quorum là 1 trên 1, và mất store chứa peer nào thì Region đó ngừng phục vụ. MySQL trong đề tài chạy một node, không có bản sao.
+Ở C3, mỗi Region có ba peer nằm trên ba store khác nhau. Một lệnh ghi được commit khi 2 trong 3 peer đã ghi Raft log~\cite{raft}, nên nếu mất một store, các Region vẫn còn đủ đa số để bầu leader mới và tiếp tục phục vụ. Ở C1, mỗi Region chỉ có một peer, quorum là 1 trên 1: store chứa peer đó dừng thì Region cũng dừng. MySQL trong đề tài chạy một node và không có bản sao.
 
-Khả năng chịu lỗi này có ba giới hạn:
+Khả năng chịu lỗi của C3 cần được hiểu đúng phạm vi. Ba TiKV là ba container trên cùng một máy và một ổ đĩa, nên ``chịu mất một store'' ở đây chỉ có nghĩa là chịu mất một tiến trình, không phải mất một máy hay một ổ đĩa. Cụm cũng chỉ có một PD và một TiDB server, nên hai thành phần này vẫn là điểm lỗi đơn. Ngoài ra, không thể dựng cấu hình 3 bản sao với một TiKV, vì các peer của một Region phải nằm trên các store khác nhau; còn với hai TiKV, quorum là 2 trên 2 nên cũng không chịu được mất store nào.
 
-\begin{itemize}
-  \item Ba TiKV là ba container trên một máy và một ổ đĩa, nên ``chịu mất 1 store'' ở C3 chỉ là chịu mất một tiến trình, không phải mất một máy hay một ổ đĩa.
-  \item Cụm chỉ có một PD và một TiDB server, nên hai thành phần này là điểm lỗi đơn ở cả C3 và C1.
-  \item Một TiKV duy nhất không thể tạo thành cấu hình 3 bản sao, vì các peer của một Region phải nằm trên các store khác nhau. Với hai TiKV, quorum là 2 trên 2 nên cũng không chịu được mất store nào.
-\end{itemize}
-
-Trước khi đo TiDB, chương trình kiểm tra ba điều kiện và dừng nếu không đạt: \code{max-replicas} đúng giá trị cần đo, đủ 3 store ở trạng thái \code{Up}, và mọi Region có đúng số peer. Khi đổi giữa C3 và C1, chương trình chờ đến khi không còn peer nào đang chờ hoặc hỏng.
+Trước mỗi lượt đo TiDB, chương trình kiểm tra ba điều: \code{max-replicas} đúng giá trị cần đo, đủ 3 store ở trạng thái \code{Up}, và mọi Region có đúng số peer. Thiếu một điều kiện là chương trình dừng. Khi chuyển giữa C3 và C1, chương trình chờ tới lúc không còn peer nào đang chờ tạo hoặc bị hỏng rồi mới đo.
 
 \subsection{Các bước cài đặt}
 
-Việc cài đặt gồm năm bước; toàn bộ cấu hình nằm trong Git để ba máy giống nhau.
+Việc cài đặt gồm năm bước. Vì mọi cấu hình đều nằm trong Git, làm đúng các bước này thì ba máy sẽ có môi trường giống nhau.
 
 \begin{enumerate}
   \item Cài Docker Desktop với WSL2, đặt \code{memory=10GB} và \code{swap=4GB} cho WSL2.
-  \item Lấy mã nguồn và tạo môi trường Python 3.10 trở lên.
-  \item Khai báo tên máy và hồ sơ (\code{MACHINE\_ID}, \code{PROFILE=XS}); đổi cổng MySQL nếu cổng 3306 đã bị chiếm. M2 dùng cổng 3307.
-  \item Chạy lệnh kiểm tra. Lệnh này từ chối khi sai hồ sơ, Docker thiếu bộ nhớ hoặc CPU, máy chạy pin, hoặc file cấu hình khác Git.
+  \item Lấy mã nguồn về và tạo môi trường Python 3.10 trở lên.
+  \item Khai báo tên máy và hồ sơ (\code{MACHINE\_ID}, \code{PROFILE=XS}). Nếu cổng 3306 đã bị chiếm thì đổi cổng MySQL; M2 dùng cổng 3307.
+  \item Chạy lệnh kiểm tra. Lệnh này từ chối khi sai hồ sơ, Docker thiếu bộ nhớ hoặc CPU, máy đang chạy pin, hoặc có file cấu hình khác với Git.
   \item Bật từng hệ và nạp dữ liệu.
 \end{enumerate}
 
@@ -102,7 +93,7 @@ python -m bench.cli check
 
 \subsection{Minh chứng cài đặt}
 
-Đoạn mã dưới đây là đầu ra thật trên M2 ngày 24/11/2026, trích từ log của lượt RQ4 chính thức. Hai hệ cùng nạp 1 triệu dòng với cùng tổng \code{cod\_amount} và cùng mã SHA-256 của file nguồn. Bản MySQL trả lời phiên bản 8.4.11; TiDB trả lời phiên bản tương thích MySQL 8.0.11 kèm phiên bản TiDB v8.5.5.
+Đoạn log dưới đây được trích từ lần nạp dữ liệu cho RQ4 trên M2. Hai hệ cùng nạp 1 triệu dòng, cho cùng tổng \code{cod\_amount} và cùng mã SHA-256 của file nguồn. MySQL báo phiên bản 8.4.11; TiDB báo chuỗi phiên bản tương thích MySQL 8.0.11, kèm phiên bản thật là v8.5.5.
 
 \begin{lstlisting}[caption={Đầu ra khi kiểm tra và bật hai hệ trên M2}]
 machine=M2 profile=XS docker=18 CPU/9.7 GiB ac_power=True commit=317f0a6
@@ -115,7 +106,7 @@ tidb SELECT 1 = 1; version=8.0.11-TiDB-v8.5.5; port=4000
 tidb: rows=1000000 sum_cod=5000968738439 seed=20261116
   sha256=8ee11b63da2217d4b1d00137bd8e4f3ba647b9bed94a594468c990fe981f4827
 \end{lstlisting}
-Kết quả \code{SELECT tidb\_version()}, trạng thái store và lược đồ thực tế được lấy khi chạy demo ngày 25/11/2026 trên M2, cùng hồ sơ XS.
+Phiên bản chi tiết của TiDB, trạng thái ba store và lược đồ thực tế của bảng được lấy trên cùng máy, trong lúc chạy demo.
 
 \begin{lstlisting}[caption={Phiên bản TiDB và trạng thái ba store}]
 Release Version: v8.5.5
@@ -141,4 +132,4 @@ PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
 \end{lstlisting}
 
-Tên cột và kiểu dữ liệu giống nhau; khác biệt collation lặp lại ở các cột chuỗi khác. TiDB in \code{ENGINE=InnoDB} để tương thích cú pháp; dữ liệu thực tế nằm trong TiKV (\code{Store: tikv}).
+Hai hệ có cùng tên cột và kiểu dữ liệu; chỗ khác duy nhất là collation, lặp lại ở mọi cột chuỗi. TiDB vẫn in \code{ENGINE=InnoDB} chỉ để tương thích cú pháp, còn dữ liệu thật nằm trong TiKV (dòng \code{Store: tikv} ở trên).
