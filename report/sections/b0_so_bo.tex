@@ -2,15 +2,25 @@
 \phutrach{TV3 -- mục B.0}
 
 \subsection{Thực nghiệm sơ bộ}
-\ghichu{Khoảng nửa trang. sysbench trên \code{sbtest1}, 16 đến 512 luồng. Nêu giả thuyết ban đầu không được xác nhận. Chỉ giữ số có log gốc; ghi rõ đây là số giai đoạn 1, khác cấu hình XS. Kết thúc bằng câu hỏi dẫn tới các mục sau.}
+Trước khi đặt câu hỏi nghiên cứu, nhóm đo thông lượng của hai hệ trên bảng \code{sbtest1} (10 triệu dòng, một chỉ mục phụ) bằng sysbench, với 16 đến 512 luồng. Đây là số của giai đoạn 1: cả hai hệ dùng chung 6 CPU và 8,5 GiB phía cơ sở dữ liệu trên một laptop, khác cấu hình XS của các mục sau, nên không so số tuyệt đối giữa hai giai đoạn. Mỗi điểm đo chạy một lần, 120 giây; độ lệch thông lượng theo giây (hệ số biến thiên) từ 9\% đến 52\%.
 
 \begin{table}[!htp]
 \centering\bangfont
-\caption{Thông lượng sơ bộ trên sbtest1 (giai đoạn 1)}\label{tab:so-bo}
-\begin{tabular}{|L{4.4cm}|C{2.2cm}|C{2.6cm}|C{2.6cm}|C{2.2cm}|}
+\caption{Thông lượng sơ bộ trên sbtest1 (giai đoạn 1; TPS, P99 theo ms)}\label{tab:so-bo}
+\begin{tabular}{|L{4.0cm}|C{1.6cm}|C{2.0cm}|C{2.0cm}|C{2.0cm}|C{3.0cm}|}
 \hline
-\dongdau \textbf{Tải} & \textbf{Số luồng} & \textbf{MySQL} & \textbf{TiDB} & \textbf{Tỉ số} \\ \hline
-\code{oltp\_read\_write} & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-\code{oltp\_update\_index} & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+\dongdau \textbf{Tải} & \textbf{Luồng} & \textbf{TPS MySQL} & \textbf{TPS TiDB} & \textbf{Tỉ số} & \textbf{P99 MySQL / TiDB} \\ \hline
+\code{oltp\_read\_write} & 16 & 1.022 & 31,8 & 32,2$\times$ & 53 / 1.070 \\ \hline
+\code{oltp\_read\_write} & 64 & 1.179 & 71,1 & 16,6$\times$ & 167 / 2.199 \\ \hline
+\code{oltp\_read\_write} & 128 & 1.257 & 84,5 & 14,9$\times$ & 405 / 2.494 \\ \hline
+\code{oltp\_read\_write} & 256 & 1.585 & 90,5 & 17,5$\times$ & 459 / 11.946 \\ \hline
+\code{oltp\_read\_write} & 512 & 1.352 & 105 & 12,8$\times$ & 1.258 / 7.087 \\ \hline
+\code{oltp\_update\_index} & 16 & 2.247 & 281 & 8,0$\times$ & 28 / 117 \\ \hline
+\code{oltp\_update\_index} & 64 & 7.419 & 684 & 10,8$\times$ & 31 / 427 \\ \hline
+\code{oltp\_update\_index} & 128 & 10.340 & 807 & 12,8$\times$ & 54 / 412 \\ \hline
+\code{oltp\_update\_index} & 256 & 9.882 & 876 & 11,3$\times$ & 135 / 1.109 \\ \hline
+\code{oltp\_update\_index} & 512 & 7.880 & 799 & 9,9$\times$ & 370 / 1.803 \\ \hline
 \end{tabular}
 \end{table}
+
+MySQL đạt thông lượng cao hơn TiDB ở mọi mức: gấp 12,8 đến 32,2 lần với \code{oltp\_read\_write} và 8,0 đến 12,8 lần với \code{oltp\_update\_index}. Giả thuyết ban đầu của nhóm, rằng TiDB ổn định vượt trội ở 256--512 luồng, không được số liệu xác nhận trong môi trường một máy: thông lượng tuyệt đối của TiDB vẫn thấp hơn ở mọi mức tải. Khi nạp 10 triệu dòng, MySQL mất 126 giây còn TiDB mất 684 giây (khoảng 5,4 lần), theo log \code{prepare}. Số liệu này chưa cho biết chênh lệch đến từ đâu: từ đường ghi qua Raft, từ việc ba TiKV chia nhau một máy, hay từ chi phí đọc qua chỉ mục phụ. Đó là câu hỏi mà các mục sau tách riêng từng nguồn chi phí để trả lời.
