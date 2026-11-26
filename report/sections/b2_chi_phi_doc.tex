@@ -139,6 +139,9 @@ Q3 & 15.000 & 29,560 & 2,445 & 109,196 & 11,980 & 12,09 & 9,11 \\ \hline
 
 \ghichu{Khi có số M3 (1 triệu dòng), so tỉ số covering ở 1 triệu dòng với 3 triệu dòng. Không so độ trễ tuyệt đối giữa các máy.}
 
+\subsection{RQ1: lợi ích đọc phải đối chiếu với chi phí ghi và dung lượng}
+Các tỉ số ở trên chỉ nói về phía đọc. Chi phí đi kèm của covering index được đo ở hai mục khác, trên điều kiện khác (M2, 1 triệu dòng, 64 luồng), nên không cộng trực tiếp với số ở đây. Về ghi, Bảng~\ref{tab:rq4-covering} cho thấy khi cột được thêm vào chỉ mục (\code{status}) bị cập nhật, TPS giảm 29,5\% trên MySQL và 61,6\% trên TiDB C3; khi thêm đơn mới, khoảng dao động của hai thiết kế giao nhau nên chưa phân định được. Về dung lượng, Bảng~\ref{tab:dl-covering} sẽ cho kích thước của hai chỉ mục. Vì vậy lợi ích đọc lớn nhất của covering (Q3, $R = 15.000$) chỉ có ý nghĩa khi tải ghi ít cập nhật các cột nằm trong chỉ mục.
+
 \subsection{RQ2: ngưỡng độ chọn lọc}
 
 \subsubsection{Thiết kế}
