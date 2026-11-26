@@ -1,0 +1,49 @@
+% RQ3: kiểu khóa chính và dung lượng chỉ mục phụ. Phụ trách: TV2.
+% Số liệu: results/rq3_size_M2_summary.csv, results/rq3_M2_summary.csv (từ rq3_size_M2.csv, rq3_M2.csv).
+\phutrach{TV2 -- RQ3}
+
+\subsection{RQ3: ảnh hưởng của kiểu khóa chính}
+\label{sec:rq3}
+
+Mỗi mục của chỉ mục phụ phải trỏ được về dòng của nó. Trong InnoDB, con trỏ đó chính là khóa chính~\cite{mysql_innodb}. Trong TiDB, con trỏ là handle của dòng: khóa chính nếu bảng clustered, hoặc cột ẩn \code{\_tidb\_rowid} (số nguyên 64 bit) nếu bảng nonclustered (Bảng~\ref{tab:anh-xa-kv}). RQ3 vì vậy hỏi: kiểu khóa chính làm chỉ mục phụ lớn lên bao nhiêu, và làm việc tra cứu thay đổi ra sao. Thiết kế kỹ thuật của nhóm đã nêu hai kỳ vọng từ trước khi đo: khóa chính dạng chuỗi làm chỉ mục phụ lớn hơn trên cả hai hệ, và trên TiDB, bảng nonclustered phải tra hai bước khi tìm theo \code{id}.
+
+\textbf{Thiết kế.} Thí nghiệm chạy trên M2 với hồ sơ XS, 1 triệu dòng, trong một database riêng để không đụng tới bảng của RQ1 và RQ4. TiDB có ba biến thể: khóa chính \code{id} clustered, \code{id} nonclustered và \code{tracking\_code} clustered. MySQL có hai biến thể, vì InnoDB luôn tổ chức bảng theo khóa chính. Mọi bảng chứa cùng dữ liệu (tổng \code{cod\_amount} khớp giá trị chuẩn) và cùng các khóa logic: một khóa duy nhất trên \code{id}, một khóa duy nhất trên \code{tracking\_code} và \code{idx\_sender\_created}; chỉ khác ở chỗ khóa nào là khóa chính.
+
+Dung lượng được đo cho \code{idx\_sender\_created}, tính cho một bản sao. Trên MySQL, nhóm đọc số trang của chỉ mục trong \code{mysql.innodb\_index\_stats} sau \code{ANALYZE TABLE}. Trên TiDB, chỉ mục được tách thành các Region riêng; chương trình kiểm tra mọi Region chỉ chứa khóa của chỉ mục này, rồi đọc kích thước từng Region trực tiếp từ TiKV bằng \code{tikv-ctl}. Nhóm không dùng thống kê của PD vì khi chạy thử, các số này chỉ được cập nhật khi Region có thay đổi, nên bị cũ. Hai hệ đo theo hai cách khác nhau, vì vậy chỉ so tỉ lệ trong từng hệ. Ngoài dung lượng, nhóm đo độ trễ của ba truy vấn như ở RQ1: tra theo \code{id}, tra theo mã vận đơn, và lấy 20 đơn mới nhất của một shop qua \code{idx\_sender\_created}; mỗi truy vấn chạy 200 tham số, 3 vòng, và trên TiDB bộ đệm kết quả của coprocessor được tắt.
+
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Dung lượng của idx\_sender\_created theo kiểu khóa chính (1 triệu dòng, một bản sao)}\label{tab:rq3-dung-luong}
+\begin{tabular}{|C{1.8cm}|L{4.4cm}|C{2.6cm}|C{2.4cm}|C{3.2cm}|}
+\hline
+\dongdau \textbf{Hệ} & \textbf{Khóa chính} & \textbf{Dung lượng (MiB)} & \textbf{Byte mỗi mục} & \textbf{So với \code{id} clustered} \\ \hline
+MySQL & \code{id} & 25,6 & 26,8 & 1,00 \\ \hline
+MySQL & \code{tracking\_code} & 32,6 & 34,2 & 1,27 \\ \hline
+TiDB & \code{id} clustered & 72,5 & 76,0 & 1,00 \\ \hline
+TiDB & \code{id} nonclustered & 72,5 & 76,0 & 1,00 \\ \hline
+TiDB & \code{tracking\_code} clustered & 101,1 & 106,0 & 1,39 \\ \hline
+\end{tabular}
+\end{table}
+
+Kỳ vọng thứ nhất được xác nhận (Bảng~\ref{tab:rq3-dung-luong}). Khi khóa chính là mã vận đơn, chỉ mục phụ lớn hơn $27{,}4\%$ trên MySQL và $39{,}5\%$ trên TiDB, vì mỗi mục phải mang theo một chuỗi thay cho một số nguyên. Trên MySQL, khóa chính dạng chuỗi còn làm chính cây khóa chính lớn hơn: 277,0 MiB so với 171,7 MiB. Một cách giải thích hợp lý là dữ liệu được nạp theo thứ tự \code{id}, nên khi khóa chính là mã vận đơn, các dòng đi vào cây theo thứ tự ngẫu nhiên và trang bị tách giữa chừng, đầy ít hơn; nhóm chưa đo độ đầy của trang để kiểm chứng.
+
+Điểm đáng chú ý là trên TiDB, chỉ mục phụ của bảng nonclustered có dung lượng \emph{đúng bằng} bảng clustered (75.999.740 B ở cả hai). Trong cả hai trường hợp, mỗi mục đều mang một số nguyên 64 bit: \code{id} ở bảng clustered, \code{\_tidb\_rowid} ở bảng nonclustered. Cái giá của nonclustered vì vậy không nằm ở chỉ mục phụ, mà ở chỗ bảng phải lưu thêm một chỉ mục cho khóa chính (phần này không đo) và tra theo khóa chính cần thêm một bước, như bảng dưới đây cho thấy. Số byte mỗi mục của TiDB lớn hơn MySQL nhiều, một phần vì khóa trong TiKV chứa cả tiền tố bảng, tiền tố chỉ mục và dấu thời gian MVCC; hai con số đo theo hai cách nên không so trực tiếp.
+
+\begin{table}[!htp]
+\centering\bangnho
+\caption{Độ trễ p50 (ms) và số lần gọi TiKV theo kiểu khóa chính}\label{tab:rq3-tra-cuu}
+\begin{tabular}{|L{3.0cm}|C{1.9cm}|C{1.9cm}|C{2.3cm}|C{2.3cm}|C{2.3cm}|}
+\hline
+\dongdau \textbf{Truy vấn} & \textbf{MySQL, \code{id}} & \textbf{MySQL, mã} & \textbf{TiDB, \code{id} clustered} & \textbf{TiDB, \code{id} nonclustered} & \textbf{TiDB, mã clustered} \\ \hline
+Theo \code{id} & 0,45 & 0,47 & 1,14 (1) & 1,60 (2) & 1,68 (2) \\ \hline
+Theo mã vận đơn & 0,46 & 0,46 & 2,28 (2) & 1,81 (2) & 1,02 (1) \\ \hline
+Qua \code{idx\_sender\_created} & 0,62 & 0,62 & 3,72 (2) & 2,98 (2) & 3,74 (3) \\ \hline
+\end{tabular}
+\par\vspace{3pt}{\noindent\small\itshape Trung vị của 3 vòng, mỗi vòng 200 truy vấn. Trong ngoặc: số lần gọi TiKV của một truy vấn.\par}
+\end{table}
+
+Kỳ vọng thứ hai cũng được xác nhận (Bảng~\ref{tab:rq3-tra-cuu}). Trên TiDB, tra theo khóa clustered chỉ cần một lần gọi TiKV, vì \code{Point\_Get} đọc thẳng dòng; p50 khoảng 1,0--1,1 ms. Mọi cách tra qua một khóa không phải khóa clustered, dù là \code{id} ở bảng nonclustered, mã vận đơn ở bảng khóa \code{id} hay \code{id} ở bảng khóa mã, đều cần hai lần gọi: đọc mục chỉ mục rồi mới đọc dòng. p50 của các trường hợp này là 1,6--2,3 ms. Riêng tra theo mã ở bảng khóa \code{id} dao động khá rộng giữa các vòng (1,53--2,29 ms), nên nhóm chỉ kết luận theo số lần gọi, không theo hiệu số chính xác. Trên MySQL, cả hai cách tra đều khoảng 0,45--0,47 ms. Đi qua chỉ mục phụ cũng tốn thêm một lần tìm trong cây khóa chính, nhưng cả hai cây đều nằm trong bộ nhớ đệm nên chênh lệch không đo thấy được.
+
+Với truy vấn qua \code{idx\_sender\_created}, p50 trên TiDB nằm trong khoảng 3,0--3,7 ms ở cả ba biến thể, và khoảng dao động giữa các vòng của chúng giao nhau (2,88--3,77; 2,87--3,93; 3,68--4,84 ms), nên chưa phân định được biến thể nào nhanh hơn. Bảng khóa mã vận đơn cần 3 lần gọi thay vì 2. Có thể là vì 20 đơn mới nhất của một shop có mã vận đơn rải khắp bảng nên nằm ở nhiều Region, còn với khóa \code{id}, các đơn mới nằm gần nhau ở cuối bảng; nhóm chưa kiểm tra số Region của bảng này.
+
+Tóm lại, với bài toán vận đơn, dùng mã vận đơn làm khóa chính giúp tra theo mã nhanh nhất trên TiDB (một lần gọi), nhưng làm mọi chỉ mục phụ lớn thêm khoảng 27--40\%. Khóa chính số nguyên clustered giữ chỉ mục phụ nhỏ nhất; còn nonclustered không làm chỉ mục phụ nhỏ hơn mà chỉ thêm một bước khi tra theo khóa chính. Kết quả này chỉ có ở một máy, một quy mô 1 triệu dòng và một lần đo dung lượng cho mỗi biến thể. RQ3 cũng không đo chi phí ghi theo kiểu khóa chính, chẳng hạn \code{AUTO\_RANDOM} để giảm điểm nóng, vì RQ4 giữ nguyên lược đồ khóa \code{id} trên cả hai hệ.

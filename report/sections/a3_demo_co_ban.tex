@@ -1,9 +1,9 @@
-% Mục A.3 demo chức năng cơ bản. Phụ trách: TV2. Nguồn: results/runs/demo_{mysql,tidb}_M2.txt (25/11/2026).
+% Mục A.3 demo chức năng cơ bản. Phụ trách: TV2. Nguồn: results/runs/demo_{mysql,tidb}_M2.txt.
 \phutrach{TV2 -- mục A.3, demo chức năng cơ bản}
 
 \subsection{Demo chức năng cơ bản}
 
-Demo chạy ngày 25/11/2026 trên máy M2, hồ sơ XS, trong một project Docker và một database riêng (\code{demo\_nhom7}) với 20.000 vận đơn, nên không dùng chung dữ liệu với các thí nghiệm. Cùng một kịch bản chạy trên MySQL 8.4.11 và TiDB v8.5.5. Đây là demo chức năng, không phải phép đo hiệu năng. Script tự kiểm tra kết quả COMMIT, ROLLBACK và ràng buộc UNIQUE, và dừng nếu sai. Bảng~\ref{tab:demo-co-ban} tóm tắt kết quả; toàn bộ kịch bản được dẫn ở Phụ lục~C.
+Demo chạy trên máy M2 với hồ sơ XS, nhưng trong một project Docker và một database riêng (\code{demo\_nhom7}) chứa 20.000 vận đơn, để không đụng tới dữ liệu thí nghiệm. Cùng một kịch bản được chạy trên MySQL 8.4.11 và TiDB v8.5.5. Mục đích là kiểm tra chức năng, không phải đo hiệu năng. Script tự so kết quả của COMMIT, ROLLBACK và ràng buộc UNIQUE với kết quả mong đợi; sai ở bước nào thì dừng ngay ở bước đó. Bảng~\ref{tab:demo-co-ban} tóm tắt kết quả, còn kịch bản đầy đủ nằm trong \path{scripts/demo_co_ban.py}.
 
 \begin{table}[!htp]
 \centering\bangfont
@@ -23,7 +23,7 @@ Tạo chỉ mục & Kế hoạch đổi sau khi tạo chỉ mục & Đạt & Đ�
 
 \subsubsection{Thêm, đọc, sửa, xóa và giao dịch}
 
-Các lệnh SQL giống hệt nhau trên hai hệ, trừ từ khóa \code{CLUSTERED} của khóa chính trên TiDB. Đoạn mã dưới đây trích phần giao dịch trên TiDB; MySQL cho cùng giá trị. Sau \code{ROLLBACK}, hai đơn trở về giá trị cũ; sau \code{COMMIT}, giá trị mới được giữ. Khi sửa mã vận đơn của đơn 2 thành mã của đơn 1, cả hai hệ đều từ chối với lỗi 1062.
+Các câu lệnh SQL trên hai hệ giống hệt nhau, chỉ khác từ khóa \code{CLUSTERED} của khóa chính trên TiDB. Đoạn trích dưới đây là phần giao dịch chạy trên TiDB; MySQL cho đúng các giá trị này. Sau \code{ROLLBACK}, hai đơn quay về giá trị cũ; sau \code{COMMIT}, giá trị mới được giữ lại. Khi thử sửa mã vận đơn của đơn 2 thành mã của đơn 1, cả hai hệ đều từ chối với lỗi 1062.
 
 \begin{lstlisting}[caption={Giao dịch ROLLBACK và COMMIT trên TiDB (trích đầu ra)}]
 sql> SELECT id, status, cod_amount FROM shipments WHERE id IN (1, 2) ORDER BY id
@@ -46,7 +46,7 @@ sql> SELECT ...        -- gia tri moi
 
 \subsubsection{Chỉ mục và kế hoạch thực thi}
 
-Demo dùng truy vấn ``20 đơn mới nhất của một shop'', với ba trạng thái: chưa có chỉ mục trên \code{sender\_id}, có chỉ mục không covering, và có chỉ mục covering. Hai trạng thái sau dùng hint \code{FORCE INDEX}. Bảng~\ref{tab:demo-explain} cho thấy cả hai hệ đi từ quét toàn bảng, sang đọc chỉ mục rồi lấy dòng, và cuối cùng là chỉ đọc chỉ mục. Chi phí của từng đường truy cập được đo ở Chương~\ref{sec:doc}.
+Để thấy chỉ mục làm thay đổi kế hoạch thực thi ra sao, demo dùng truy vấn ``20 đơn mới nhất của một shop'' ở ba trạng thái: chưa có chỉ mục trên \code{sender\_id}, có chỉ mục thường, và có chỉ mục covering. Ở hai trạng thái sau, truy vấn dùng hint \code{FORCE INDEX}. Bảng~\ref{tab:demo-explain} cho thấy trên cả hai hệ, kế hoạch đi từ quét toàn bảng, sang đọc chỉ mục rồi lấy dòng, và cuối cùng chỉ còn đọc chỉ mục. Chi phí của từng đường truy cập được đo ở Chương~\ref{sec:doc}.
 
 \begin{table}[!htp]
 \centering\bangfont
@@ -81,4 +81,4 @@ Limit_11                    root
       IndexRangeScan_16     cop[tikv]  index:idx_sender_cov(sender_id, created_at, status, cod_amount)
 \end{lstlisting}
 
-Demo cũng cho thấy cách TiDB đặt chỉ mục: sau khi tạo ba chỉ mục, \code{SHOW TABLE shipments REGIONS} trả về 7 Region. Khóa của từng chỉ mục (\code{t\_114\_i\_1}, \code{t\_114\_i\_2}, \code{t\_114\_i\_3}) và khóa của các dòng nằm ở những Region khác nhau, dù bảng chỉ có 20.000 dòng. Chi tiết này được dùng lại khi thảo luận chi phí ghi ở Chương~\ref{sec:ghi}.
+Demo còn cho thấy TiDB đặt chỉ mục ở đâu. Sau khi tạo ba chỉ mục, \code{SHOW TABLE shipments REGIONS} trả về 7 Region: khóa của từng chỉ mục (\code{t\_114\_i\_1}, \code{t\_114\_i\_2}, \code{t\_114\_i\_3}) và khóa của các dòng nằm ở những Region khác nhau, dù bảng chỉ có 20.000 dòng. Chi tiết này sẽ được dùng lại khi bàn về chi phí ghi ở Chương~\ref{sec:ghi}.

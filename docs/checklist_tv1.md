@@ -136,14 +136,14 @@ Code do TV2 viết (`experiments/rq1_covering.py`, `experiments/rq1_summary.py`)
   git push
   ```
 
-- [ ] Quy mô 10 triệu và 100 triệu dòng chỉ ghi số mô hình, vì nhóm dùng hồ sơ XS. Bỏ RQ3 nếu không kịp.
+- [ ] Quy mô 10 triệu và 100 triệu dòng chỉ ghi số mô hình, vì nhóm dùng hồ sơ XS. RQ3 đã do TV2 đo và viết (`report/sections/b1_rq3.tex`), TV1 không phải làm.
 
 ## 25/11 · Viết A.1, A.2, B.1
 
 Mỗi người viết mục của mình trong file riêng để tránh xung đột; bạn nối bằng `\input{}` khi ghép. B.1 đặt ở `report/sections/b1_dung_luong.tex`. Khung và phân công file nằm trong `report/README.md`.
 
 - [ ] **A.1** — Viết theo bài toán vận đơn. Bỏ các câu khẳng định chưa đo trong `01_phan_a.tex`, ví dụ "mở rộng ngang vô hạn" (dòng 37), "giải quyết triệt để" (dòng 30), `RTO ≤ 10s` (dòng 42). Dòng 39 ghi 4 phẩm chất nhưng chỉ liệt kê 3.
-- [ ] **Chương 2, tổng quan** (`a0_tong_quan.tex`) — Tổng quan TiDB khoảng nửa trang và bảng thành phần chính. Viết tổng quát, chi tiết dẫn sang Phụ lục C.
+- [ ] **Chương 2, tổng quan** (`a0_tong_quan.tex`) — Tổng quan TiDB khoảng nửa trang và bảng thành phần chính. Viết tổng quát, chi tiết dẫn sang kho mã (đầu Chương 3).
 - [ ] **Chương 4, vấn đề và cơ chế** (`p2_van_de_co_che.tex`) — Vấn đề đã đăng ký; cơ chế đọc và ghi qua chỉ mục phụ trên hai hệ; covering index.
 - [ ] **A.2** — Mỗi trụ cột nêu ảnh hưởng tới index. Sửa kích thước Region theo `SHOW CONFIG WHERE name LIKE '%region-split-size%'` trên v8.5.5. Bỏ "3–8 giây": giai đoạn 1 ghi nhận 10 giây QPS bằng 0.
 - [ ] **A.2** — Quorum là đa số peer của một Region: C3 cần 2/3, chịu mất 1 store; C1 cần 1/1, không chịu mất store nào. Sửa câu "3 node TiKV độc lập vật lý" (dòng 156): ba TiKV là ba container trên một máy và một ổ đĩa. TiDB không hỗ trợ SERIALIZABLE.

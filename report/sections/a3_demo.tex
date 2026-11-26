@@ -1,14 +1,14 @@
-% Mục A.3 phần demo bổ sung. Phụ trách: TV2 (nhận từ TV3 ngày 25/11/2026).
+% Mục A.3 phần demo bổ sung. Phụ trách: TV2.
 % Nguồn: results/demo_chiu_loi_{tidb,mysql}_M2.csv, results/demo_them_node_M2.csv, results/runs/demo_*_M2.txt.
 \phutrach{TV2 -- mục A.3, phần demo bổ sung}
 
 \subsection{Demo bổ sung: chịu lỗi}
 
-Demo minh họa cơ chế quorum ở Bảng~\ref{tab:ban-sao}, không dùng cho kết luận nào về chỉ mục. Trên cụm C3 (3 TiKV, 3 bản sao), 8 luồng liên tục chèn từng dòng vào một bảng thử và ghi nhớ mọi giao dịch đã được xác nhận. Ở giây 30, container TiKV đang giữ leader của bảng thử bị tắt đột ngột bằng \code{docker compose kill}; ở giây 90 container được bật lại. Store bị tắt được chọn có chủ đích để sự cố chắc chắn ảnh hưởng tới tải. Trên MySQL, cùng kịch bản thời gian được áp dụng cho container duy nhất.
+Demo này minh họa cơ chế quorum đã nêu ở Bảng~\ref{tab:ban-sao}; nó không được dùng cho kết luận nào về chỉ mục. Trên cụm C3, 8 luồng liên tục chèn từng dòng vào một bảng thử và ghi lại mọi giao dịch đã được xác nhận. Ở giây thứ 30, nhóm tắt đột ngột container TiKV đang giữ leader của bảng thử bằng \code{docker compose kill}, rồi bật lại ở giây thứ 90. Nhóm cố ý chọn store đang giữ leader để sự cố chắc chắn tác động lên tải. MySQL chạy cùng kịch bản thời gian, áp dụng cho container duy nhất của nó.
 
 \begin{table}[!htp]
 \centering\bangfont
-\caption{Demo chịu lỗi trên máy M2, ngày 25/11/2026}\label{tab:demo-loi}
+\caption{Kết quả demo chịu lỗi trên máy M2}\label{tab:demo-loi}
 \begin{tabular}{|L{6.4cm}|C{4.0cm}|C{4.0cm}|}
 \hline
 \dongdau \textbf{Chỉ số} & \textbf{TiDB C3, tắt \code{tikv2}} & \textbf{MySQL một node} \\ \hline
@@ -23,15 +23,15 @@ Dòng có trong bảng nhưng client không nhận được xác nhận & 0 & 7 
 
 \hinh{demo_chiu_loi_tidb_M2.png}{0.9}{Giao dịch thành công mỗi giây khi tắt một TiKV ở cấu hình C3}{fig:demo-loi-tidb}
 
-Ngay sau khi \code{tikv2} bị tắt, tải dừng hẳn vì Region của bảng thử mất leader (Hình~\ref{fig:demo-loi-tidb}). Hai peer còn lại vẫn đủ quorum 2 trên 3 nên bầu được leader mới; tải chạy lại ở giây 44 mà không cần can thiệp. Theo PD, số leader trên \code{tikv2} giảm từ 27 về 0, trong khi \code{tikv1} tăng từ 28 lên 40 và \code{tikv3} từ 19 lên 34. Các luồng ghi trên TiDB không gặp lỗi: câu lệnh bị treo trong lúc chờ leader mới rồi hoàn thành. Sau khi được bật lại, \code{tikv2} nhận lại leader, đạt 18 leader ở cuối lượt đo.
+Ngay khi \code{tikv2} bị tắt, tải dừng hẳn vì Region của bảng thử mất leader (Hình~\ref{fig:demo-loi-tidb}). Hai peer còn lại vẫn đủ quorum 2 trên 3 nên tự bầu được leader mới, và tải chạy lại từ giây thứ 44 mà không cần ai can thiệp. Số liệu từ PD cho thấy leader trên \code{tikv2} giảm từ 27 về 0, còn \code{tikv1} tăng từ 28 lên 40 và \code{tikv3} từ 19 lên 34. Trong suốt quá trình đó, không luồng ghi nào nhận lỗi: câu lệnh chỉ bị treo trong lúc chờ leader mới rồi hoàn thành bình thường. Khi được bật lại, \code{tikv2} dần nhận lại leader và giữ 18 leader ở cuối lượt.
 
-Với MySQL, 61 giây ngừng phục vụ chủ yếu là khoảng chờ 60 giây mà kịch bản đặt trước khi bật lại container. Phép so này \emph{không ngang hàng}: MySQL trong đề tài chạy một node, không có bản sao, và có thể triển khai cùng InnoDB Cluster. Cả hai hệ đều không mất giao dịch đã xác nhận. Vì vậy demo cho thấy khác biệt về tính sẵn sàng khi mất một tiến trình, không cho thấy khác biệt về độ bền.
+Phía MySQL, 61 giây ngừng phục vụ phần lớn chính là 60 giây kịch bản chờ trước khi bật lại container. Vì vậy phép so này \emph{không ngang hàng}: MySQL ở đây chỉ có một node, không có bản sao, trong khi MySQL hoàn toàn có thể chạy theo cụm với InnoDB Cluster. Cả hai hệ đều không mất giao dịch nào đã xác nhận. Điều demo cho thấy là khác biệt về tính sẵn sàng khi mất một tiến trình, không phải khác biệt về độ bền dữ liệu.
 
-Demo có các giới hạn sau. Ba TiKV nằm trên một máy và một ổ đĩa, nên đây là lỗi của một tiến trình, không phải lỗi của một máy; PD và TiDB server chỉ có một node và không được tắt. Mỗi hệ chỉ có một lượt trong bảng; một lượt chạy thử trước đó của TiDB cho 8 giây ngừng và 10 giây để về 90\% mức nền, nên thời gian phục hồi dao động giữa các lần. Số giao dịch mỗi giây của demo không dùng để so hiệu năng hai hệ.
+Kết quả cần được đọc với vài giới hạn. Ba TiKV nằm trên một máy và một ổ đĩa, nên đây là lỗi của một tiến trình chứ không phải của một máy; PD và TiDB server chỉ có một node và không bị tắt. Mỗi hệ chỉ có một lượt trong bảng. Ở một lượt chạy thử trước đó, TiDB ngừng 8 giây và mất 10 giây để về 90\% mức nền, tức là thời gian phục hồi dao động giữa các lần chạy. Số giao dịch mỗi giây trong demo cũng không được dùng để so hiệu năng hai hệ.
 
 \subsection{Demo bổ sung: thêm node TiKV}
 
-Demo này thêm \code{tikv4} vào cụm C3 đang có tải ghi. Bảng \code{shipments} có 100.000 dòng và được tách sẵn thành nhiều Region để PD có dữ liệu cần cân bằng. \code{tikv4} được thêm ở giây 30.
+Demo thứ hai thêm \code{tikv4} vào cụm C3 trong lúc cụm đang có tải ghi. Bảng \code{shipments} có 100.000 dòng và được tách sẵn thành nhiều Region để PD có dữ liệu cần cân bằng. \code{tikv4} được thêm vào ở giây thứ 30.
 
 \begin{table}[!htp]
 \centering\bangfont
@@ -45,10 +45,10 @@ Giây 149 & 27 / 69 & 24 / 77 & 28 / 82 & 20 / 69 \\ \hline
 \end{tabular}
 \end{table}
 
-\code{tikv4} ở trạng thái Up sau 11 giây và nhận Region đầu tiên sau 12 giây kể từ lúc thêm. Đến cuối lượt đo, nó giữ 69 bản sao Region và 20 leader (Bảng~\ref{tab:demo-them-node}, Hình~\ref{fig:dashboard4}). Không có lệnh ghi nào bị lỗi và không mất giao dịch nào trong 124.628 giao dịch. Trong quá trình cân bằng, thông lượng có những giây giảm mạnh, thấp nhất 38 giao dịch mỗi giây so với mức trước khi thêm là 903, và trung bình 30 giây cuối là 785. Demo cho thấy có thể mở rộng trực tuyến; nó \emph{không} chứng minh thêm node làm tăng hiệu năng, vì node mới dùng chung máy và ổ đĩa với các node cũ và tải chỉ ghi vào một bảng nhỏ.
+Chỉ 11 giây sau khi được thêm, \code{tikv4} đã ở trạng thái Up, và một giây sau đó nhận Region đầu tiên. Đến cuối lượt, nó giữ 69 bản sao Region và 20 leader (Bảng~\ref{tab:demo-them-node}, Hình~\ref{fig:dashboard4}). Trong 124.628 giao dịch, không có lệnh ghi nào lỗi và không mất giao dịch nào. Trong lúc cân bằng, thông lượng có những giây giảm mạnh, thấp nhất còn 38 giao dịch mỗi giây so với mức 903 trước khi thêm; trung bình 30 giây cuối là 785. Như vậy demo cho thấy cụm mở rộng được ngay khi đang chạy, nhưng \emph{không} chứng minh thêm node làm tăng hiệu năng: node mới dùng chung máy và ổ đĩa với các node cũ, và tải chỉ ghi vào một bảng nhỏ.
 
 \hinh{tidb_dashboard_4_tikv.png}{0.9}{TiDB Dashboard sau khi thêm tikv4: 4 TiKV ở trạng thái Up}{fig:dashboard4}
 
 \subsection{Kết luận chương}
 
-Chương này trình bày cách cài đặt, cấu hình và vận hành cụm TiDB v8.5.5 gồm 1 PD, 1 TiDB server và 3 TiKV trên một máy 16 GB, cùng MySQL 8.4.11 để đối chứng. Các chức năng cơ bản chạy đúng trên cả hai hệ. Cấu hình C3 chịu được việc mất một tiến trình TiKV và không mất giao dịch đã xác nhận trong demo, và cho phép thêm node khi đang có tải. Các demo này chỉ minh họa cơ chế; mọi kết luận về chi phí chỉ mục trong Phần 2 dựa trên các thí nghiệm riêng.
+Chương này đã trình bày cách nhóm cài đặt, cấu hình và vận hành một cụm TiDB v8.5.5 gồm 1 PD, 1 TiDB server và 3 TiKV trên máy 16 GB, cùng MySQL 8.4.11 để đối chứng. Các chức năng cơ bản chạy đúng trên cả hai hệ. Trong demo, cấu hình C3 chịu được việc mất một tiến trình TiKV mà không mất giao dịch đã xác nhận, và cho phép thêm node ngay khi đang có tải. Đây chỉ là các demo minh họa cơ chế; mọi kết luận về chi phí chỉ mục trong Phần 2 đều dựa trên các thí nghiệm riêng.

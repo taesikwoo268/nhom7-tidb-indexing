@@ -3,11 +3,11 @@
 
 \subsection{Phương pháp triển khai thực nghiệm}
 
-Phần cứng và cấu hình được trình bày ở Chương~\ref{sec:cai-dat}. Mục này nêu các nguyên tắc chung cho mọi phép đo, nhằm bảo đảm hai hệ được đo trong cùng điều kiện và kết quả có thể chạy lại.
+Phần cứng và cấu hình đã được trình bày ở Chương~\ref{sec:cai-dat}. Mục này nêu những nguyên tắc chung mà mọi phép đo đều tuân theo, để hai hệ được đo trong cùng điều kiện và người khác có thể chạy lại kết quả.
 
-\textbf{Cùng cấu hình.} Toàn bộ cấu hình container, lược đồ, bộ sinh dữ liệu và kịch bản tải nằm trong Git. Chương trình tính một mã băm (\code{team\_hash}) từ các file này; ba máy phải cho cùng một mã. Lệnh kiểm tra từ chối đo khi có file cấu hình khác Git.
+\textbf{Cùng cấu hình.} Toàn bộ cấu hình container, lược đồ, bộ sinh dữ liệu và kịch bản tải đều nằm trong Git. Từ các file này, chương trình tính ra một mã băm (\code{team\_hash}), và ba máy phải cho cùng một mã. Nếu có file cấu hình khác với Git, lệnh kiểm tra sẽ từ chối cho đo.
 
-\textbf{Cùng dữ liệu.} Mỗi máy tự sinh dữ liệu bằng cùng seed 20261116 nên không cần chép file lớn. Bảng có 100.000 shop với số đơn theo phân phối Zipf (tham số 1,1), 200 kho, 80\% đơn ở trạng thái đã giao, \code{cod\_amount} phân phối đều từ 0 đến dưới 10 triệu, và \code{created\_at} tăng theo \code{id} trong 180 ngày. Mã vận đơn của dữ liệu nền luôn chẵn, còn tải W1 sinh mã lẻ, nên hai nguồn không trùng nhau. Dữ liệu được nạp bằng \code{LOAD DATA LOCAL INFILE} theo lô 10.000 dòng vào một bảng tạm; bảng chỉ được đưa vào sử dụng khi số dòng và tổng \code{cod\_amount} khớp với file nguồn. Bảng~\ref{tab:checksum} đối chiếu giữa các máy.
+\textbf{Cùng dữ liệu.} Thay vì chép file dữ liệu lớn giữa các máy, mỗi máy tự sinh dữ liệu với cùng seed 20261116. Bảng có 100.000 shop, số đơn mỗi shop theo phân phối Zipf (tham số 1,1), 200 kho, 80\% đơn ở trạng thái đã giao, \code{cod\_amount} phân phối đều từ 0 đến dưới 10 triệu, và \code{created\_at} tăng theo \code{id} trong 180 ngày. Mã vận đơn của dữ liệu nền luôn chẵn, còn tải W1 sinh mã lẻ, nên hai nguồn không bao giờ trùng nhau. Dữ liệu được nạp bằng \code{LOAD DATA LOCAL INFILE} theo lô 10.000 dòng vào một bảng tạm, và bảng chỉ được đưa vào dùng khi số dòng và tổng \code{cod\_amount} khớp với file nguồn. Bảng~\ref{tab:checksum} đối chiếu kết quả giữa các máy.
 
 \begin{table}[!htp]
 \centering\bangfont
@@ -18,25 +18,25 @@ Phần cứng và cấu hình được trình bày ở Chương~\ref{sec:cai-dat
 Giá trị chuẩn & fa4c12cdf33a & 5000968738439 & 15001281300461 \\ \hline
 M1 & \chuaco & \chuaco & 15001281300461 \\ \hline
 M2 & fa4c12cdf33a & 5000968738439 & 15001281300461 \\ \hline
-M3 & \chuaco & \chuaco & \chuaco \\ \hline
+M3 & fa4c12cdf33a & \chuaco & 15001281300461 \\ \hline
 \end{tabular}
-\par\vspace{3pt}{\noindent\small\itshape Giá trị chuẩn sinh lại trực tiếp từ bộ sinh dữ liệu. M1: results/rq1\_M1.csv. M2: results/rq4\_official.csv và results/rq1\_M2.csv.\par}
+\par\vspace{3pt}{\noindent\small\itshape Giá trị chuẩn được sinh lại trực tiếp từ bộ sinh dữ liệu; số của từng máy lấy từ log nạp dữ liệu trên máy đó.\par}
 \end{table}
 \ghichu{Bổ sung ô còn trống khi TV1, TV3 gửi kết quả lệnh kiểm tra.}
 
-\textbf{Một hệ mỗi lúc.} Trên mỗi máy, TiDB và MySQL được đo luân phiên. Chương trình dùng một khóa để hai phép đo không chạy cùng lúc và kiểm tra hệ kia đã dừng trước khi đo.
+\textbf{Một hệ mỗi lúc.} Trên mỗi máy, TiDB và MySQL được đo lần lượt. Chương trình dùng một khóa để hai phép đo không thể chạy cùng lúc, và kiểm tra hệ kia đã dừng trước khi bắt đầu đo.
 
-\textbf{Trạng thái trước khi đo.} Sau khi tạo chỉ mục, chương trình chạy \code{ANALYZE TABLE}; trên TiDB, lệnh này dùng 2.048 mẫu để vừa giới hạn RAM. Với TiDB, số bản sao của mọi Region được kiểm tra. Chương trình chờ lượng ghi đĩa nền xuống dưới 2 MB/s trong hai cửa sổ 10 giây liên tiếp, tối đa 10 phút; nếu đĩa chưa lắng thì lượt đó không được ghi nhận và phải chạy lại.
+\textbf{Trạng thái trước khi đo.} Sau khi tạo chỉ mục, chương trình chạy \code{ANALYZE TABLE}; trên TiDB, lệnh này lấy 2.048 mẫu để không vượt giới hạn RAM. Với TiDB, số bản sao của mọi Region được kiểm tra lại. Sau đó chương trình chờ lượng ghi đĩa nền xuống dưới 2 MB/s trong hai cửa sổ 10 giây liên tiếp, tối đa 10 phút. Nếu hết 10 phút mà đĩa vẫn chưa lắng, lượt đó bị bỏ và phải chạy lại.
 
-\textbf{Chống nhiễu theo thời gian.} Các lượt được chia thành vòng, mỗi vòng đo mọi cấu hình một lần theo thứ tự xáo bằng hạt giống cố định. Nhờ vậy một xu hướng trôi theo thời gian không bị nhầm với ảnh hưởng của chỉ mục.
+\textbf{Chống nhiễu theo thời gian.} Các lượt được chia thành vòng, mỗi vòng đo mọi cấu hình một lần theo thứ tự xáo bằng hạt giống cố định. Nhờ vậy, nếu hiệu năng của máy trôi dần theo thời gian, sự trôi đó không bị nhầm thành ảnh hưởng của chỉ mục.
 
-\textbf{Truy vết.} Mỗi lượt đo là một dòng CSV, ghi mã lượt, máy, hồ sơ, phiên bản, cấu hình bản sao, bộ nhớ đệm, tổng kiểm tra dữ liệu và mã cấu hình. Khi chạy tiếp sau khi bị ngắt, chương trình từ chối ghi chung một file nếu mã cấu hình đã thay đổi.
+\textbf{Truy vết.} Mỗi lượt đo là một dòng CSV, ghi mã lượt, máy, hồ sơ, phiên bản, cấu hình bản sao, bộ nhớ đệm, tổng kiểm tra dữ liệu và mã cấu hình. Khi chạy tiếp sau một lần bị ngắt, chương trình từ chối ghi chung vào file cũ nếu mã cấu hình đã thay đổi.
 
-\textbf{Giới hạn chung.} Mọi node nằm trên một máy nên không có độ trễ mạng vật lý; ``chi phí gọi KV'' trong báo cáo chỉ gồm mã hóa, gRPC, lập lịch và xử lý ở TiKV. Số tuyệt đối không được so giữa các máy.
+\textbf{Giới hạn chung.} Mọi node nằm trên một máy nên không có độ trễ mạng vật lý. Vì vậy ``chi phí gọi KV'' trong báo cáo chỉ gồm mã hóa, gRPC, lập lịch và xử lý ở TiKV. Số tuyệt đối không được so giữa các máy.
 
 \subsection{Kịch bản thử nghiệm}
 
-Bảng~\ref{tab:kich-ban} tóm tắt các kịch bản. Thiết kế chi tiết nằm ở đầu mỗi chương kết quả.
+Bảng~\ref{tab:kich-ban} tóm tắt các kịch bản; thiết kế chi tiết của từng kịch bản nằm ở đầu chương kết quả tương ứng.
 
 \begin{table}[!htp]
 \centering\bangnho
@@ -47,10 +47,11 @@ Bảng~\ref{tab:kich-ban} tóm tắt các kịch bản. Thiết kế chi tiết 
 B.1 & Số chỉ mục (0, 5) & M1 & 1 triệu, 3 triệu & Dung lượng, tài nguyên tạo chỉ mục & Chương~\ref{sec:dung-luong} \\ \hline
 RQ1 & Covering, R, truy vấn & M3, M2, M1 & 1 triệu (M3), 3 triệu (M2; M1 đối chiếu) & Kế hoạch, độ trễ, cop task, RPC & Chương~\ref{sec:doc} \\ \hline
 RQ2 & Độ chọn lọc, chế độ ép kế hoạch & M3 & 3 triệu & Độ trễ, điểm giao nhau & Chương~\ref{sec:doc} \\ \hline
+RQ3 & Kiểu khóa chính & M2 & 1 triệu & Dung lượng chỉ mục phụ, độ trễ, số lần gọi TiKV & Chương~\ref{sec:dung-luong} \\ \hline
 RQ4 & Số chỉ mục, tải, cấu hình bản sao & M2 & 1 triệu & TPS, p95, p99, CPU, byte ghi & Chương~\ref{sec:ghi} \\ \hline
 \end{tabular}
 \end{table}
 
 \subsection{Cách xử lý số liệu}
 
-Mỗi cấu hình được báo cáo bằng trung vị của các vòng, kèm khoảng nhỏ nhất -- lớn nhất hoặc khoảng tứ phân vị. Phần trăm thay đổi tính trong từng hệ so với mốc của chính hệ đó. Không lượt nào bị loại vì cho kết quả trái giả thuyết; các lượt bị nhiễu được liệt kê riêng và nhóm kiểm tra xem kết luận có đổi khi tạm bỏ chúng hay không. Khi khoảng của hai cấu hình giao nhau, báo cáo không kết luận cấu hình nào tốt hơn. Báo cáo tách phần số đo khỏi phần giải thích, và nói rõ khi một cách giải thích chưa được kiểm chứng.
+Mỗi cấu hình được báo cáo bằng trung vị của các vòng, kèm khoảng nhỏ nhất -- lớn nhất hoặc khoảng tứ phân vị. Phần trăm thay đổi luôn tính trong từng hệ, so với mốc của chính hệ đó. Nhóm không loại lượt nào chỉ vì kết quả trái giả thuyết. Những lượt bị nhiễu được liệt kê riêng, và nhóm kiểm tra xem kết luận có đổi không khi tạm bỏ chúng. Khi khoảng của hai cấu hình giao nhau, báo cáo không kết luận cấu hình nào tốt hơn. Báo cáo cũng tách phần số đo khỏi phần giải thích, và nói rõ khi một cách giải thích chưa được kiểm chứng.

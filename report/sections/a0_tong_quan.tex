@@ -1,20 +1,23 @@
-% Tổng quan TiDB. Phụ trách: TV1.
+% Tổng quan TiDB. Phụ trách: TV1. Chuyển từ bản Word của TV1 (26/11/2026), đã rút gọn.
 \phutrach{TV1 -- tổng quan TiDB}
 
 \subsection{Tổng quan về TiDB}
-\ghichu{Khoảng nửa trang, trình bày tổng quát: TiDB là gì, ai phát triển, mã nguồn mở theo giấy phép nào, phiên bản v8.5.5, tương thích giao thức MySQL, nhóm bài toán phù hợp và không phù hợp. Mỗi thông tin có trích dẫn, ví dụ \cite{pingcap_arch}. Chi tiết dẫn sang Phụ lục C.}
+TiDB là hệ quản trị cơ sở dữ liệu SQL phân tán mã nguồn mở, phục vụ cả xử lý giao dịch và phân tích (HTAP), do PingCAP khởi xướng năm 2015 và phát hành theo giấy phép Apache 2.0~\cite{pingcap_arch}. Đề tài dùng bản Community v8.5.5. TiDB tương thích giao thức và phần lớn cú pháp của MySQL (bản v8.5.5 báo phiên bản \code{8.0.11-TiDB-v8.5.5}), nên sysbench và các script đo kết nối qua driver MySQL thông thường. Mức tương thích có giới hạn~\cite{tidb_compat}: TiDB chấp nhận nhưng bỏ qua kiểu chỉ mục \code{HASH}, \code{BTREE}, \code{RTREE}; không hỗ trợ chỉ mục \code{SPATIAL}; mức cô lập là Snapshot Isolation, không có \code{READ-UNCOMMITTED} và \code{SERIALIZABLE}.
+
+TiDB nhắm tới các hệ thống cần nhất quán mạnh, dữ liệu vượt khả năng một máy, độ đồng thời cao hoặc cần phân tích gần thời gian thực. Ở quy mô nhỏ trên một máy, TiDB có thể chậm hơn một MySQL đơn lẻ vì phải trả thêm chi phí giao tiếp giữa TiDB server và TiKV và chi phí nhân bản đồng bộ; thực nghiệm sơ bộ ở Chương~\ref{sec:dung-luong} cho thấy đúng điều này. Cấu hình cụm của đề tài được trình bày ở Chương~\ref{sec:cai-dat}.
 
 \subsection{Các thành phần chính}
+Bảng~\ref{tab:thanh-phan} tóm tắt các thành phần của TiDB và cách đề tài sử dụng chúng.
 \begin{table}[!htp]
 \centering\bangfont
 \caption{Các thành phần chính của TiDB}\label{tab:thanh-phan}
-\begin{tabular}{|L{2.6cm}|L{6.6cm}|C{2.4cm}|L{2.8cm}|}
+\begin{tabular}{|L{2.4cm}|L{6.8cm}|C{2.0cm}|L{3.2cm}|}
 \hline
 \dongdau \textbf{Thành phần} & \textbf{Vai trò} & \textbf{Lưu trạng thái} & \textbf{Trong đề tài} \\ \hline
-TiDB server & \chuaco & \chuaco & 1 node \\ \hline
-TiKV & \chuaco & \chuaco & 3 node \\ \hline
-PD & \chuaco & \chuaco & 1 node \\ \hline
-TiFlash & \chuaco & \chuaco & Không dùng \\ \hline
-TiDB Dashboard & \chuaco & --- & Có, trong PD \\ \hline
+TiDB server & Tầng SQL: nhận kết nối giao thức MySQL, phân tích cú pháp, tối ưu theo chi phí (CBO), điều phối giao dịch phân tán & Không & 1 node (1,2 CPU; 1.280 MiB) \\ \hline
+TiKV & Tầng lưu trữ Key-Value có giao dịch: quản lý Region, đồng thuận Multi-Raft, lưu bằng RocksDB & Có & 3 node (mỗi node 0,8 CPU; 1.280 MiB; block cache 250 MiB) \\ \hline
+PD & Điều phối cụm: lưu vị trí Region, cấp dấu thời gian TSO, lập lịch cân bằng & Có (siêu dữ liệu) & 1 node (0,4 CPU; 512 MiB) \\ \hline
+TiFlash & Lưu trữ dạng cột, nhận dữ liệu từ TiKV qua Raft Learner, tăng tốc truy vấn phân tích & Có & Không dùng \\ \hline
+TiDB Dashboard & Giao diện web quản trị và chẩn đoán (Cluster Info, Top SQL, Key Visualizer) & Không & Có, chạy trong PD \\ \hline
 \end{tabular}
 \end{table}
