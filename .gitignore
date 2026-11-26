@@ -26,6 +26,7 @@ docs/report/experiments/nghiem_thu_tv2_2026-11-20.md
 !/results/rq4_official*.csv
 !/results/rq1*.csv
 !/results/rq2*.csv
+!/results/rq3*.csv
 
 # LaTeX build artifacts
 /report/**/*.aux
