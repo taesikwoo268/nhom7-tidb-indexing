@@ -1,6 +1,6 @@
 # Khung báo cáo nhóm 7
 
-Định dạng lấy theo báo cáo mẫu của nhóm (bìa UET, cam đoan, tóm tắt, phân công, mục lục, danh sách hình và bảng, từ viết tắt). Nội dung chia theo Phần 1 và Phần 2 mà giảng viên yêu cầu. Mã A.x, B.x là mã trong kế hoạch của nhóm.
+Định dạng lấy theo báo cáo mẫu của nhóm (bìa UET, tóm tắt, phân công, mục lục, danh sách hình và bảng, từ viết tắt). Nội dung chia theo Phần 1 và Phần 2 mà giảng viên yêu cầu. Mã A.x, B.x là mã trong kế hoạch của nhóm.
 
 ## Ai viết file nào
 

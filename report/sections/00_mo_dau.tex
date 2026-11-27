@@ -1,17 +1,14 @@
-% Lời cam đoan, Tóm tắt, Phân chia công việc. TV1 ghép, cả nhóm cùng sửa.
-\section*{Lời cam đoan}
-\addcontentsline{toc}{section}{Lời cam đoan}
-Chúng em xin cam đoan đề tài ``Chi phí của chỉ mục phụ trên hệ lưu trữ Key-Value phân tán'' là kết quả do nhóm tự thực hiện. Số liệu thực nghiệm được đo trên máy của các thành viên; file kết quả, cấu hình và script để chạy lại được lưu trong kho mã nguồn của nhóm.
-
-\ghichu{Cả nhóm đọc lại và bổ sung: phần mềm, tài liệu của bên thứ ba đã dùng (TiDB, MySQL, sysbench\dots); công cụ AI nếu có và phạm vi sử dụng. Chỉ giữ câu nào nhóm thật sự cam đoan được.}
-
-Chúng em xin chịu trách nhiệm về tính trung thực của nội dung báo cáo này.
-
-\clearpage
+% Tóm tắt, Phân chia công việc. TV1 ghép, cả nhóm cùng sửa.
 \section*{Tóm tắt}
 \addcontentsline{toc}{section}{Tóm tắt}
 \phutrach{TV1, viết sau cùng}
-\ghichu{Bốn đoạn, không quá một trang. (1) Bài toán vận đơn và vì sao chi phí chỉ mục phụ là câu hỏi trung tâm. (2) Cách làm: TiDB v8.5.5 và MySQL 8.4.11 trên cùng máy, hồ sơ XS, C3 và C1. (3) Kết quả chính của B.1, RQ1, RQ2, RQ4, mỗi kết quả một con số có trong CSV, kể cả kết quả trái giả thuyết. (4) Giới hạn. Không viết ``TiDB vượt trội'', không quy chênh lệch cho mạng.}
+Một hệ thống quản lý vận đơn phải ghi liên tục, đồng thời tra cứu theo nhiều thuộc tính, nên bảng vận đơn thường mang nhiều chỉ mục phụ. MySQL InnoDB lưu mỗi chỉ mục phụ thành một cây B+Tree trên một máy; TiDB biến mỗi mục chỉ mục thành một cặp khóa--giá trị riêng, phân tán trên các node TiKV và nhân bản bằng Raft. Báo cáo này đo chi phí của chỉ mục phụ trên hai hệ ở ba mặt: dung lượng, độ trễ đọc và thông lượng ghi.
+
+TiDB v8.5.5 (1 PD, 1 TiDB server, 3 TiKV) và MySQL 8.4.11 chạy luân phiên trong Docker trên cùng một máy, với cùng hồ sơ tài nguyên XS: mỗi hệ 4 CPU và khoảng 750 MiB bộ nhớ đệm dữ liệu. Dữ liệu vận đơn 1 triệu và 3 triệu dòng được sinh bằng cùng một hạt giống trên ba máy. TiDB được đo với 3 bản sao mỗi Region (C3) và, để tách chi phí nhân bản, với 1 bản sao (C1). Mỗi phép đo lặp lại nhiều vòng; báo cáo dùng trung vị kèm khoảng dao động và không loại lượt nào vì kết quả trái giả thuyết.
+
+Về dung lượng, mô hình dựng từ định dạng lưu trữ khớp số đo trong khoảng 1,2\% với MySQL và tới từng byte với TiDB, trừ chỉ mục UNIQUE; mỗi mục chỉ mục của TiDB lớn hơn MySQL 3,4 đến 4,8 lần, tính cho một bản sao, trước khi nén. Về đọc, ở 3 triệu dòng covering index giúp TiDB nhiều hơn khi ít dòng khớp (nhanh gấp 2,01 lần so với 1,08 lần trên MySQL khi $R = 10$), nhưng giúp MySQL nhiều hơn khi nhiều dòng khớp (5,91 so với 3,31 lần khi $R = 10.000$). Quét bảng bắt đầu nhanh hơn dùng chỉ mục ở khoảng 3,2\% số dòng trên TiDB và 6,9\% trên MySQL. Dùng mã vận đơn làm khóa chính làm chỉ mục phụ lớn thêm 27,4\% trên MySQL và 39,5\% trên TiDB. Về ghi, thêm 5 chỉ mục làm thông lượng thêm đơn giảm 18,9\% trên MySQL nhưng 82,7\% trên TiDB C3, và TiDB C1 không nhân bản vẫn giảm 79,4\%. Như vậy giả thuyết ``LSM-tree giúp TiDB giảm ít hơn'' bị bác bỏ, và nhân bản không phải nguyên nhân chính. Với covering index, cái giá khi ghi phụ thuộc vào việc cột thêm vào có bị cập nhật hay không: khi \code{status} bị cập nhật, thông lượng giảm 29,5\% trên MySQL và 61,6\% trên TiDB C3.
+
+Các kết quả này có giới hạn rõ. Mọi node chạy trên một máy và một ổ đĩa, nên không có độ trễ mạng vật lý và chênh lệch giữa hai hệ không được quy cho mạng; khả năng chịu lỗi của C3 chỉ là chịu mất một tiến trình TiKV. Quy mô dừng ở 3 triệu dòng, con số 10 triệu dòng chỉ là ngoại suy từ mô hình; thí nghiệm ghi chỉ dùng một mức 64 luồng; và số tuyệt đối chỉ được so giữa hai hệ trên cùng một máy.
 
 \clearpage
 \section*{Phân chia công việc và mức độ đóng góp}
@@ -34,9 +31,9 @@ Chúng em xin chịu trách nhiệm về tính trung thực của nội dung bá
 \endhead
 \endfoot
 \endlastfoot
-\TenTVMot & Trưởng nhóm, máy M1 & Mô hình và số đo dung lượng (B.1); RQ1 ở 3 triệu dòng; kiến trúc TiDB; ghép báo cáo, slide & \chuaco \\ \hline
-\TenTVHai & Môi trường, máy M2 & Cấu hình TiDB và MySQL, công cụ đo dùng chung; RQ4; RQ3; code RQ1; cài đặt và toàn bộ demo A.3; B.3 & \chuaco \\ \hline
-\TenTVBa & Chi phí đọc, máy M3 & RQ1 ở 1 triệu dòng; RQ2; thực nghiệm sơ bộ B.0; B.2 & \chuaco \\ \hline
+\TenTVMot & Trưởng nhóm, máy M1 & Mô hình và số đo dung lượng (B.1); RQ1 ở 3 triệu dòng; kiến trúc TiDB; ghép báo cáo, slide & 33,3\% \\ \hline
+\TenTVHai & Môi trường, máy M2 & Cấu hình TiDB và MySQL, công cụ đo dùng chung; RQ4; RQ3; code RQ1; cài đặt và toàn bộ demo A.3; B.3 & 33,3\% \\ \hline
+\TenTVBa & Chi phí đọc, máy M3 & RQ1 ở 1 triệu dòng; RQ2; thực nghiệm sơ bộ B.0; B.2 & 33,3\% \\ \hline
 \end{longtable}
 }
 
