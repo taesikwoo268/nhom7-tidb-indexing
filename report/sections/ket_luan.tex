@@ -6,16 +6,41 @@
 
 \subsection*{Kết quả đạt được}
 \addcontentsline{toc}{subsection}{Kết quả đạt được}
-\ghichu{Tóm tắt kết quả chính, mỗi kết quả kèm số và số bảng. Nêu cả kết quả trái giả thuyết.}
+
+Đề tài đã hoàn thành các phép so sánh chính về dung lượng, chi phí đọc và chi phí ghi trên dữ liệu vận đơn và hai hệ TiDB v8.5.5/MySQL 8.4.11 trong phạm vi môi trường lab đã ghi. Về cấu trúc, cụm TiDB gồm 1 PD, 1 TiDB Server và 3 TiKV; MySQL chạy một node InnoDB. Mọi kết quả tuyệt đối được giới hạn trong máy, hồ sơ tài nguyên và số lượt đo tương ứng.
+
+\begin{enumerate}
+  \item \textbf{Mô hình và dung lượng.} Mô hình dự đoán dung lượng trang lá của MySQL lệch không quá 1,2\%, còn mô hình TiDB khớp dữ liệu và các index thường với sai lệch khoảng 0--4\%. Riêng \code{idx\_code} UNIQUE của TiDB lớn hơn mô hình 24--32 B/mục và nguyên nhân giá trị dư chưa được xác minh đầy đủ. Mô hình cho bộ 5 ở 10 triệu dòng là khoảng 2.649 MiB trên MySQL và 5.598 MiB trên một bản sao TiDB; đây chỉ là kết quả ngoại suy, không phải số đo. Chi tiết ở Chương~\ref{sec:dung-luong}.
+
+  \item \textbf{RQ1 -- covering và quay về bảng.} Trên M2 ở 3 triệu dòng, covering làm truy vấn Q2R với $R=10$ nhanh gấp 2,01 lần trên TiDB C3 và 1,08 lần trên MySQL. Khi $R=10.000$, tỷ lệ tương ứng là 3,31 và 5,91 lần. Kết quả chứng minh covering có lợi lớn ở dải $R$ nhỏ, nhưng lợi ích tương đối không tỷ lệ thuận với số dòng. Tại $R$ lớn, MySQL có lợi hơn trong phép đo M2.
+
+  \item \textbf{RQ2 -- độ chọn lọc và optimizer.} Điểm giao \emph{performance crossover} là khoảng 6,9\% ở MySQL và 3,2\% ở TiDB C3 trên M3, ba triệu dòng. Optimizer của MySQL giữ index ở mức 10\% dù quét bảng nhanh hơn khoảng 1,4 lần; TiDB có kế hoạch hỗn hợp giữa \code{IndexLookUp} và \code{TableReader} tại mức 2\% dù dùng index còn nhanh gấp 2,2 lần. Hai điểm crossover và optimizer crossover không trùng nhau ở cả hai hệ.
+
+  \item \textbf{RQ3 -- kiểu khóa chính.} Khóa \code{tracking\_code} làm \code{idx\_sender\_created} tăng khoảng 27,4\% trên MySQL và 39,5\% trên TiDB so với \code{id} ở 1 triệu dòng. TiDB clustered \code{id} tra bằng một gọi TiKV; \code{id} nonclustered và khóa chuỗi cần thêm một pha quay về dòng. Khóa chuỗi clustered có thể tra mã nhanh nhất nhưng đánh đổi dung lượng cho mọi chỉ mục phụ.
+
+  \item \textbf{RQ4 -- workload ghi.} LSM-Tree không làm mức giảm TPS của TiDB nhỏ hơn MySQL trong thí nghiệm. Từ 0 tới 5 chỉ mục, TiDB C3 giảm TPS 82,7\% ở W1 và 64,8\% ở W2; MySQL giảm 18,9\% và 20,2\%. C1 vẫn giảm 79,4\% ở W1 và 51,6\% ở W2, nên phần lớn chi phí không đến riêng từ nhân bản Raft ba bản sao. Kết quả bác bỏ giả thuyết rằng TiDB giảm ít hơn nhờ ghi tuần tự LSM-Tree; giả thuyết chi phí giao dịch phân tán giữ vai trò chính được số đo hiện hành hợp lý.
+\end{enumerate}
 
 \subsection*{Hạn chế}
 \addcontentsline{toc}{subsection}{Hạn chế}
-\ghichu{Hai đến ba câu, dẫn về Chương~\ref{sec:tong-hop}.}
+Các con số hiện tại không chứng minh một hệ luôn tốt hơn hệ kia. Mọi TiDB/TiKV và MySQL đều chạy trong container trên một máy và một ổ đĩa, nên không đo độ trễ mạng vật lý đa máy. RQ4 chỉ đo 1 triệu dòng, 64 luồng và 3 vòng; RQ1 đo 1 và 3 triệu dòng; RQ2 đo 3 triệu dòng; RQ3 chỉ đo 1 triệu dòng. Dữ liệu là dữ liệu tổng hợp, không phải log vận đơn sản xuất. Các giới hạn chi tiết gồm thiếu số đo chính thức ở 10 triệu dòng, cấu hình cache và bộ máy khác nhau, khác biệt collation đã kiểm tra và nhiễu cửa sổ 60 giây đã ghi trong Chương~\ref{sec:tong-hop}.
 
 \subsection*{Hướng phát triển}
 \addcontentsline{toc}{subsection}{Hướng phát triển}
-\ghichu{Ví dụ: cụm nhiều máy thật, quy mô lớn hơn bộ nhớ đệm, nhiều mức luồng, TiFlash.}
+
+\begin{enumerate}
+  \item Chạy lại RQ1--RQ4 trên ít nhất ba node vật lý riêng, đo độ trễ mạng và I/O đĩa độc lập; xác nhận cấu hình CPU/RAM/cache bằng cùng hồ sơ.
+  \item Mở rộng quy mô lên 10 triệu và 30 triệu dòng, bổ sung số đo dung lượng sau nén trên đĩa, TiKV MVCC và compaction thay vì chỉ mô hình logic.
+  \item Chạy RQ2 với lưới độ chọn lọc dày hơn quanh 2--10\%, lưu thống kê optimizer để phân biệt chi phí ước lượng sai và chi phí cơ chế thực thi.
+  \item Thêm các workload hỗn hợp đọc--ghi và mức luồng khác nhau; dùng \code{run\_id}, raw artifact và thống kê multi-run để kiểm định độ tin cậy.
+  \item Với TiDB, đánh giá TiFlash cho truy vấn phân tích nhưng tách rõ chi phí giao dịch OLTP và lưu trữ HTAP; với MySQL, so thêm InnoDB Cluster hoặc sharding chỉ khi dữ liệu/tính sẵn sàng được thiết kế ngang hàng.
+\end{enumerate}
 
 \subsection*{Kiến thức và kỹ năng đạt được}
 \addcontentsline{toc}{subsection}{Kiến thức và kỹ năng đạt được}
-\ghichu{Mỗi thành viên viết một ý.}
+
+\textbf{TV1} hiểu cách liên kết mô hình lưu trữ, truy cập khóa chính, chỉ mục phụ và kết quả thực nghiệm; rèn kỹ năng tạo mô hình dung lượng, kiểm tra byte và đối chiếu B+Tree/LSM-Tree.
+
+\textbf{TV2} nắm quy trình dựng cụm Docker, cấu hình tài nguyên, nạp dữ liệu, chạy benchmark ghi, trích cấu hình thực tế và xử lý các lượt đo bất thường; kỹ năng này giúp tách điều kiện benchmark khỏi suy diễn về hiệu năng.
+
+\textbf{TV3} hiểu cách phân tích \code{EXPLAIN ANALYZE}, mapping chỉ mục trên TiDB/MySQL, selectivity crossover và thống kê latency; rèn khả năng đọc số liệu, giữ raw artifact và không loại lượt đo chỉ vì kết quả trái giả thuyết.

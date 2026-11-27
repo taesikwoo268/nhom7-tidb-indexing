@@ -5,15 +5,18 @@
 \begin{table}[!htp]
 \centering\bangnho
 \caption{Đối chiếu giả thuyết với kết quả}\label{tab:gia-thuyet}
-\begin{tabular}{|C{1.4cm}|L{4.0cm}|L{3.0cm}|L{3.8cm}|L{2.2cm}|}
+\begin{tabular}{|C{1.4cm}|L{3.8cm}|L{3.4cm}|L{4.0cm}|L{2.2cm}|}
 \hline
 \dongdau \textbf{Câu hỏi} & \textbf{Giả thuyết} & \textbf{Kết luận (xác nhận, bác bỏ, một phần)} & \textbf{Số liệu chính} & \textbf{Nguồn} \\ \hline
-B.1 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-RQ1 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-RQ2 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-RQ4 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
+B.1 & TiDB/KV dùng ít dung lượng trên một bản sao nhờ nén; 10 triệu dòng vẫn nằm trong giới hạn kiểm tra & Một phần; mô hình khớp ở 1 và 3 triệu, nhưng bộ 5 ở 10 triệu chỉ là ước tính & Bộ 5 ở 10 triệu: MySQL 2.649 GiB theo mô hình; TiDB 5.598 GiB theo mô hình cho một bản sao & \path{results/b1_summary.csv} \\ \hline
+RQ1 & R nhỏ: covering lợi rõ trên TiDB; R lớn: lợi ích của hai hệ gần nhau & Một phần; R nhỏ đúng, R lớn MySQL lợi hơn & M2, R=10: MySQL 1,08, TiDB 2,01; R=10.000: MySQL 5,91, TiDB 3,31 & \path{results/rq1_M2_summary.csv} \\ \hline
+RQ2 & Tồn tại một crossover chung và điểm optimizer cũng gần crossover & Bác bỏ; điểm và hành vi khác nhau ở hai hệ & MySQL crossover 6,9\%, chuyển plan 10--25\%; TiDB 3,2\%, chuyển plan/lai khoảng 2--5\% & \path{results/rq2_M3_summary.csv} \\ \hline
+RQ3 & Khóa chuỗi làm chỉ mục phụ lớn và nonclustered key làm tra cứu chậm hơn & Xác nhận một phần & Khóa mã làm idx\_sender\_created tăng 27,4\% ở MySQL và 39,5\% ở TiDB; nonclustered TiDB không làm chỉ mục lớn hơn nhưng thêm một lượt gọi & \path{results/rq3_size_M2_summary.csv}, \path{results/rq3_M2_summary.csv} \\ \hline
+RQ4 & LSM-Tree làm TiDB giảm TPS ít hơn MySQL khi thêm chỉ mục & Bác bỏ & TiDB C3 bộ 0 $\to$ 5: W1 $-82,7\%$, W2 $-64,8\%$; MySQL: $-18,9\%$ và $-20,2\%$ & \path{results/rq4_official_bin_summary.csv} \\ \hline
 \end{tabular}
 \end{table}
+
+Giả thuyết chính của đề tài không được khẳng định bởi một kết luận chung vì RQ1--RQ4 đo các chi phí khác nhau. Dung lượng mô hình B.1 cho thấy mục chỉ mục KV của TiDB lớn hơn mục B+Tree ở InnoDB, nên lợi ích nén hoặc ghi tuần tự không loại bỏ chi phí xử lý entry. RQ1 cho thấy covering index có thể bù chi phí quay về bảng, đặc biệt ở $R$ nhỏ. RQ2 cho thấy ngưỡng quay sang quét bảng không giống nhau và optimizer không theo sát ngưỡng đo. RQ4 cho thấy chi phí tăng số chỉ mục vượt xa so với MySQL trong hồ sơ thực nghiệm này.
 
 \subsection{Đánh đổi của covering index}
 \begin{table}[!htp]
@@ -22,13 +25,27 @@ RQ4 & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
 \begin{tabular}{|L{5.6cm}|C{4.2cm}|C{4.2cm}|}
 \hline
 \dongdau \textbf{Chỉ số} & \textbf{MySQL} & \textbf{TiDB C3} \\ \hline
-Lợi ích đọc Q2 (Bảng~\ref{tab:covering}) & \chuaco & \chuaco \\ \hline
-Thay đổi TPS W1 (Bảng~\ref{tab:rq4-covering}) & \chuaco & \chuaco \\ \hline
-Thay đổi TPS W2 (Bảng~\ref{tab:rq4-covering}) & \chuaco & \chuaco \\ \hline
-Dung lượng thêm (Bảng~\ref{tab:dl-covering}) & \chuaco & \chuaco \\ \hline
+Lợi ích đọc Q2 ở R=20 (Bảng~\ref{tab:covering}) & $1,12$ lần & $2,24$ lần \\ \hline
+Thay đổi TPS W1 (Bảng~\ref{tab:rq4-covering}) & $+0,7\%$ & $-6,2\%$; khoảng dao động giao nhau \\ \hline
+Thay đổi TPS W2 (Bảng~\ref{tab:rq4-covering}) & $-29,5\%$ & $-61,6\%$ \\ \hline
+Dung lượng thêm ở 3 triệu dòng (Bảng~\ref{tab:dl-covering}) & $14,6$ MiB theo trang lá & $77,3$ MiB trên một bản sao \\ \hline
 \end{tabular}
 \end{table}
-\ghichu{Ba nguồn số đo trên ba máy khác nhau, nên chỉ ghép tỉ lệ, không ghép số tuyệt đối.}
+
+\textbf{Cách đọc ba nguồn số.} Lợi ích đọc ở M2, chi phí ghi và dung lượng ở M2 giúp ghép cùng một quy mô và hồ sơ ở các thí nghiệm tương ứng. Không ghép TPS tuyệt đối với máy M1/M3. Trong W1, cả hai cách \code{idx\_sender\_created} và \code{idx\_sender\_cov} đều ghi một mục cho mỗi đơn nên phần chênh chưa phân định; trong W2, \code{idx\_sender\_cov} chứa \code{status} nên phải cập nhật trong khi chỉ mục thường không phải. Dung lượng covering tăng trên cả hai hệ, nhưng phần tăng của TiDB lớn hơn cả theo một bản sao.
 
 \subsection{Khuyến nghị thiết kế chỉ mục}
-\ghichu{Quy tắc nào giữ nguyên, quy tắc nào thay đổi khi chuyển từ MySQL sang TiDB. Mỗi khuyến nghị dẫn tới một bảng hoặc hình.}
+
+\begin{enumerate}
+  \item \textbf{Khóa chính số nguyên clustered phù hợp cho bảng vận đơn khi không có yêu cầu đặt mã vận đơn làm key.} RQ3 cho thấy mã vận đơn làm \code{idx\_sender\_created} tăng 27,4\% trên MySQL và 39,5\% trên TiDB so với khóa \code{id}; trên TiDB, tra theo key không clustered cũng cần thêm một lần gọi TiKV.
+
+  \item \textbf{Chỉ tạo covering index cho truy vấn mang lại lợi ích đọc đủ lớn.} Trên M2, covering Q2 ở $R=20$ nhanh hơn 2,24 lần trên TiDB và 1,12 lần trên MySQL. Khi W2 cập nhật \code{status}, \code{idx\_sender\_cov} làm TPS TiDB C3 giảm 61,6\% so với \code{idx\_sender\_created}; MySQL giảm 29,5\%. Không nên thêm cột chỉ để dự kiến vài truy vấn tăng tốc nếu cột đó nằm trong tải ghi định kỳ.
+
+  \item \textbf{Không dùng một ngưỡng chung cho hai engine.} Với truy vấn \code{cod\_amount}, MySQL nên kiểm tra lực cản của chỉ mục quanh mức 5--10\%; TiDB nên quan sát lại ở mức 2--5\%. Trong triển khai, số liệu thực tế và thống kê optimizer của từng bảng cần được kiểm tra, không nên chỉ dùng số crossover của thí nghiệm này làm tham số cố định.
+
+  \item \textbf{Ưu tiên MySQL InnoDB cho quy mô bảng nằm trong tài nguyên một máy, truy vấn nhỏ và áp lực ghi thấp đến trung bình.} Trong RQ4, MySQL duy trì TPS cao hơn TiDB C3 cả ở tải 0 và 5 chỉ mục. Cấu hình này cũng có độ trễ p95 13 ms ở bộ 5, thấp hơn 204 ms của TiDB C3 cho W1.
+
+  \item \textbf{Ưu tiên TiDB khi giá trị thiết kế là mở rộng dữ liệu và dịch vụ phân tán, không chỉ TPS trên một máy.} TiDB cung cấp SQL quan hệ, chia Region tự động và nhân bản C3; đánh đổi là chi phí giao dịch, nhân bản và chỉ mục KV làm hiệu năng ghi giảm mạnh trong hồ sơ XS. C1 chỉ dùng để tách chi phí nhân bản: C1 vẫn giảm 79,4\% ở W1 và 51,6\% ở W2 từ bộ 0 đến bộ 5.
+
+  \item \textbf{Tránh đánh chỉ mục phụ quá sớm cho workload ghi W1.} Khi thêm 5 chỉ mục, TPS W1 giảm 82,7\% trên TiDB C3 và 18,9\% trên MySQL. Với mỗi chỉ mục, nhóm cần xác định truy vấn đọc bù được chi phí ghi, dung lượng và thời gian tối thiểu để duy trì/sửa chỉ mục.
+\end{enumerate}
