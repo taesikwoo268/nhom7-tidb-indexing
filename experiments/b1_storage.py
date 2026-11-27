@@ -21,6 +21,7 @@ import argparse
 import re
 import subprocess
 import time
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -46,7 +47,8 @@ STORE = "tikv1"
 FIELDS = [
     "run_id", "machine", "profile", "engine", "version", "replica_config", "rows",
     "sum_cod", "object", "bytes", "leaf_bytes", "regions", "isolated", "build_s",
-    "cpus", "write_mib", "config_id",
+    "cpus", "memory_before_mib", "memory_peak_mib", "memory_after_mib",
+    "read_mib", "write_mib", "config_id",
 ]
 
 
@@ -242,7 +244,30 @@ def run(args):
             for index in ORDER:
                 before = resource_snapshot(client, containers)
                 start = time.monotonic()
-                cur.execute(create_index_sql(table, index))
+                stop_monitor = threading.Event()
+                during = {}
+
+                def monitor_resources():
+                    peak = 0
+                    while not stop_monitor.is_set():
+                        try:
+                            snapshot = resource_snapshot(client, containers)
+                            peak = max(
+                                peak,
+                                sum(s["memory_bytes"] for s in snapshot["services"].values()),
+                            )
+                            during["memory_peak_bytes"] = peak
+                        except Exception:
+                            pass
+                        stop_monitor.wait(0.2)
+
+                monitor = threading.Thread(target=monitor_resources, daemon=True)
+                monitor.start()
+                try:
+                    cur.execute(create_index_sql(table, index))
+                finally:
+                    stop_monitor.set()
+                    monitor.join(timeout=2)
                 build_s = time.monotonic() - start
                 after = resource_snapshot(client, containers)
                 wall = after["time_ns"] - before["time_ns"]
@@ -254,6 +279,18 @@ def run(args):
                 cost = {
                     "build_s": round(build_s, 1),
                     "cpus": round(delta("cpu_ns") / wall, 2),
+                    "memory_before_mib": round(
+                        sum(s["memory_bytes"] for s in before["services"].values()) / 1024**2, 1
+                    ),
+                    "memory_peak_mib": round(
+                        during.get("memory_peak_bytes", sum(
+                            s["memory_bytes"] for s in after["services"].values()
+                        )) / 1024**2, 1
+                    ),
+                    "memory_after_mib": round(
+                        sum(s["memory_bytes"] for s in after["services"].values()) / 1024**2, 1
+                    ),
+                    "read_mib": round(delta("read_bytes") / 1024**2, 1),
                     "write_mib": round(delta("write_bytes") / 1024**2, 1),
                 }
                 if engine == "tidb":

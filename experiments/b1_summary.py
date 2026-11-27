@@ -53,11 +53,63 @@ def summarise(measured, model):
     return out
 
 
+def plot(rows, path):
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    colors = {"mysql": "#2a78d6", "tidb": "#eb6834"}
+    names = {"mysql": "MySQL", "tidb": "TiDB C3"}
+    scales = sorted({int(r["rows"]) for r in rows})
+    fig, axes = plt.subplots(1, len(scales), figsize=(6.4 * len(scales), 4.2), squeeze=False)
+    for ax, scale in zip(axes[0], scales):
+        cases = [r for r in rows if int(r["rows"]) == scale and r["object"] in ("set0", "set5")]
+        xs = list(range(len(cases)))
+        width = 0.34
+        for offset, engine in ((-0.17, "mysql"), (0.17, "tidb")):
+            model_values = []
+            measured_values = []
+            for case in cases:
+                model_field = f"model_{engine}_bytes"
+                measured_field = f"measured_{engine}_bytes"
+                model_values.append(int(case[model_field]) / 1024**2)
+                measured_values.append(int(case[measured_field]) / 1024**2 if case[measured_field] else 0)
+            ax.bar(
+                [x + offset for x in xs],
+                model_values,
+                width=width,
+                color="#b9bec5",
+                label=f"{names[engine]} mo hinh" if cases else None,
+            )
+            ax.bar(
+                [x + offset for x in xs],
+                measured_values,
+                width=width * 0.55,
+                color=colors[engine],
+                label=f"{names[engine]} do",
+            )
+        ax.set_xticks(xs, ["0 chỉ mục", "5 chỉ mục"])
+        ax.set_title(f"{scale:,} dòng".replace(",", "."))
+        ax.set_ylabel("Dung lượng (MiB)")
+        ax.grid(axis="y", color="#e3e5e8", linewidth=0.8)
+        ax.set_axisbelow(True)
+        ax.spines[["top", "right"]].set_visible(False)
+    handles, labels = axes[0][0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", ncol=4, frameon=False)
+    fig.suptitle("Mô hình và số đo dung lượng B.1", fontsize=11)
+    fig.tight_layout(rect=(0, 0.11, 1, 1))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=200)
+    plt.close(fig)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("measured", type=Path)
     parser.add_argument("model", type=Path)
     parser.add_argument("--output", type=Path, default=Path("results/b1_summary.csv"))
+    parser.add_argument("--figure", type=Path, default=Path("results/fig/b1_model_vs_measured.png"))
     args = parser.parse_args()
     rows = summarise(read(args.measured), read(args.model))
     with args.output.open("w", encoding="utf-8", newline="") as stream:
@@ -65,6 +117,8 @@ def main():
         writer.writeheader()
         writer.writerows(rows)
     print(f"{args.output}: {len(rows)} rows")
+    plot(rows, args.figure)
+    print(f"{args.figure}: plot written")
 
 
 if __name__ == "__main__":

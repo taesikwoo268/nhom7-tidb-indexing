@@ -1,33 +1,77 @@
 % Chương mở đầu Phần 2. Phụ trách: TV1.
 \phutrach{TV1 -- vấn đề và cơ chế}
 
-\subsection{Vấn đề kỹ thuật đã đăng ký}
-\ghichu{Nhắc lại tên đề tài đã đăng ký và câu hỏi nghiên cứu (Bảng~\ref{tab:cau-hoi}) trong khoảng nửa trang. Nêu vì sao cần thực nghiệm, không chỉ phân tích lý thuyết.}
+\subsection{Vấn đề và câu hỏi nghiên cứu}
+\label{subsec:van-de-rq}
+
+Báo cáo này nghiên cứu chi phí của chỉ mục phụ trên hai kiến trúc lưu trữ khác nhau: MySQL InnoDB sử dụng một máy chứa cây B+ (B+Tree) và TiDB sử dụng kiến trúc SQL tính toán phân tách khỏi TiKV lưu trữ key--value theo cấu trúc RocksDB LSM-Tree. Đối tượng đo là bảng \code{shipments}, mô tả các vận đơn thương mại điện tử và bao gồm khóa đơn vị, mã vận đơn, mã người gửi, kho đích, trạng thái, tiền COD, các cột địa chỉ và hai mốc thời gian.
+
+Trong vận hành thực tế, nhiều truy vấn đi qua các thuộc tính khác với khóa chính: tìm theo mã vận đơn, lấy danh sách đơn mới của một người gửi, đếm đơn theo kho và trạng thái hoặc lọc theo khoảng tiền COD. Mỗi truy cập thường làm phát sinh hai loại chi phí. Một là chi phí \emph{đọc}: số dòng lọc ra, số lần quay về bảng, số toán tử/dữ liệu qua coprocessor và số nút KV phải gọi. Hai là chi phí \emph{ghi}: mỗi chỉ mục phụ phải được thêm, xóa hoặc cập nhật khi dữ liệu thay đổi. Đồng thời, các cặp key--value của TiDB còn phải đi qua MVCC, giao dịch hai pha và nhân bản Raft.
+
+Bốn câu hỏi nghiên cứu xác định phạm vi phân tích và các phép đo tương ứng:
+\begin{enumerate}
+  \item \textbf{RQ1 -- Chỉ mục covering có làm giảm chi phí truy vấn?} So sánh truy vấn chỉ dùng khóa và cột phụ trong chỉ mục với truy vấn quay về bảng.
+  \item \textbf{RQ2 -- Khi nào một truy vấn nên dùng chỉ mục thay vì quét bảng?} So sánh ba chế độ truy cập \code{FORCE INDEX}, \code{IGNORE INDEX} và optimizer tự chọn theo độ chọn lọc.
+  \item \textbf{RQ3 -- Khóa chính ảnh hưởng thế nào đến chỉ mục phụ?} So sánh clustered key và nonclustered key, số lần gọi TiKV và dung lượng mục chỉ mục.
+  \item \textbf{RQ4 -- Việc tăng số chỉ mục phụ làm giảm thông lượng ghi ra sao?} Đo tải chèn và cập nhật theo bộ 0, 1, 3 và 5 chỉ mục, đồng thời tách chi phí giao dịch và nhân bản.
+\end{enumerate}
+
+Các câu hỏi trên không được đặt thành giả định rằng TiDB luôn nhanh hơn hoặc chậm hơn MySQL. Mục đích là xác định \emph{điều kiện} mà mỗi cơ chế mang lại lợi ích đọc, mức dung lượng và chi phí ghi đi kèm, cũng như giới hạn của phép so sánh trên một máy lab.
 
 \subsection{Cơ chế chỉ mục phụ}
+\label{subsec:co-che-index}
 
-\subsubsection{Đọc và ghi qua chỉ mục phụ trong InnoDB}
-\ghichu{B+Tree phụ chứa khóa và khóa chính; quay về clustered index; tách trang khi chèn khóa ngẫu nhiên; redo log và group commit.}
+\subsubsection{Lưu trữ và truy cập chỉ mục phụ trong MySQL InnoDB}
 
-\subsubsection{Đọc qua chỉ mục phụ trong TiDB}
-\ghichu{\code{Point\_Get}, \code{IndexReader}, \code{IndexLookUp}: các pha, cop task, gom handle theo lô. Chỉ nêu cơ chế; số đo ở Chương~\ref{sec:doc}.}
+Trong InnoDB, bảng có khóa chính clustered được tổ chức thành một B+Tree. Lá của cây chứa dữ liệu toàn hàng, còn mỗi chỉ mục phụ là một B+Tree riêng. Lá chỉ mục lưu giá trị khóa, khóa chính của dòng, header bản ghi và thư mục trang. Vì một truy vấn quét chỉ mục phụ có thể cần lấy các cột nằm ngoài leaf entry, InnoDB phải dùng khóa chính để quay về clustered index.
 
-\subsubsection{Ghi qua chỉ mục phụ trong TiDB}
-\ghichu{Mỗi dòng và mỗi mục chỉ mục là một cặp KV, cùng đi qua prewrite, commit và Raft. Cập nhật cột nằm trong chỉ mục phải xóa mục cũ và ghi mục mới. Số đo ở Chương~\ref{sec:ghi}.}
+Chẳng hạn, truy vấn \code{SELECT * FROM shipments WHERE sender\_id=?} đọc khối khóa và \code{id} ở lá chỉ mục rồi tra từng dòng trong cây dữ liệu. Truy vấn \code{SELECT sender\_id, created\_at, status, cod\_amount FROM shipments WHERE sender\_id=?} có thể trở thành \emph{covering} khi tất cả cột trả về nằm trong \code{idx\_sender\_cov}. Trường hợp này không cần quay về bảng.
 
-\subsubsection{Covering index}
-\ghichu{Điều kiện để truy vấn chỉ đọc chỉ mục trên mỗi hệ; cái giá về dung lượng và ghi.}
+Khi chèn khóa ngẫu nhiên, InnoDB có thể tách trang B+Tree. Khi khóa tăng tuần tự, các trang lá được điền gần dọc thứ tự. Khi cập nhật một cột nằm trong chỉ mục phụ, engine phải thay đổi leaf entry tương ứng; đồng thời lệnh ghi tạo redo log, có thể tạo undo record cho MVCC và chịu cơ chế group commit theo cấu hình giao dịch. Như vậy, chỉ số \emph{không còn chứa dữ liệu tại lá} hay \emph{ít ghi hơn} là kết quả của từng workload, không phải tính chất chung cho mọi truy vấn.
+
+\subsubsection{Ánh xạ chỉ mục phụ và đường truy cập trong TiDB}
+
+TiDB ánh xạ bảng quan hệ sang key--value. Với bảng clustered, dòng có dạng \code{t{table\_id}\_r{id}}, còn chỉ mục phụ có key chứa \code{table\_id}, \code{index\_id}, giá trị cột khóa và handle của dòng. Với chỉ mục \code{idx\_sender\_created(sender\_id, created\_at)}, key không phủ ngoài khóa còn lưu trong bảng là \code{id}; với \code{idx\_sender\_cov(sender\_id, created\_at, status, cod\_amount)}, các cột \code{status} và \code{cod\_amount} được thêm vào khóa vì cùng nằm trong leaf index entry của TiKV.
+
+Tầng TiDB lựa chọn ba đường truy cập cơ bản:
+\begin{itemize}
+  \item \code{Point\_Get}: tra thẳng một khóa duy nhất hoặc khóa chính mà không cần coprocessor nhiều pha.
+  \item \code{IndexReader}: đọc cột cần thiết trực tiếp từ Region chứa chỉ mục; đây là đường covering khi cột truy vấn nằm trong entry index.
+  \item \code{IndexLookUp}: đọc index để lấy các handle, gom handle theo lô rồi gửi yêu cầu tới Region chứa dòng dữ liệu.
+\end{itemize}
+
+Trong \code{IndexLookUp}, index task và table task có thể nằm trên TiKV khác nhau. Bản ghi thực thi ghi riêng \code{cop\_task}, \code{rpc\_num}, \code{total\_process\_keys}, \code{tot\_proc}, \code{tot\_wait} và tổng thời gian RPC. Các đại lượng này cho phép tách chi phí quay về bảng khỏi chi phí xử lý mỗi dòng. Tuy nhiên, phần \code{rest\_ms} trong mô hình không thể coi là độ trễ mạng vật lý vì cả cụm đều chạy trong các container trên một máy.
+
+\subsubsection{Ghi chỉ mục phụ trong TiDB}
+
+Trong TiDB, một giao dịch nạp dòng và một giao dịch cập nhật dòng đều làm thay đổi nhiều cặp key--value. Với \code{INSERT}, một dòng và mỗi mục chỉ mục phụ phải được \code{prewrite}; sau đó giao dịch gọi TSO, ghi khóa \code{commit} và chờ xác nhận commit. Với \code{UPDATE}, phần key--value của cột không nằm trong chỉ mục được ghi mới, còn mỗi cột nằm trong chỉ mục tạo ra một cặp \emph{xóa mục cũ -- ghi mục mới} cùng một phiên bản MVCC mới.
+
+Mỗi cặp key--value sau đó được lưu trong RocksDB, đi qua WAL/MemTable, flush thành SST và compaction LSM-Tree. Một Region chỉ commit sau khi đa số peer ghi và áp dụng Raft log. Với C3, quorum thực tế là 2 trong 3 peer; với C1, Region chỉ có một peer nên không cần chờ peer thứ hai. Vì các bước trên lặp lại theo số cột/key bị ảnh hưởng, số chỉ mục phụ không chỉ làm tăng dung lượng mà còn làm tăng số key phải giao dịch, số Raft log và công việc compaction.
+
+Tuy nhiên, ưu thế kiến trúc LSM-Tree không phải áp dụng trực tiếp cho mọi workload. Ghi luôn tuần tự không loại bỏ chi phí giao dịch phân tán, chi phí đồng thuận hoặc chi phí compaction. RQ4 vì vậy kiểm chứng hai giả thuyết trái chiều: TiDB có thể có write penalty nhỏ hơn MySQL nhờ ghi LSM, hoặc có thể thua MySQL do overhead phân tán và nhân bản.
+
+\subsubsection{Covering index và đánh đổi}
+
+Một covering index là chỉ mục chứa đủ cột để thực thi truy vấn mà không cần quay về bảng. Tác dụng phụ thuộc vào ba yếu tố: số dòng cần xử lý, tỷ lệ truy vấn cần cột ở ngoài chỉ mục và chi phí truy cập thêm. Trong RQ1, \code{idx\_sender\_cov(sender\_id, created\_at, status, cod\_amount)} vừa là ví dụ covering cho truy vấn lấy 20 đơn mới nhất, vừa là một cấu trúc lớn hơn \code{idx\_sender\_created} ở mục B.1. Covering không miễn phí:
+\begin{itemize}
+  \item Khi truy vấn tra ít dòng, nó có thể loại bỏ hai pha \code{IndexLookUp} hoặc lượt quay về bảng và làm giảm độ trễ.
+  \item Khi truy vấn đọc số dòng lớn, kích thước entry lớn hơn làm truy xuất chỉ mục truyền nhiều dữ liệu hơn và có thể không còn lợi thế.
+  \item Khi \code{status} hoặc \code{cod\_amount} được cập nhật, chỉ mục covering phải ghi/xóa thêm mục; RQ4 đo ảnh hưởng tương ứng.
+  \item Chỉ mục có nhiều cột làm tăng dung lượng, dung lượng tạo thêm và thời gian duy trì. Số liệu thực tế của hai hệ được đối chiếu ở Chương~\ref{sec:dung-luong}.
+\end{itemize}
 
 \begin{table}[!htp]
 \centering\bangfont
 \caption{So sánh cơ chế chỉ mục phụ của hai hệ}\label{tab:so-co-che}
-\begin{tabular}{|L{4.0cm}|L{5.2cm}|L{5.2cm}|}
+\begin{tabular}{|L{3.4cm}|L{5.2cm}|L{5.8cm}|}
 \hline
-\dongdau \textbf{Khía cạnh} & \textbf{MySQL InnoDB} & \textbf{TiDB} \\ \hline
-Cấu trúc lưu chỉ mục & \chuaco & \chuaco \\ \hline
-Đọc không covering & \chuaco & \chuaco \\ \hline
-Đọc covering & \chuaco & \chuaco \\ \hline
-Thêm một dòng & \chuaco & \chuaco \\ \hline
-Cập nhật cột trong chỉ mục & \chuaco & \chuaco \\ \hline
+\dongdau \textbf{Khía cạnh} & \textbf{MySQL InnoDB} & \textbf{TiDB/TiKV} \\ \hline
+Cấu trúc chỉ mục & B+Tree riêng, lá lưu khóa, khóa chính và dữ liệu khóa & Cặp key--value trong Region/TiKV, key chứa index ID và giá trị khóa, handle hoặc dữ liệu nhỏ \\ \hline
+Đọc không covering & Quét leaf index rồi quay về clustered B+Tree bằng khóa chính & \code{IndexLookUp}: đọc index rồi gom handle và gửi table task đến Region dòng dữ liệu \\ \hline
+Đọc covering & Trả kết quả trực tiếp từ leaf B+Tree nếu đủ cột & \code{IndexReader}: chỉ đọc leaf index entry qua coprocessor \\ \hline
+Thêm một dòng & Thêm leaf entry vào mỗi chỉ mục; khóa tăng tuần tự hoặc khóa ngẫu nhiên ảnh hưởng tách trang & Tạo cặp key--value cho dòng và mỗi chỉ mục; đi qua prewrite, commit, MVCC và Raft \\ \hline
+Cập nhật cột trong chỉ mục & Cập nhật leaf entry tương ứng, redo log và các cơ chế giao dịch của InnoDB & Xóa entry cũ và ghi entry mới cùng MVCC, sau đó ghi LSM/Raft theo số Region liên quan \\ \hline
+Khóa chính dài & Khóa chính được lưu trong leaf của mọi chỉ mục phụ & Handle/key clustered hoặc \code{\_tidb\_rowid} nonclustered tăng kích thước/dải gọi KV \\ \hline
+Chi phí đo chính & Thời gian truy vấn, Handler reads, dung lượng trang và byte ghi & Thời gian truy vấn, cop task/RPC/key, Region size và byte ghi đĩa \\ \hline
 \end{tabular}
 \end{table}
