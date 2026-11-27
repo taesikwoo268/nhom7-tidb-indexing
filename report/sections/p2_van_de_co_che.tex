@@ -8,15 +8,45 @@ Báo cáo này nghiên cứu chi phí của chỉ mục phụ trên hai kiến t
 
 Trong vận hành thực tế, nhiều truy vấn đi qua các thuộc tính khác với khóa chính: tìm theo mã vận đơn, lấy danh sách đơn mới của một người gửi, đếm đơn theo kho và trạng thái hoặc lọc theo khoảng tiền COD. Mỗi truy cập thường làm phát sinh hai loại chi phí. Một là chi phí \emph{đọc}: số dòng lọc ra, số lần quay về bảng, số toán tử/dữ liệu qua coprocessor và số nút KV phải gọi. Hai là chi phí \emph{ghi}: mỗi chỉ mục phụ phải được thêm, xóa hoặc cập nhật khi dữ liệu thay đổi. Đồng thời, các cặp key--value của TiDB còn phải đi qua MVCC, giao dịch hai pha và nhân bản Raft.
 
-Bốn câu hỏi nghiên cứu xác định phạm vi phân tích và các phép đo tương ứng:
-\begin{enumerate}
-  \item \textbf{RQ1 -- Chỉ mục covering có làm giảm chi phí truy vấn?} So sánh truy vấn chỉ dùng khóa và cột phụ trong chỉ mục với truy vấn quay về bảng.
-  \item \textbf{RQ2 -- Khi nào một truy vấn nên dùng chỉ mục thay vì quét bảng?} So sánh ba chế độ truy cập \code{FORCE INDEX}, \code{IGNORE INDEX} và optimizer tự chọn theo độ chọn lọc.
-  \item \textbf{RQ3 -- Khóa chính ảnh hưởng thế nào đến chỉ mục phụ?} So sánh clustered key và nonclustered key, số lần gọi TiKV và dung lượng mục chỉ mục.
-  \item \textbf{RQ4 -- Việc tăng số chỉ mục phụ làm giảm thông lượng ghi ra sao?} Đo tải chèn và cập nhật theo bộ 0, 1, 3 và 5 chỉ mục, đồng thời tách chi phí giao dịch và nhân bản.
-\end{enumerate}
+Bảng~\ref{tab:cau-hoi} liệt kê bốn câu hỏi nghiên cứu và phần dung lượng B.1, cùng giả thuyết được đặt trước khi đo; giả thuyết có thể bị số liệu bác bỏ.
+\begin{table}[!htp]
+\centering\bangnho
+\caption{Câu hỏi nghiên cứu, giả thuyết và lý do có thể sai}\label{tab:cau-hoi}
+\begin{tabular}{|C{1.2cm}|L{3.6cm}|L{4.7cm}|L{4.7cm}|}
+\hline
+\dongdau \textbf{Mã} & \textbf{Câu hỏi} & \textbf{Giả thuyết} & \textbf{Lý do có thể sai} \\ \hline
+B.1 & Bảng và chỉ mục chiếm bao nhiêu dung lượng? & Mô hình lý thuyết dự đoán được số đo sau khi hiệu chỉnh & Hệ số nén và phiên bản MVCC chưa dọn làm số đo lệch \\ \hline
+RQ1 & Covering index giảm độ trễ đọc bao nhiêu? & R nhỏ: lợi ích covering ở TiDB lớn hơn vì chi phí cố định; R lớn: hai hệ có thể gần nhau & Point\_Get rẻ; TiDB gom handle theo lô; MySQL đọc ngẫu nhiên nếu vượt bộ nhớ đệm \\ \hline
+RQ2 & Ở độ chọn lọc nào quét bảng nhanh hơn dùng chỉ mục? & Điểm giao nhau của TiDB thấp hơn MySQL & TiDB lấy dòng theo lô; TiKV ít CPU nên quét bảng cũng đắt \\ \hline
+RQ3 & Kiểu khóa chính ảnh hưởng thế nào tới chỉ mục phụ? & Khóa chính dạng chuỗi làm chỉ mục phụ lớn hơn trên cả hai hệ; TiDB nonclustered phải tra hai bước khi tìm theo \code{id} & Nén và mã hóa khóa của TiKV có thể làm chênh lệch nhỏ đi \\ \hline
+RQ4 & Thêm chỉ mục làm TPS ghi giảm bao nhiêu? & (a) TiDB giảm ít hơn nhờ LSM-tree; (b) TiDB giảm nhiều hơn vì mỗi chỉ mục thêm cặp KV phải prewrite và commit qua Raft & Hai giả thuyết đối lập, do thực nghiệm phân xử \\ \hline
+\end{tabular}
+\end{table}
 
 Các câu hỏi trên không được đặt thành giả định rằng TiDB luôn nhanh hơn hoặc chậm hơn MySQL. Mục đích là xác định \emph{điều kiện} mà mỗi cơ chế mang lại lợi ích đọc, mức dung lượng và chi phí ghi đi kèm, cũng như giới hạn của phép so sánh trên một máy lab.
+
+\subsection{Mục tiêu và cách đo}
+Đề tài không dừng ở việc so sánh độ trễ hay thông lượng tổng mà tìm nguyên nhân kỹ thuật (Bảng~\ref{tab:muc-tieu}). Với chiều đọc, nhóm ép đường truy cập bằng hint, đo các truy vấn đường chuẩn (\code{SELECT 1}, tra theo khóa chính) và khớp số đo với mô hình $t = a + bR$ để tách độ chọn lọc, toán tử truy cập và chi phí gọi KV. Cấu hình bản sao được kiểm tra trước mỗi lượt đo TiDB. Covering index được đánh giá trên cả ba mặt: đọc (RQ1), ghi (RQ4) và dung lượng (B.1).
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Mục tiêu và cách đo}\label{tab:muc-tieu}
+\begin{tabular}{|L{3.4cm}|L{5.6cm}|L{5.6cm}|}
+\hline
+\dongdau \textbf{Nhóm mục tiêu} & \textbf{Mục tiêu} & \textbf{Cách đo} \\ \hline
+Tách nguồn chênh lệch đọc & Tách độ chọn lọc, đường truy cập và chi phí gọi KV & Ép chỉ mục bằng hint, đường chuẩn, mô hình $t = a + bR$ \\ \hline
+Cấu hình bản sao & Nêu đúng số TiKV, số bản sao, quorum và khả năng chịu lỗi & Kiểm tra trước khi đo TiDB \\ \hline
+Covering trên truy vấn vận đơn & Kế hoạch, độ trễ, chi phí ghi, dung lượng & RQ1, RQ4 và B.1 \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Phạm vi và giới hạn}
+Đề tài so sánh TiDB v8.5.5 với MySQL 8.4.11, chạy trong Docker trên WSL2 theo hồ sơ tài nguyên chung XS: mỗi hệ dùng tổng cộng 4 CPU; bộ nhớ đệm dữ liệu là 750 MiB ở TiDB (3 TiKV, mỗi node 250 MiB block cache) và 752 MiB ở MySQL (buffer pool). Dữ liệu có hai mức 1 triệu và 3 triệu dòng; mức 10 triệu dòng chỉ được ngoại suy bằng mô hình dung lượng ở Chương~\ref{sec:dung-luong}, không đo. RQ4 chỉ đo ở 1 triệu dòng với 64 luồng; lý do bỏ mức 16 luồng nêu ở Chương~\ref{sec:ghi}.
+
+RQ3 chỉ đo ảnh hưởng của kiểu khóa chính tới dung lượng chỉ mục phụ và tới việc tra cứu, ở 1 triệu dòng trên một máy. Các thí nghiệm còn lại đều giữ cùng lược đồ \code{PRIMARY KEY (id)} trên hai hệ để cô lập chi phí của riêng chỉ mục phụ; vì vậy các biến thể giảm điểm nóng ghi như \code{AUTO\_RANDOM} của TiDB không được thử.
+
+So với đề cương đã đăng ký, nhóm có hai điều chỉnh. Thứ nhất, đề cương dự kiến 1 đến 10 triệu bản ghi; với hồ sơ XS trên laptop 16 GB, nhóm chỉ đo ở 1 và 3 triệu dòng, còn 10 triệu dòng chỉ được tính bằng mô hình dung lượng. Thứ hai, đề cương dự kiến so sánh độ trễ mạng phân tán ở RQ1; theo nhận xét của giảng viên, nhóm tách riêng chi phí gọi KV và không quy chênh lệch cho mạng, vì mọi node nằm trên một máy.
+
+Mọi container của cụm TiDB (1 PD, 1 TiDB server, 3 TiKV) và MySQL chạy luân phiên trên cùng một máy và một ổ đĩa, nên giữa các node không có độ trễ mạng vật lý và chênh lệch hiệu năng không thể quy cho đường truyền. Khối lượng đo chia trên ba máy (Bảng~\ref{tab:ba-may}); số tuyệt đối chỉ được so giữa hai hệ trên cùng một máy, còn giữa các máy chỉ đối chiếu tỉ lệ. Demo tắt node và thêm node ở Chương~\ref{sec:cai-dat} chỉ minh họa cách cụm vận hành, không dùng để kết luận về chi phí chỉ mục.
 
 \subsection{Cơ chế chỉ mục phụ}
 \label{subsec:co-che-index}
@@ -29,26 +59,9 @@ Chẳng hạn, truy vấn \code{SELECT * FROM shipments WHERE sender\_id=?} đ�
 
 Khi chèn khóa ngẫu nhiên, InnoDB có thể tách trang B+Tree. Khi khóa tăng tuần tự, các trang lá được điền gần dọc thứ tự. Khi cập nhật một cột nằm trong chỉ mục phụ, engine phải thay đổi leaf entry tương ứng; đồng thời lệnh ghi tạo redo log, có thể tạo undo record cho MVCC và chịu cơ chế group commit theo cấu hình giao dịch. Như vậy, chỉ số \emph{không còn chứa dữ liệu tại lá} hay \emph{ít ghi hơn} là kết quả của từng workload, không phải tính chất chung cho mọi truy vấn.
 
-\subsubsection{Ánh xạ chỉ mục phụ và đường truy cập trong TiDB}
+\subsubsection{Chỉ mục phụ trong TiDB}
 
-TiDB ánh xạ bảng quan hệ sang key--value. Với bảng clustered, dòng có dạng \code{t{table\_id}\_r{id}}, còn chỉ mục phụ có key chứa \code{table\_id}, \code{index\_id}, giá trị cột khóa và handle của dòng. Với chỉ mục \code{idx\_sender\_created(sender\_id, created\_at)}, key không phủ ngoài khóa còn lưu trong bảng là \code{id}; với \code{idx\_sender\_cov(sender\_id, created\_at, status, cod\_amount)}, các cột \code{status} và \code{cod\_amount} được thêm vào khóa vì cùng nằm trong leaf index entry của TiKV.
-
-Tầng TiDB lựa chọn ba đường truy cập cơ bản:
-\begin{itemize}
-  \item \code{Point\_Get}: tra thẳng một khóa duy nhất hoặc khóa chính mà không cần coprocessor nhiều pha.
-  \item \code{IndexReader}: đọc cột cần thiết trực tiếp từ Region chứa chỉ mục; đây là đường covering khi cột truy vấn nằm trong entry index.
-  \item \code{IndexLookUp}: đọc index để lấy các handle, gom handle theo lô rồi gửi yêu cầu tới Region chứa dòng dữ liệu.
-\end{itemize}
-
-Trong \code{IndexLookUp}, index task và table task có thể nằm trên TiKV khác nhau. Bản ghi thực thi ghi riêng \code{cop\_task}, \code{rpc\_num}, \code{total\_process\_keys}, \code{tot\_proc}, \code{tot\_wait} và tổng thời gian RPC. Các đại lượng này cho phép tách chi phí quay về bảng khỏi chi phí xử lý mỗi dòng. Tuy nhiên, phần \code{rest\_ms} trong mô hình không thể coi là độ trễ mạng vật lý vì cả cụm đều chạy trong các container trên một máy.
-
-\subsubsection{Ghi chỉ mục phụ trong TiDB}
-
-Trong TiDB, một giao dịch nạp dòng và một giao dịch cập nhật dòng đều làm thay đổi nhiều cặp key--value. Với \code{INSERT}, một dòng và mỗi mục chỉ mục phụ phải được \code{prewrite}; sau đó giao dịch gọi TSO, ghi khóa \code{commit} và chờ xác nhận commit. Với \code{UPDATE}, phần key--value của cột không nằm trong chỉ mục được ghi mới, còn mỗi cột nằm trong chỉ mục tạo ra một cặp \emph{xóa mục cũ -- ghi mục mới} cùng một phiên bản MVCC mới.
-
-Mỗi cặp key--value sau đó được lưu trong RocksDB, đi qua WAL/MemTable, flush thành SST và compaction LSM-Tree. Một Region chỉ commit sau khi đa số peer ghi và áp dụng Raft log. Với C3, quorum thực tế là 2 trong 3 peer; với C1, Region chỉ có một peer nên không cần chờ peer thứ hai. Vì các bước trên lặp lại theo số cột/key bị ảnh hưởng, số chỉ mục phụ không chỉ làm tăng dung lượng mà còn làm tăng số key phải giao dịch, số Raft log và công việc compaction.
-
-Tuy nhiên, ưu thế kiến trúc LSM-Tree không phải áp dụng trực tiếp cho mọi workload. Ghi luôn tuần tự không loại bỏ chi phí giao dịch phân tán, chi phí đồng thuận hoặc chi phí compaction. RQ4 vì vậy kiểm chứng hai giả thuyết trái chiều: TiDB có thể có write penalty nhỏ hơn MySQL nhờ ghi LSM, hoặc có thể thua MySQL do overhead phân tán và nhân bản.
+Cách TiDB ánh xạ dòng và chỉ mục thành cặp khóa--giá trị, các toán tử \code{Point\_Get}, \code{IndexReader}, \code{IndexLookUp}, và đường ghi qua prewrite, commit, Raft và LSM-tree đã được trình bày ở Chương~\ref{sec:kien-truc}. Ba điểm liên quan trực tiếp tới phép đo được nhắc lại ở đây. Thứ nhất, \code{IndexLookUp} gồm hai pha gọi TiKV, và \code{EXPLAIN ANALYZE} ghi riêng số cop task, số RPC, số khóa xử lý và thời gian của từng pha, nên có thể tách chi phí quay về bảng khỏi chi phí mỗi dòng; vì mọi container nằm trên một máy, phần thời gian còn lại không được coi là độ trễ mạng. Thứ hai, khi \code{INSERT}, dòng và mỗi mục chỉ mục đều phải prewrite và commit; khi \code{UPDATE} một cột nằm trong chỉ mục, mục cũ bị xóa và mục mới được ghi, nên số khóa của một giao dịch tăng theo số chỉ mục bị ảnh hưởng. Thứ ba, ghi nối tiếp của LSM-tree không loại bỏ chi phí giao dịch phân tán, đồng thuận và compaction; RQ4 vì vậy kiểm chứng hai giả thuyết trái chiều: TiDB giảm ít hơn MySQL nhờ LSM-tree, hoặc giảm nhiều hơn vì chi phí phân tán và nhân bản.
 
 \subsubsection{Covering index và đánh đổi}
 
