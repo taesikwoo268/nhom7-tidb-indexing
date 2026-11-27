@@ -25,23 +25,13 @@ Tạo chỉ mục & Kế hoạch đổi sau khi tạo chỉ mục & Đạt & Đ�
 
 Các câu lệnh SQL trên hai hệ giống hệt nhau, chỉ khác từ khóa \code{CLUSTERED} của khóa chính trên TiDB. Đoạn trích dưới đây là phần giao dịch chạy trên TiDB; MySQL cho đúng các giá trị này. Sau \code{ROLLBACK}, hai đơn quay về giá trị cũ; sau \code{COMMIT}, giá trị mới được giữ lại. Khi thử sửa mã vận đơn của đơn 2 thành mã của đơn 1, cả hai hệ đều từ chối với lỗi 1062.
 
-\begin{lstlisting}[caption={Giao dịch ROLLBACK và COMMIT trên TiDB (trích đầu ra)}]
+\begin{lstlisting}[caption={Giao dịch ROLLBACK và COMMIT trên TiDB (trích đầu ra, đơn 1)}]
 sql> SELECT id, status, cod_amount FROM shipments WHERE id IN (1, 2) ORDER BY id
   1 | 5 | 9641779
-  2 | 5 | 9453603
-sql> START TRANSACTION
-sql> UPDATE shipments SET cod_amount = cod_amount + 1000 WHERE id IN (1, 2)
-  OK, 2 rows affected
-sql> ROLLBACK
-sql> SELECT ...        -- gia tri cu
-  1 | 5 | 9641779
-  2 | 5 | 9453603
-sql> START TRANSACTION
-sql> UPDATE shipments SET cod_amount = cod_amount + 1000 WHERE id IN (1, 2)
-sql> COMMIT
-sql> SELECT ...        -- gia tri moi
-  1 | 5 | 9642779
-  2 | 5 | 9454603
+sql> UPDATE ... SET cod_amount = cod_amount + 1000 ...; ROLLBACK
+  1 | 5 | 9641779      -- gia tri cu
+sql> UPDATE ... SET cod_amount = cod_amount + 1000 ...; COMMIT
+  1 | 5 | 9642779      -- gia tri moi
 \end{lstlisting}
 
 \subsubsection{Chỉ mục và kế hoạch thực thi}
@@ -59,26 +49,5 @@ Chưa có chỉ mục & \code{type=ALL}, \code{Using where; Using filesort} & \c
 \code{idx\_sender\_cov} (covering) & \code{type=range}, \code{Using where; Backward index scan; Using index} & \code{IndexReader}: chỉ \code{IndexRangeScan} \\ \hline
 \end{tabular}
 \end{table}
-
-\begin{lstlisting}[caption={Kế hoạch trên TiDB (trích cột id, task, access object)}]
--- Chua co chi muc
-TopN_8                      root
-  TableReader_16            root
-    TopN_15                 cop[tikv]
-      Selection_14          cop[tikv]
-        TableFullScan_13    cop[tikv]  table:shipments
-
--- idx_sender_created: khong covering
-IndexLookUp_20              root
-  Limit_19(Build)           cop[tikv]
-    IndexRangeScan_17       cop[tikv]  index:idx_sender_created(sender_id, created_at)
-  TableRowIDScan_18(Probe)  cop[tikv]  table:shipments
-
--- idx_sender_cov: covering
-Limit_11                    root
-  IndexReader_18            root
-    Limit_17                cop[tikv]
-      IndexRangeScan_16     cop[tikv]  index:idx_sender_cov(sender_id, created_at, status, cod_amount)
-\end{lstlisting}
 
 Demo còn cho thấy TiDB đặt chỉ mục ở đâu. Sau khi tạo ba chỉ mục, \code{SHOW TABLE shipments REGIONS} trả về 7 Region: khóa của từng chỉ mục (\code{t\_114\_i\_1}, \code{t\_114\_i\_2}, \code{t\_114\_i\_3}) và khóa của các dòng nằm ở những Region khác nhau, dù bảng chỉ có 20.000 dòng. Chi tiết này sẽ được dùng lại khi bàn về chi phí ghi ở Chương~\ref{sec:ghi}.

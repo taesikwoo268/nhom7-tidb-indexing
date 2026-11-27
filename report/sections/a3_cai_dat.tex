@@ -47,7 +47,7 @@ CPU cũng được chia theo hai cách khác nhau. MySQL là một tiến trình
 
 Về độ bền, MySQL đặt \code{innodb\_flush\_log\_at\_trx\_commit=1} và tắt binlog, còn TiDB giữ cấu hình ghi Raft log mặc định. Mỗi TiKV có block cache 250 MiB, \code{memory-usage-limit} 1.000 MiB và \code{write-buffer-size} 32 MiB cho hai column family chính. Nhóm dùng image TiKV chính thức nhưng loại bỏ phần thông tin debug, phần mã thực thi giữ nguyên. Trên M2, nhờ vậy bộ nhớ một tiến trình TiKV chiếm khi cụm còn rỗng giảm từ khoảng 1,9 GB xuống khoảng 0,16 GB.
 
-Cuối cùng là collation. Lược đồ không chỉ định collation nên mỗi hệ dùng mặc định của mình: MySQL dùng \code{utf8mb4\_unicode\_ci} (đặt trong file cấu hình), TiDB dùng \code{utf8mb4\_bin}. Hai hệ vì vậy so sánh và sắp xếp chuỗi không hoàn toàn giống nhau, nhưng trong các truy vấn và chỉ mục của đề tài chỉ có \code{tracking\_code} là cột chuỗi. Với RQ4, nhóm đã đo lại MySQL bằng \code{utf8mb4\_bin} và không thấy khác biệt nào vượt mức nhiễu (Mục~\ref{sec:rq4-collation}). RQ1 vẫn dùng collation mặc định, nên ở truy vấn Q1 báo cáo chỉ so tỉ số trong từng hệ.
+Cuối cùng là collation. Lược đồ không chỉ định collation nên MySQL dùng \code{utf8mb4\_unicode\_ci} (đặt trong file cấu hình), còn TiDB dùng \code{utf8mb4\_bin}; trong các truy vấn và chỉ mục của đề tài, chỉ \code{tracking\_code} là cột chuỗi. Mục~\ref{sec:rq4-collation} cho thấy khác biệt này không vượt mức nhiễu ở RQ4; RQ1 vẫn dùng collation mặc định nên ở truy vấn Q1 chỉ so tỉ số trong từng hệ.
 
 \subsection{Số node, số bản sao, quorum và khả năng chịu lỗi}
 
@@ -79,23 +79,14 @@ Việc cài đặt gồm năm bước. Vì mọi cấu hình đều nằm trong 
   \item Lấy mã nguồn về và tạo môi trường Python 3.10 trở lên.
   \item Khai báo tên máy và hồ sơ (\code{MACHINE\_ID}, \code{PROFILE=XS}). Nếu cổng 3306 đã bị chiếm thì đổi cổng MySQL; M2 dùng cổng 3307.
   \item Chạy lệnh kiểm tra. Lệnh này từ chối khi sai hồ sơ, Docker thiếu bộ nhớ hoặc CPU, máy đang chạy pin, hoặc có file cấu hình khác với Git.
-  \item Bật từng hệ và nạp dữ liệu.
+  \item Bật từng hệ bằng \code{use\_engine.ps1} và nạp dữ liệu bằng \code{load.ps1}.
 \end{enumerate}
-
-\begin{lstlisting}[caption={Các lệnh cài đặt và nạp dữ liệu}]
-python -m pip install -e ".[dev]"
-python -m bench.cli check
-.\scripts\use_engine.ps1 -Engine mysql
-.\scripts\load.ps1 -Engine mysql -Rows 1000000
-.\scripts\use_engine.ps1 -Engine tidb -Switch
-.\scripts\load.ps1 -Engine tidb -Rows 1000000
-\end{lstlisting}
 
 \subsection{Minh chứng cài đặt}
 
-Đoạn log dưới đây được trích từ lần nạp dữ liệu cho RQ4 trên M2. Hai hệ cùng nạp 1 triệu dòng, cho cùng tổng \code{cod\_amount} và cùng mã SHA-256 của file nguồn. MySQL báo phiên bản 8.4.11; TiDB báo chuỗi phiên bản tương thích MySQL 8.0.11, kèm phiên bản thật là v8.5.5.
+Đoạn log dưới đây trích từ lần nạp dữ liệu cho RQ4 trên M2, kèm phiên bản TiDB và trạng thái ba store lấy trên cùng máy trong lúc chạy demo. Hai hệ cùng nạp 1 triệu dòng, cho cùng tổng \code{cod\_amount} và cùng mã SHA-256 của file nguồn. MySQL báo phiên bản 8.4.11; TiDB báo chuỗi phiên bản tương thích MySQL 8.0.11, kèm phiên bản thật là v8.5.5.
 
-\begin{lstlisting}[caption={Đầu ra khi kiểm tra và bật hai hệ trên M2}]
+\begin{lstlisting}[caption={Kiểm tra, nạp dữ liệu, phiên bản TiDB và trạng thái ba store trên M2 (trích)}]
 machine=M2 profile=XS docker=18 CPU/9.7 GiB ac_power=True commit=317f0a6
 team_hash=fa4c12cdf33a
 DAT
@@ -104,14 +95,10 @@ mysql: rows=1000000 sum_cod=5000968738439 seed=20261116
   sha256=8ee11b63da2217d4b1d00137bd8e4f3ba647b9bed94a594468c990fe981f4827
 tidb SELECT 1 = 1; version=8.0.11-TiDB-v8.5.5; port=4000
 tidb: rows=1000000 sum_cod=5000968738439 seed=20261116
-  sha256=8ee11b63da2217d4b1d00137bd8e4f3ba647b9bed94a594468c990fe981f4827
-\end{lstlisting}
-Phiên bản chi tiết của TiDB, trạng thái ba store và lược đồ thực tế của bảng được lấy trên cùng máy, trong lúc chạy demo.
+-- tidb: cung sha256 nhu tren
 
-\begin{lstlisting}[caption={Phiên bản TiDB và trạng thái ba store}]
 Release Version: v8.5.5
 Edition: Community
-Git Commit Hash: 1fa258b833ff113883beeba40bc130be7ce66610
 Store: tikv
 
 store_id | address     | store_state_name

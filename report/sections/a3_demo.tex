@@ -45,9 +45,7 @@ Giây 149 & 27 / 69 & 24 / 77 & 28 / 82 & 20 / 69 \\ \hline
 \end{tabular}
 \end{table}
 
-Chỉ 11 giây sau khi được thêm, \code{tikv4} đã ở trạng thái Up, và một giây sau đó nhận Region đầu tiên. Đến cuối lượt, nó giữ 69 bản sao Region và 20 leader (Bảng~\ref{tab:demo-them-node}, Hình~\ref{fig:dashboard4}). Trong 124.628 giao dịch, không có lệnh ghi nào lỗi và không mất giao dịch nào. Trong lúc cân bằng, thông lượng có những giây giảm mạnh, thấp nhất còn 38 giao dịch mỗi giây so với mức 903 trước khi thêm; trung bình 30 giây cuối là 785. Như vậy demo cho thấy cụm mở rộng được ngay khi đang chạy, nhưng \emph{không} chứng minh thêm node làm tăng hiệu năng: node mới dùng chung máy và ổ đĩa với các node cũ, và tải chỉ ghi vào một bảng nhỏ.
-
-\hinh{tidb_dashboard_4_tikv.png}{0.9}{TiDB Dashboard sau khi thêm tikv4: 4 TiKV ở trạng thái Up}{fig:dashboard4}
+Chỉ 11 giây sau khi được thêm, \code{tikv4} đã ở trạng thái Up, và một giây sau đó nhận Region đầu tiên. Đến cuối lượt, nó giữ 69 bản sao Region và 20 leader (Bảng~\ref{tab:demo-them-node}). Trong 124.628 giao dịch, không có lệnh ghi nào lỗi và không mất giao dịch nào. Trong lúc cân bằng, thông lượng có những giây giảm mạnh, thấp nhất còn 38 giao dịch mỗi giây so với mức 903 trước khi thêm; trung bình 30 giây cuối là 785. Như vậy demo cho thấy cụm mở rộng được ngay khi đang chạy, nhưng \emph{không} chứng minh thêm node làm tăng hiệu năng: node mới dùng chung máy và ổ đĩa với các node cũ, và tải chỉ ghi vào một bảng nhỏ.
 
 \subsection{Kết luận chương}
 
