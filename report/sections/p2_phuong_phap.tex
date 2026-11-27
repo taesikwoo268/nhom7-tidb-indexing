@@ -51,18 +51,6 @@ RQ4 & Số chỉ mục, tải, cấu hình bản sao & M2 & 1 triệu & TPS, p95
 \end{tabular}
 \end{table}
 
-\subsubsection{Quy trình chạy RQ1, RQ2 và RQ3}
-
-RQ1 lấy 200 bộ tham số tại 1 và 3 triệu dòng; cùng một giá trị tham số được dùng cho hai thiết kế trong cùng một vòng, với 5 lượt lặp. Trước đo, script kiểm tra \code{ANALYZE TABLE}, toán tử truy cập mong muốn và kết quả chuỗi, sau đó ghi \code{EXPLAIN ANALYZE}, p50/p95/p99, số cop task, RPC, key xử lý và \code{Handler\_*}/\code{Innodb\_buffer\_pool\_reads} tương ứng. RQ2 chạy ở 3 triệu dòng, với 10 mức độ chọn lọc từ 0,001\% đến 50\%, mỗi mức dùng khoảng COD cố định, ba chế độ truy cập và 5 vòng. Script dừng nếu \code{FORCE INDEX} không tạo index range hoặc \code{IGNORE INDEX} không tạo table scan theo quy ước đã kiểm tra.
-
-RQ3 chạy trên M2 ở 1 triệu dòng. TiDB có ba biến thể \code{id} clustered, \code{id} nonclustered và \code{tracking\_code} clustered; MySQL chỉ có \code{id} và \code{tracking\_code} clustered vì InnoDB không hỗ trợ một bảng nonclustered tương đương. Mỗi truy vấn lặp 200 tham số trên 3 vòng. Dung lượng chỉ số được đo bằng số trang leaf MySQL và kích thước Region TiKV đã tách riêng; hai cách đo chỉ được so ở phạm vi tương đối trong từng hệ.
-
-\subsubsection{Quy trình chạy RQ4}
-
-RQ4 gồm 84 lượt chính thức: MySQL 36 lượt, TiDB C3 36 lượt và TiDB C1 12 lượt. Mỗi tổ hợp gồm 64 luồng, một tải 60 giây và 3 vòng. Tải W1 chèn một vận đơn mới; tải W2 cập nhật \code{status} và \code{updated\_at} của một dòng hiện có. Trước lượt đo, script kiểm tra số bản sao, chờ dữ liệu nền lắng và ghi \code{run\_id}, cấu hình engine, bố trí container, thông số cache, tổng dòng, tổng \code{cod\_amount}, TPS, p95/p99, byte ghi và tài nguyên.
-
-Các lượt C3 bị cạn điện hoặc có trạng thái container bất thường không được xóa khỏi dataset. Chương~\ref{sec:ghi} ghi riêng các trường hợp \code{tikv1} thiếu leader, số store không khớp hoặc các vòng đo lại. Kết luận chỉ dựa trên tập chính thức và không loại lượt chỉ vì TPS trái giả thuyết.
-
 \subsection{Cách xử lý số liệu}
 
 Mỗi cấu hình được báo cáo bằng trung vị của các vòng, kèm khoảng nhỏ nhất -- lớn nhất hoặc khoảng tứ phân vị. Phần trăm thay đổi luôn tính trong từng hệ, so với mốc của chính hệ đó. Nhóm không loại lượt nào chỉ vì kết quả trái giả thuyết. Những lượt bị nhiễu được liệt kê riêng, và nhóm kiểm tra xem kết luận có đổi không khi tạm bỏ chúng. Khi khoảng của hai cấu hình giao nhau, báo cáo không kết luận cấu hình nào tốt hơn. Báo cáo cũng tách phần số đo khỏi phần giải thích, và nói rõ khi một cách giải thích chưa được kiểm chứng.

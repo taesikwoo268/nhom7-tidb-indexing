@@ -5,7 +5,7 @@
 | Hình | File | Người làm | Trạng thái |
 |---|---|---|---|
 | `fig:rq4` | `rq4_tps_vs_indexes_bin.png` | TV2 | Đã có |
-| `fig:dashboard`, `fig:keyviz`, `fig:dashboard4` | `tidb_dashboard.png`, `tidb_key_visualizer.png`, `tidb_dashboard_4_tikv.png` | TV2 | Đã có |
+| `fig:dashboard`, `fig:keyviz` | `tidb_dashboard.png`, `tidb_key_visualizer.png` | TV2 | Đã có |
 | `fig:demo-loi-tidb` | `demo_chiu_loi_tidb_M2.png` | TV2 | Đã có |
 | `fig:kien-truc` | `tidb_kien_truc.png` (lấy từ bản Word của TV1) | TV1 | Đã có |
 | `fig:b1` | `b1_model_vs_measured.png` | TV1 | Đã có |
