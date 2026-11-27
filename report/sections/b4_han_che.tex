@@ -1,20 +1,10 @@
-% Mục B.4, hạn chế. Phụ trách: TV3.
-\subsection{Hạn chế}
-\phutrach{TV3 -- mục B.4, hạn chế}
-Các kết luận của Chương~\ref{sec:doc} và \ref{sec:ghi} chỉ có giá trị trong phạm vi sau.
+% Hạn chế, đặt trong phần Kết luận. Phụ trách: TV3.
+\subsection*{Hạn chế}
+\addcontentsline{toc}{subsection}{Hạn chế}
+\phutrach{TV3 -- hạn chế}
+Các kết luận chỉ có giá trị trong phạm vi đã nêu ở Chương~\ref{sec:phuong-phap} (một máy, một ổ đĩa, tối đa 3 triệu dòng). Ngoài ra còn ba giới hạn:
 \begin{itemize}
-  \item \textbf{Một máy, một ổ đĩa.} Mọi node của TiDB và MySQL chạy trong container trên cùng một máy và dùng chung một ổ đĩa. Giữa các container không có độ trễ mạng vật lý, nên chi phí gọi KV đo được chỉ gồm tuần tự hóa, gRPC và lập lịch; trên cụm thật, độ trễ mạng cộng thêm vào chi phí cố định $a$, và giá trị $a$ ở đây là ước lượng thấp. Độ trễ phía máy khách còn gồm đường từ máy chủ Windows vào container, giống nhau cho cả hai hệ.
-  \item \textbf{Chịu lỗi.} Cấu hình C3 chịu mất một container TiKV, không phải mất một máy hay một ổ đĩa. Cấu hình C1 (3 TiKV, 1 bản sao) không chịu lỗi và chỉ dùng để tách chi phí nhân bản.
-  \item \textbf{Tài nguyên không đối xứng.} CPU chia cố định theo container (hồ sơ XS: 4 CPU cho mỗi hệ). Tổng RAM của hai hệ khác nhau: cụm TiDB khoảng 5,5 GiB (5.632 MiB), MySQL 2 GiB, và bộ nhớ đệm đặt tương đương 750 MiB. Hai hệ cũng khác nhau về bộ thực thi, định dạng dòng và ngôn ngữ cài đặt, nên chênh lệch tuyệt đối giữa hai hệ không quy được cho riêng mạng hay riêng covering.
-  \item \textbf{Ba máy khác nhau.} Mỗi máy có CPU, ổ đĩa và nền hệ điều hành riêng, nên không so độ trễ hay thông lượng tuyệt đối giữa các máy; chỉ so các đại lượng không có đơn vị (tỉ số covering, điểm giao nhau). Máy tính cá nhân không được cách ly hoàn toàn, nên có nhiễu ngoài tầm kiểm soát.
-  \item \textbf{Quy mô.} Mọi máy dùng hồ sơ XS. RQ1 ở 1 triệu (M3) và 3 triệu dòng (M1, M2); RQ2 ở 3 triệu dòng; RQ4 chỉ ở 1 triệu dòng, 64 luồng, 3 vòng. \textbf{Không có số đo 10 triệu dòng}; mọi số liệu ở quy mô đó chỉ là số theo mô hình dung lượng. Ở mức chọn lọc trên 2\%, RQ2 chỉ dùng vài khoảng giá trị mỗi mức để vừa thời gian.
-  \item \textbf{Bộ nhớ đệm kết quả của TiDB bị tắt} trong lúc đo RQ1 và RQ2 (MySQL 8 không có cơ chế tương đương); phép đo phản ánh đường truy cập chứ không phản ánh bộ nhớ đệm kết quả. Thời gian trong \code{EXPLAIN ANALYZE} cộng dồn qua các tác vụ song song, nên có thể lớn hơn thời gian chạy; phần còn lại \code{rest\_ms} chỉ là xấp xỉ.
-  \item \textbf{Dữ liệu tổng hợp.} Dữ liệu vận đơn sinh bằng một bộ sinh cố định (seed 20261116), không phải dữ liệu sản xuất; phân bố \code{sender\_id} theo luật lũy thừa và \code{cod\_amount} phân bố đều.
-\end{itemize}
-Các điểm sau trên M3 có thể ảnh hưởng tới việc đọc kết quả; nhóm không xóa lượt nào.
-\begin{itemize}
-  \item \textbf{Số lượt.} RQ1 (1 triệu dòng) có 170 lượt, 85 mỗi hệ; RQ2 (3 triệu dòng) có 300 lượt. Trong cả 470 lượt, điều kiện lắng đĩa (\code{settled}) đều bằng 1; 17 lượt của TiDB trong RQ1 phải chờ 30,2 giây thay vì 20,1 giây.
-  \item \textbf{Cơ sở dữ liệu của RQ2.} RQ2 trên M3 chạy trên cơ sở dữ liệu \code{logistics}, không phải \code{logistics\_3000000} như quy ước của nhóm. Bảng 3 triệu dòng ở hai nơi giống hệt nhau (tổng \code{cod\_amount} bằng 15001281300461), nên không ảnh hưởng tới số đo; bảng ở \code{logistics} được xóa sau đó để nạp 1 triệu dòng cho RQ1.
-  \item \textbf{Lần chạy RQ1 đầu tiên dừng ở bước nạp dữ liệu} vì \code{logistics} đang chứa bảng 3 triệu dòng; chưa có phép đo nào được ghi, và lần chạy lại dùng đúng tham số của script chính thức.
-  \item \textbf{Dao động giữa các lượt:} Q3 và Q2R $R = 10.000$ của TiDB trong RQ1 (mục B.2), quét bảng của TiDB trong RQ2.
+  \item \textbf{Tài nguyên không đối xứng.} Hai hệ có cùng 4 CPU và bộ nhớ đệm tương đương 750 MiB, nhưng tổng RAM khác nhau (5,5 GiB so với 2 GiB) và khác nhau về bộ thực thi, định dạng dòng, nên chênh lệch tuyệt đối không quy được cho riêng một yếu tố.
+  \item \textbf{Bộ nhớ đệm kết quả của TiDB bị tắt} khi đo RQ1 và RQ2, nên phép đo phản ánh đường truy cập; thời gian trong \code{EXPLAIN ANALYZE} cộng dồn qua các tác vụ song song nên phần còn lại \code{rest\_ms} chỉ là xấp xỉ.
+  \item \textbf{Dữ liệu tổng hợp}, sinh bằng bộ sinh cố định (seed 20261116), không phải dữ liệu sản xuất.
 \end{itemize}

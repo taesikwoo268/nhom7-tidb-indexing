@@ -7,21 +7,7 @@ Phần cứng và cấu hình đã được trình bày ở Chương~\ref{sec:ca
 
 \textbf{Cùng cấu hình.} Toàn bộ cấu hình container, lược đồ, bộ sinh dữ liệu và kịch bản tải đều nằm trong Git. Từ các file này, chương trình tính ra một mã băm (\code{team\_hash}), và ba máy phải cho cùng một mã. Nếu có file cấu hình khác với Git, lệnh kiểm tra sẽ từ chối cho đo.
 
-\textbf{Cùng dữ liệu.} Thay vì chép file dữ liệu lớn giữa các máy, mỗi máy tự sinh dữ liệu với cùng seed 20261116. Bảng có 100.000 shop, số đơn mỗi shop theo phân phối Zipf (tham số 1,1), 200 kho, 80\% đơn ở trạng thái đã giao, \code{cod\_amount} phân phối đều từ 0 đến dưới 10 triệu, và \code{created\_at} tăng theo \code{id} trong 180 ngày. Mã vận đơn của dữ liệu nền luôn chẵn, còn tải W1 sinh mã lẻ, nên hai nguồn không bao giờ trùng nhau. Dữ liệu được nạp bằng \code{LOAD DATA LOCAL INFILE} theo lô 10.000 dòng vào một bảng tạm, và bảng chỉ được đưa vào dùng khi số dòng và tổng \code{cod\_amount} khớp với file nguồn. Bảng~\ref{tab:checksum} đối chiếu kết quả giữa các máy.
-
-\begin{table}[!htp]
-\centering\bangfont
-\caption{Đối chiếu cấu hình và dữ liệu giữa ba máy}\label{tab:checksum}
-\begin{tabular}{|C{2.2cm}|L{3.2cm}|L{4.4cm}|L{4.4cm}|}
-\hline
-\dongdau \textbf{Máy} & \textbf{team\_hash} & \textbf{sum\_cod, 1 triệu dòng} & \textbf{sum\_cod, 3 triệu dòng} \\ \hline
-Giá trị chuẩn & fa4c12cdf33a & 5000968738439 & 15001281300461 \\ \hline
-M1 & fa4c12cdf33a & 5000968738439 & 15001281300461 \\ \hline
-M2 & fa4c12cdf33a & 5000968738439 & 15001281300461 \\ \hline
-M3 & fa4c12cdf33a & 5000968738439 & 15001281300461 \\ \hline
-\end{tabular}
-\par\vspace{3pt}{\noindent\small\itshape Giá trị chuẩn được sinh lại trực tiếp từ bộ sinh dữ liệu; số của từng máy lấy từ log nạp dữ liệu trên máy đó.\par}
-\end{table}
+\textbf{Cùng dữ liệu.} Thay vì chép file dữ liệu lớn giữa các máy, mỗi máy tự sinh dữ liệu với cùng seed 20261116. Bảng có 100.000 shop, số đơn mỗi shop theo phân phối Zipf (tham số 1,1), 200 kho, 80\% đơn ở trạng thái đã giao, \code{cod\_amount} phân phối đều từ 0 đến dưới 10 triệu, và \code{created\_at} tăng theo \code{id} trong 180 ngày. Mã vận đơn của dữ liệu nền luôn chẵn, còn tải W1 sinh mã lẻ, nên hai nguồn không bao giờ trùng nhau. Dữ liệu được nạp bằng \code{LOAD DATA LOCAL INFILE} theo lô 10.000 dòng vào một bảng tạm, và bảng chỉ được đưa vào dùng khi số dòng và tổng \code{cod\_amount} khớp với file nguồn. Cả ba máy cho cùng \code{team\_hash} (fa4c12cdf33a) và cùng tổng \code{cod\_amount} với giá trị sinh lại trực tiếp từ bộ sinh dữ liệu: 5000968738439 ở 1 triệu dòng và 15001281300461 ở 3 triệu dòng, theo log nạp dữ liệu trên từng máy.
 
 \textbf{Một hệ mỗi lúc.} Trên mỗi máy, TiDB và MySQL được đo lần lượt. Chương trình dùng một khóa để hai phép đo không thể chạy cùng lúc, và kiểm tra hệ kia đã dừng trước khi bắt đầu đo.
 

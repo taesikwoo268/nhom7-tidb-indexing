@@ -22,21 +22,7 @@ Nạp dữ liệu & \code{load.ps1 -Engine tidb -Rows 1000000} & Số dòng, t�
 
 \subsubsection{Kiểm tra trạng thái cụm TiDB}
 
-Trạng thái cụm có thể đọc bằng SQL thông thường qua TiDB server, không cần công cụ riêng:
-
-\begin{lstlisting}[language=SQL,caption={Kiểm tra store, số bản sao và cấu hình}]
-SELECT store_id, address, store_state_name, region_count, leader_count
-FROM information_schema.tikv_store_status;
-
-SELECT region_id, COUNT(*) AS peers
-FROM information_schema.tikv_region_peers
-GROUP BY region_id HAVING peers <> 3;   -- C3: phai tra ve 0 dong
-
-SHOW CONFIG WHERE type='pd' AND name='replication.max-replicas';
-SHOW CONFIG WHERE type='tikv' AND name='storage.block-cache.capacity';
-\end{lstlisting}
-
-Chính các truy vấn này đã giúp nhóm phát hiện hai hiện tượng trong lúc đo RQ4. Ở C1, leader phân bố lệch giữa ba store, khoảng 230/60/50. Còn trong năm lượt C3, store \code{tikv1} không giữ leader nào vì PD tạm chuyển leader khỏi store mà nó đánh giá là chậm. Cả hai được phân tích ở Chương~\ref{sec:ghi}.
+Trạng thái cụm đọc được bằng SQL thông thường qua TiDB server: bảng \code{information\_schema.tikv\_store\_status} cho trạng thái, số Region và số leader của từng store, bảng \code{tikv\_region\_peers} cho số peer của từng Region, và \code{SHOW CONFIG} cho cấu hình đang chạy. Chính các truy vấn này đã giúp nhóm phát hiện hai hiện tượng trong lúc đo RQ4. Ở C1, leader phân bố lệch giữa ba store, khoảng 230/60/50. Còn trong năm lượt C3, store \code{tikv1} không giữ leader nào vì PD tạm chuyển leader khỏi store mà nó đánh giá là chậm. Cả hai được phân tích ở Chương~\ref{sec:ghi}.
 
 \subsubsection{Giám sát bằng TiDB Dashboard}
 

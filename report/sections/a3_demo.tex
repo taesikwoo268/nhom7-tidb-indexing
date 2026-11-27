@@ -23,11 +23,9 @@ Dòng có trong bảng nhưng client không nhận được xác nhận & 0 & 7 
 
 \hinh{demo_chiu_loi_tidb_M2.png}{0.9}{Giao dịch thành công mỗi giây khi tắt một TiKV ở cấu hình C3}{fig:demo-loi-tidb}
 
-Ngay khi \code{tikv2} bị tắt, tải dừng hẳn vì Region của bảng thử mất leader (Hình~\ref{fig:demo-loi-tidb}). Hai peer còn lại vẫn đủ quorum 2 trên 3 nên tự bầu được leader mới, và tải chạy lại từ giây thứ 44 mà không cần ai can thiệp. Số liệu từ PD cho thấy leader trên \code{tikv2} giảm từ 27 về 0, còn \code{tikv1} tăng từ 28 lên 40 và \code{tikv3} từ 19 lên 34. Trong suốt quá trình đó, không luồng ghi nào nhận lỗi: câu lệnh chỉ bị treo trong lúc chờ leader mới rồi hoàn thành bình thường. Khi được bật lại, \code{tikv2} dần nhận lại leader và giữ 18 leader ở cuối lượt.
+Ngay khi \code{tikv2} bị tắt, tải dừng hẳn vì Region của bảng thử mất leader (Hình~\ref{fig:demo-loi-tidb}). Hai peer còn lại vẫn đủ quorum 2 trên 3 nên tự bầu leader mới, và tải chạy lại từ giây thứ 44 mà không cần can thiệp; leader trên \code{tikv2} giảm từ 27 về 0, còn \code{tikv1} và \code{tikv3} nhận thêm. Không luồng ghi nào nhận lỗi: câu lệnh chỉ bị treo trong lúc chờ leader mới.
 
-Phía MySQL, 61 giây ngừng phục vụ phần lớn chính là 60 giây kịch bản chờ trước khi bật lại container. Vì vậy phép so này \emph{không ngang hàng}: MySQL ở đây chỉ có một node, không có bản sao, trong khi MySQL hoàn toàn có thể chạy theo cụm với InnoDB Cluster. Cả hai hệ đều không mất giao dịch nào đã xác nhận. Điều demo cho thấy là khác biệt về tính sẵn sàng khi mất một tiến trình, không phải khác biệt về độ bền dữ liệu.
-
-Kết quả cần được đọc với vài giới hạn. Ba TiKV nằm trên một máy và một ổ đĩa, nên đây là lỗi của một tiến trình chứ không phải của một máy; PD và TiDB server chỉ có một node và không bị tắt. Mỗi hệ chỉ có một lượt trong bảng. Ở một lượt chạy thử trước đó, TiDB ngừng 8 giây và mất 10 giây để về 90\% mức nền, tức là thời gian phục hồi dao động giữa các lần chạy. Số giao dịch mỗi giây trong demo cũng không được dùng để so hiệu năng hai hệ.
+Phía MySQL, 61 giây ngừng phục vụ phần lớn là 60 giây kịch bản chờ trước khi bật lại container, nên phép so này \emph{không ngang hàng}: MySQL ở đây chỉ có một node, không có bản sao. Cả hai hệ đều không mất giao dịch đã xác nhận, nên demo cho thấy khác biệt về tính sẵn sàng, không phải về độ bền. Đây là lỗi của một tiến trình trên một máy, và mỗi hệ chỉ có một lượt; một lượt chạy thử trước đó của TiDB cho 8 giây ngừng, nên thời gian phục hồi dao động giữa các lần.
 
 \subsection{Demo bổ sung: thêm node TiKV}
 
@@ -49,4 +47,4 @@ Chỉ 11 giây sau khi được thêm, \code{tikv4} đã ở trạng thái Up, v
 
 \subsection{Kết luận chương}
 
-Chương này đã trình bày cách nhóm cài đặt, cấu hình và vận hành một cụm TiDB v8.5.5 gồm 1 PD, 1 TiDB server và 3 TiKV trên máy 16 GB, cùng MySQL 8.4.11 để đối chứng. Các chức năng cơ bản chạy đúng trên cả hai hệ. Trong demo, cấu hình C3 chịu được việc mất một tiến trình TiKV mà không mất giao dịch đã xác nhận, và cho phép thêm node ngay khi đang có tải. Đây chỉ là các demo minh họa cơ chế; mọi kết luận về chi phí chỉ mục trong Phần 2 đều dựa trên các thí nghiệm riêng.
+Cụm TiDB v8.5.5 gồm 1 PD, 1 TiDB server và 3 TiKV chạy được trên máy 16 GB cùng MySQL 8.4.11 để đối chứng; các chức năng cơ bản chạy đúng trên cả hai hệ, và trong demo, C3 chịu được việc mất một tiến trình TiKV và cho phép thêm node khi đang có tải. Các demo chỉ minh họa cơ chế; kết luận về chi phí chỉ mục ở Phần 2 dựa trên các thí nghiệm riêng.

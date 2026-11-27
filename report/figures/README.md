@@ -11,3 +11,4 @@
 | `fig:b1` | `b1_model_vs_measured.png` | TV1 | Đã có |
 | `fig:covering` | `rq1_M3_covering.png` | TV3 | Chưa có |
 | `fig:rq2` | Hình RQ2 | TV3 | Chưa có |
+| `fig:minh-chung-cai-dat`, `fig:explain-tidb`, `fig:explain-mysql` | `minh_chung_cai_dat.png`, `minh_chung_explain_tidb.png`, `minh_chung_explain_mysql.png` (chụp bằng `scripts/minh_chung.ps1`) | TV2 | Đã có |

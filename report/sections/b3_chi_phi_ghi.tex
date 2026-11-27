@@ -64,12 +64,11 @@ W2 & TiDB C1 & 1.946\newline(1.940--2.105) & --- & --- & 942\newline(921--1.072)
 
 Trên MySQL, TPS giảm dần đều: $-5{,}6\%$ với 1 chỉ mục, $-14{,}9\%$ với 3 và $-18{,}9\%$ với 5 chỉ mục (Bảng~\ref{tab:rq4-w1}, Hình~\ref{fig:rq4}). Khoảng của bộ 1 vẫn còn giao với mốc 0, còn bộ 3 và bộ 5 thì đã tách hẳn. TiDB C3 thì khác: phần lớn mức giảm đến ngay từ những chỉ mục đầu tiên, $-50{,}3\%$ với 1 chỉ mục, $-77{,}1\%$ với 3 và $-82{,}7\%$ với 5. Đáng chú ý là TiDB C1, dù không nhân bản, cũng giảm tới $79{,}4\%$ từ 0 lên 5 chỉ mục, gần bằng C3.
 
-Nếu nhìn giá trị tuyệt đối trên cùng máy M2, TPS của MySQL gấp 6,4 lần TiDB C3 khi không có chỉ mục phụ và gấp 30,1 lần khi có 5 chỉ mục. Hai tỉ số này chỉ đúng với hồ sơ XS, bảng 1 triệu dòng và cách chia CPU cho từng container; giới hạn của chúng được bàn ở Mục~\ref{sec:rq4-thao-luan}.
+Nếu nhìn giá trị tuyệt đối trên cùng máy M2, TPS của MySQL gấp 6,4 lần TiDB C3 khi không có chỉ mục phụ và gấp 30,1 lần khi có 5 chỉ mục. Hai tỉ số này chỉ đúng với hồ sơ XS, bảng 1 triệu dòng và cách chia CPU cho từng container; giới hạn của chúng được nêu ở cuối chương.
 
 \hinh{rq4_tps_vs_indexes_bin.png}{0.98}{TPS so với mốc 0 chỉ mục của chính hệ theo số chỉ mục phụ, 64 luồng (trung vị; thanh: nhỏ nhất -- lớn nhất). Đường nét đứt của C1 chỉ nối hai điểm đo}{fig:rq4}
 
 \subsection{Kết quả cập nhật trạng thái (W2)}
-
 
 Với W2 (Bảng~\ref{tab:rq4-w2}), TPS phụ thuộc vào số chỉ mục \emph{bị ảnh hưởng} nhiều hơn là tổng số chỉ mục. Ở bộ 1 và sender\_created, không chỉ mục nào chứa \code{status}, và khoảng dao động của cả hai hệ đều giao với mốc 0: MySQL $-2{,}0\%$ và $+6{,}7\%$, TiDB C3 $+5{,}8\%$ và $-7{,}2\%$. Các khác biệt này, kể cả hai lần TPS tăng, đều nằm trong mức nhiễu của 3 lượt đo.
 
@@ -102,7 +101,6 @@ Nói cách khác, trong thí nghiệm này cái giá khi ghi của covering inde
 
 C1 và C3 đều có 3 TiKV, chỉ khác số bản sao của mỗi Region. C1 vẫn phải đi qua TSO, giao dịch phân tán, Raft log của một nhóm chỉ có một peer và LSM-tree; nó chỉ không phải chờ đa số xác nhận. Số TPS của hai cấu hình nằm trong Bảng~\ref{tab:rq4-w1}.
 
-
 Ở bộ 0, C3 thấp hơn C1 $11{,}8\%$ với W1, còn với W2 mức chênh $3{,}2\%$ nằm trong vùng giao nhau. Ở bộ 5, C3 thấp hơn C1 $25{,}9\%$ (W1) và $29{,}7\%$ (W2), và khoảng dao động đã tách nhau. Như vậy chi phí nhân bản lớn dần khi mỗi giao dịch phải ghi nhiều cặp KV hơn.
 
 Tuy vậy, nhân bản không giải thích được phần lớn mức giảm theo số chỉ mục. Bỏ nhân bản đi, C1 vẫn giảm $79{,}4\%$ (W1) và $51{,}6\%$ (W2) từ 0 lên 5 chỉ mục, so với $82{,}7\%$ và $64{,}8\%$ của C3. Cũng cần nói rõ rằng chênh lệch giữa C1 và C3 ở đây là chi phí nhân bản Raft trên \emph{một máy và một ổ đĩa}: ghi và áp dụng log ba lần, CPU của các follower và tranh chấp đĩa; phép đo không có độ trễ mạng vật lý. Phép so còn hai hạn chế: C3 và C1 không chạy xen kẽ nhau, và leader của C1 phân bố lệch, khoảng 230/60/50 leader trên ba store.
@@ -127,84 +125,19 @@ TiDB C1 & W2 & 80,0 & 104,8 & 97,6 & 116,8 & 4,1 & 11,1 \\ \hline
 
 Ở bộ 5, p95 của TiDB C3 là 204 ms (W1) và 162 ms (W2), trong khi MySQL chỉ 13 ms và 12 ms (Bảng~\ref{tab:rq4-tre}). Riêng MySQL có phân phối độ trễ đuôi dài: p95 trung vị chỉ từ 3,5 đến 13,0 ms ở mọi cấu hình (trừ W2 với sender\_cov, 23,5 ms), nhưng p99 trung vị lại nằm quanh 53--60 ms ở tất cả. Nhóm chưa xác định được nguyên nhân. Container MySQL chạy sát giới hạn CPU nên có thể bị hãm theo hạn ngạch CPU, nhưng nhóm không đo số lần bị hãm để kiểm chứng.
 
-\begin{table}[!htp]
-\centering\bangnho
-\caption{Số CPU sử dụng trung bình trong lượt đo}\label{tab:rq4-cpu}
-\begin{tabular}{|C{1.7cm}|C{1.1cm}|C{1.1cm}|C{2.2cm}|C{2.4cm}|C{2.4cm}|C{2.4cm}|}
-\hline
-\dongdau \textbf{Cấu hình} & \textbf{Tải} & \textbf{Bộ} & \textbf{Cả hệ (trên 4)} & \textbf{TiDB server (trên 1,2)} & \textbf{TiKV bận nhất (trên 0,8)} & \textbf{Hai TiKV còn lại} \\ \hline
-MySQL & W1, W2 & 0, 5 & 3,97--3,99 & --- & --- & --- \\ \hline
-TiDB C3 & W1 & 0 & 1,90 & 0,78 & 0,67 & 0,18 và 0,17 \\ \hline
-TiDB C3 & W1 & 5 & 1,78 & 0,41 & 0,80 & 0,28 và 0,28 \\ \hline
-TiDB C3 & W2 & 0 & 2,09 & 0,75 & 0,74 & 0,22 và 0,21 \\ \hline
-TiDB C3 & W2 & 5 & 1,81 & 0,48 & 0,80 & 0,23 và 0,23 \\ \hline
-TiDB C1 & W1 & 0 & 1,88 & 0,83 & 0,63 & 0,17 và 0,12 \\ \hline
-TiDB C1 & W1 & 5 & 2,03 & 0,58 & 0,80 & 0,49 và 0,29 \\ \hline
-TiDB C1 & W2 & 0 & 1,75 & 0,67 & 0,80 & 0,11 và 0,04 \\ \hline
-TiDB C1 & W2 & 5 & 2,50 & 0,66 & 0,79 & 0,65 và 0,05 \\ \hline
-\end{tabular}
-\end{table}
-
-Bảng~\ref{tab:rq4-cpu} cho thấy hai hệ bị giới hạn theo hai kiểu khác nhau. MySQL dùng 3,76--4,00 trên 4 CPU trong mọi lượt, tức gần cạn ngân sách. Cụm TiDB chỉ dùng 1,67--2,71 trên 4 CPU, nhưng lại có một TiKV dùng gần hết 0,8 CPU của riêng nó: trong 33 trên 36 lượt C3, TiKV bận nhất dùng từ 0,7 CPU trở lên (trung vị 0,78), trong khi hai TiKV còn lại chỉ có trung vị khoảng 0,17--0,28. Container sysbench dùng nhiều nhất 1,01 trên 2 CPU, nên bộ sinh tải không phải là điểm nghẽn.
-
+Số CPU đo được trong từng lượt cho thấy hai hệ bị giới hạn theo hai kiểu khác nhau. MySQL dùng 3,76--4,00 trên 4 CPU trong mọi lượt, tức gần cạn ngân sách. Cụm TiDB chỉ dùng 1,67--2,71 trên 4 CPU, nhưng lại có một TiKV dùng gần hết 0,8 CPU của riêng nó: trong 33 trên 36 lượt C3, TiKV bận nhất dùng từ 0,7 CPU trở lên (trung vị 0,78), trong khi hai TiKV còn lại chỉ có trung vị khoảng 0,17--0,28. Container sysbench dùng nhiều nhất 1,01 trên 2 CPU, nên bộ sinh tải không phải là điểm nghẽn.
 
 Với MySQL, byte ghi trên mỗi giao dịch (Bảng~\ref{tab:rq4-byte}) tăng theo số chỉ mục, từ khoảng 1,5 KB lên 4,3 KB ở W1. Số của TiDB thì dao động rất mạnh giữa các vòng của cùng một cấu hình, chẳng hạn 11,5--62,6 KB ở C3, W1, bộ 5, vì cửa sổ 60 giây lúc thì chứa, lúc thì không chứa các đợt ghi nền như flush và compaction. Byte của C3 còn gồm cả ba bản sao và Raft log. Vì vậy nhóm chỉ báo cáo số byte quan sát được, không tính hệ số khuếch đại ghi và không dùng chỉ số này để xếp hạng hai hệ.
 
 \subsection{Kiểm tra ảnh hưởng của collation}
 \label{sec:rq4-collation}
 
-Lược đồ không chỉ định collation, nên ở đợt đo đầu tiên MySQL dùng \code{utf8mb4\_unicode\_ci} trong khi TiDB dùng \code{utf8mb4\_bin}. Trong RQ4, khác biệt này chỉ chạm tới \code{idx\_code}, chỉ mục duy nhất trên cột chuỗi, tức là W1 ở bộ 1, 3 và 5. Các cấu hình còn lại không so sánh chuỗi nên đóng vai trò đối chứng. Để loại hẳn khác biệt, nhóm đo lại đủ 36 lượt MySQL với \code{utf8mb4\_bin}. Bảng~\ref{tab:rq4-collation} so hai đợt; số của đợt đầu nằm trong \path{results/rq4_official.csv}.
-
-\begin{table}[!htp]
-\centering\bangnho
-\caption{TPS của MySQL với hai collation: các cấu hình có ghi chỉ mục chuỗi và đối chứng thay đổi nhiều nhất}\label{tab:rq4-collation}
-\begin{tabular}{|C{1.0cm}|C{2.4cm}|C{1.8cm}|C{3.6cm}|C{3.6cm}|C{1.5cm}|}
-\hline
-\dongdau \textbf{Tải} & \textbf{Bộ} & \textbf{Có ghi chỉ mục chuỗi} & \textbf{unicode\_ci (đợt đầu)} & \textbf{bin (đợt sau)} & \textbf{Thay đổi} \\ \hline
-W1 & 1 & Có & 15.460 (14.487--15.584) & 15.764 (14.722--16.247) & $+2{,}0\%$ \\ \hline
-W1 & 3 & Có & 14.370 (14.326--14.512) & 14.210 (13.380--14.769) & $-1{,}1\%$ \\ \hline
-W1 & 5 & Có & 13.481 (12.531--13.636) & 13.539 (13.473--13.708) & $+0{,}4\%$ \\ \hline
-W2 & sender\_cov & Không & 11.334 (7.597--12.647) & 12.702 (12.626--13.096) & $+12{,}1\%$ \\ \hline
-\end{tabular}
-\par\vspace{3pt}{\noindent\small\itshape Đủ 12 cấu hình nằm trong results/rq4\_official.csv (đợt đầu) và results/rq4\_official\_bin.csv (đợt sau); ở cả 12 cấu hình, khoảng của hai đợt giao nhau.\par}
-\end{table}
+Lược đồ không chỉ định collation, nên ở đợt đo đầu tiên MySQL dùng \code{utf8mb4\_unicode\_ci} trong khi TiDB dùng \code{utf8mb4\_bin}. Trong RQ4, khác biệt này chỉ chạm tới \code{idx\_code}, chỉ mục duy nhất trên cột chuỗi, tức là W1 ở bộ 1, 3 và 5. Các cấu hình còn lại không so sánh chuỗi nên đóng vai trò đối chứng. Để loại hẳn khác biệt, nhóm đo lại đủ 36 lượt MySQL với \code{utf8mb4\_bin}. Số của hai đợt nằm trong \path{results/rq4_official.csv} (đợt đầu) và \path{results/rq4_official_bin.csv} (đợt sau).
 
 Ở cả 12 cấu hình, khoảng dao động của hai đợt đều giao nhau. Ba cấu hình có chỉ mục chuỗi thay đổi $+2{,}0\%$, $-1{,}1\%$ và $+0{,}4\%$, còn nhỏ hơn mức thay đổi của nhiều cấu hình đối chứng (W2 sender\_cov thay đổi tới $+12{,}1\%$). Nói cách khác, nhóm không thấy ảnh hưởng nào của collation vượt quá mức nhiễu, dù với 3 lượt đo vẫn chưa loại trừ được một ảnh hưởng nhỏ cỡ vài phần trăm. Hai đợt không chạy cùng lúc nên khác biệt quan sát được còn gồm cả phần trôi theo thời gian. Nếu dùng đợt đầu, mức giảm từ 0 lên 5 chỉ mục là $17{,}6\%$ (W1) và $24{,}9\%$ (W2), còn của covering ở W2 là $34{,}7\%$; mọi kết luận vẫn cùng chiều với đợt sau.
-
-\subsection{Các điểm bất thường}
-
-Nhóm giữ lại toàn bộ 84 lượt, kể cả những lượt có vấn đề. Các điểm dưới đây có thể ảnh hưởng tới kết quả:
-
-\begin{itemize}
-  \item Năm lượt C3 ở vòng 2 chạy khi \code{tikv1} không giữ leader nào, vì giữa vòng này PD đã chuyển leader khỏi store đó bằng cơ chế evict-slow-store. Đó là các lượt W1 bộ 0, 1, 3, sender\_cov và W2 sender\_created.
-  \item Ở C1, một lượt (W1, bộ 5, vòng 1) chạy trùng lúc với các lệnh chẩn đoán; ba lượt phải đo lại sau khi nạp lại dữ liệu, vì ở lần đầu đĩa chưa lắng sau 10 phút nên chương trình không ghi nhận (W2 bộ 0 vòng 1 và 3; W1 bộ 0 vòng 2); và leader lệch trong mọi lượt, khoảng 230/60/50.
-  \item Một dòng C3 (W2, bộ 3, vòng 3) ghi \code{tikv\_stores=2} vì trạng thái được đọc quá sớm sau khi khởi động lại. Trước khi đo, chương trình vẫn kiểm tra đủ 3 store và đủ bản sao.
-  \item Một số cấu hình dao động lớn: C3 W1 sender\_created (682--1.283 TPS) và C3 W1 bộ 1 (894--1.353). Ở đợt MySQL đầu, W2 sender\_cov dao động 7.597--12.647, còn ở đợt sau chỉ 12.626--13.096.
-  \item TiDB và MySQL được đo ở hai đợt. Giữa hai đợt, mã đo chỉ đổi thứ tự đọc thông số của TiDB, nên không ảnh hưởng tới các lượt MySQL.
-  \item Container TiDB server dùng tới 1.156 trên 1.280 MiB bộ nhớ trong lúc đo. Dung lượng chỉ mục của TiDB ghi trong file kết quả chỉ là ước tính từ thống kê, nên chương này không dùng; số đo dung lượng nằm ở Chương~\ref{sec:dung-luong}.
-\end{itemize}
-
-Nhóm đã thử bỏ 6 lượt bị nhiễu (năm lượt C3 khi \code{tikv1} không giữ leader và lượt C1 trùng lệnh chẩn đoán) và thấy chiều của mọi so sánh trong chương không đổi. Thay đổi lớn nhất rơi vào C3 W2 sender\_created so với mốc 0, từ $-7{,}2\%$ thành $-14{,}1\%$; các phần trăm khác lệch không quá 3,3 điểm phần trăm.
-
-\subsection{Thảo luận}
-\label{sec:rq4-thao-luan}
-
-\textbf{Giả thuyết nào được ủng hộ?} Với cấu hình này, số liệu không ủng hộ giả thuyết (a): TiDB giảm TPS nhiều hơn MySQL ở cả hai tải. Giả thuyết (b) đúng về chiều, nhưng phần ``qua Raft trên ba bản sao'' không phải nguyên nhân chính, vì C1 giảm gần bằng C3 ở W1.
-
-\textbf{Điều đo được và cách giải thích.} Số đo cho thấy mức giảm tăng theo số mục chỉ mục phải ghi, và luôn có một TiKV chạm giới hạn CPU. Từ đó có thể đưa ra ba cách giải thích, nhưng thí nghiệm chưa tách riêng được từng cách:
-
-\begin{itemize}
-  \item \textbf{Thêm cặp KV trong mỗi giao dịch.} Mỗi mục chỉ mục phải qua prewrite và commit cùng với dòng dữ liệu, nên khối lượng việc ở TiKV tăng theo số chỉ mục.
-  \item \textbf{Mất đường commit một pha.} TiDB có thể commit một pha khi giao dịch chỉ chạm một Region~\cite{tidb_sysvars}. Nếu mục chỉ mục nằm ở Region khác với dòng, giao dịch phải đi đường commit phân tán đầy đủ. Cách giải thích này khớp với bước nhảy lớn ở chỉ mục đầu tiên (W1) và ở chỉ mục bị ảnh hưởng đầu tiên (W2). Demo ở Chương~\ref{sec:cai-dat} cho thấy ngay trên bảng 20.000 dòng, các chỉ mục đã nằm ở Region riêng, tách khỏi Region chứa dòng; tuy nhiên bảng thử của RQ4 chưa được kiểm tra theo cách này. Nhóm không đổi biến \code{tidb\_enable\_1pc} nhưng cũng chưa đo tỉ lệ giao dịch commit một pha, nên đây vẫn chỉ là giả thuyết.
-  \item \textbf{Điểm nóng ghi.} Với khóa chính số nguyên tăng dần, các dòng mới dồn về cuối bảng và tạo điểm nóng ở một Region~\cite{tidb_hotspot}. Điều này khớp với việc ở W1 có một TiKV bận hơn hẳn hai TiKV kia. W2 chọn \code{id} đều nhưng vẫn có một TiKV bận hơn; bảng 1 triệu dòng chỉ gồm ít Region, nên tải có thể không trải đều được trên ba store. Nhóm chưa đo số Region và lưu lượng theo Region của bảng thử.
-\end{itemize}
-
-\textbf{Vì sao MySQL giảm ít hơn?} Theo thống kê của MySQL, bảng và chỉ mục của một bảng thử chiếm tổng cộng không quá 661 MB, nhỏ hơn buffer pool 789 MB. Việc sửa trang chỉ mục vì vậy diễn ra trong bộ nhớ, và chi phí bền vững dồn vào redo log. Với \code{innodb\_flush\_log\_at\_trx\_commit=1}, mỗi commit phải chờ redo log được ghi bền~\cite{mysql_trx}, nhưng số lần fsync redo log đo được chỉ khoảng 0,032--0,037 trên mỗi giao dịch, tức cứ 27--31 giao dịch mới cần một lần fsync. Change buffer mặc định bị tắt ở MySQL 8.4~\cite{mysql_params} và nhóm không bật lên, nên nó không phải là lời giải thích. Kết quả này cũng không áp dụng được cho trường hợp chỉ mục lớn hơn bộ nhớ đệm.
-
-\textbf{Không quy chênh lệch cho mạng.} Mọi container nằm trên một máy, và thí nghiệm không đo riêng thời gian gRPC. Điều quan sát được trực tiếp là một TiKV chạy sát giới hạn 0,8 CPU; phần đóng góp của gRPC, TSO và compaction chưa được tách ra.
-
-\textbf{Giới hạn của phép so.} Hai hệ có cùng tổng 4 CPU, nhưng MySQL dùng được cả 4 CPU trong một tiến trình còn TiDB phải chia cố định cho năm container. Hệ nhanh hơn cũng chèn được nhiều dòng hơn trong cùng 60 giây: sau W1 bộ 0, bảng MySQL có khoảng 1,96--2,00 triệu dòng, bảng C3 chỉ có 1,13--1,17 triệu dòng. Thí nghiệm mới có một quy mô dữ liệu, một mức luồng và 3 vòng. Các cách giảm điểm nóng của TiDB, chẳng hạn \code{AUTO\_RANDOM}, không được thử vì lược đồ phải giống nhau trên hai hệ.
 
 \subsection{Kết luận chương}
 
 Trên máy M2, với 1 triệu dòng và 64 luồng, thêm 5 chỉ mục phụ làm TPS thêm đơn giảm $18{,}9\%$ trên MySQL, nhưng giảm tới $82{,}7\%$ trên TiDB C3 và $79{,}4\%$ trên TiDB C1. Với tải cập nhật trạng thái, các mức giảm lần lượt là $20{,}2\%$, $64{,}8\%$ và $51{,}6\%$, và yếu tố quyết định là cột bị cập nhật có nằm trong chỉ mục hay không. Covering index không tạo ra khác biệt phân định được khi thêm đơn, nhưng khi \code{status} bị cập nhật thì làm TPS giảm $29{,}5\%$ trên MySQL và $61{,}6\%$ trên C3. Nhân bản khiến C3 thấp hơn C1 khoảng $26$--$30\%$ ở bộ 5 chỉ mục, song phần lớn mức giảm theo số chỉ mục đã xuất hiện ngay cả khi không nhân bản.
+
+Số liệu không ủng hộ giả thuyết (a): TiDB giảm TPS nhiều hơn MySQL ở cả hai tải. Giả thuyết (b) đúng về chiều, nhưng nhân bản Raft không phải nguyên nhân chính, vì C1 giảm gần bằng C3. Điều đo được trực tiếp là mức giảm tăng theo số mục chỉ mục phải ghi và luôn có một TiKV chạm giới hạn 0,8 CPU. Ba cách giải thích phù hợp với số liệu, nhưng thí nghiệm chưa tách riêng từng cách: mỗi mục chỉ mục thêm một cặp KV phải prewrite và commit; giao dịch mất đường commit một pha khi mục chỉ mục nằm ở Region khác với dòng~\cite{tidb_sysvars}; và khóa chính tăng dần tạo điểm nóng ghi ở một Region~\cite{tidb_hotspot}. MySQL giảm ít hơn một phần vì bảng và chỉ mục của bảng thử (tối đa 661 MB) nằm gọn trong buffer pool, và cứ 27--31 giao dịch mới cần một lần fsync redo log; kết quả này không áp dụng cho chỉ mục lớn hơn bộ nhớ đệm. Mọi container nằm trên một máy nên chênh lệch không được quy cho mạng. Nhóm giữ toàn bộ 84 lượt; tạm bỏ 6 lượt bị nhiễu (năm lượt C3 khi \code{tikv1} không giữ leader, một lượt C1 trùng lệnh chẩn đoán) không làm đổi chiều kết luận nào.

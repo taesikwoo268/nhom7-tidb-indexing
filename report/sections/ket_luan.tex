@@ -7,24 +7,20 @@
 \subsection*{Kết quả đạt được}
 \addcontentsline{toc}{subsection}{Kết quả đạt được}
 
-Đề tài đã đo chi phí của chỉ mục phụ trên TiDB v8.5.5 và MySQL 8.4.11 ở cả ba mặt dung lượng, đọc và ghi, trên cùng dữ liệu vận đơn và cùng hồ sơ tài nguyên. Mỗi mục chỉ mục của TiDB lớn hơn MySQL 3,4 đến 4,8 lần. Covering index có lợi cho TiDB nhiều hơn khi ít dòng khớp nhưng cho MySQL nhiều hơn khi nhiều dòng khớp. Khóa chính dạng chuỗi làm chỉ mục phụ lớn thêm 27,4\% trên MySQL và 39,5\% trên TiDB. Thêm 5 chỉ mục làm thông lượng ghi của TiDB C3 giảm 82,7\% (thêm đơn) và 64,8\% (cập nhật), so với 18,9\% và 20,2\% của MySQL, và phần lớn mức giảm này vẫn còn khi bỏ nhân bản. Bảng~\ref{tab:gia-thuyet} đối chiếu từng giả thuyết với số đo, kể cả giả thuyết bị bác bỏ, còn các giới hạn của kết quả được nêu ở cuối Chương~\ref{sec:tong-hop}: một máy và một ổ đĩa, quy mô tối đa 3 triệu dòng, và một mức luồng cho phép đo ghi.
+Đề tài đã đo chi phí của chỉ mục phụ trên TiDB v8.5.5 và MySQL 8.4.11 ở cả ba mặt dung lượng, đọc và ghi. Mỗi mục chỉ mục của TiDB lớn hơn MySQL 3,4 đến 4,8 lần. Covering index có lợi cho TiDB nhiều hơn khi ít dòng khớp nhưng cho MySQL nhiều hơn khi nhiều dòng khớp. Khóa chính dạng chuỗi làm chỉ mục phụ lớn thêm 27,4\% trên MySQL và 39,5\% trên TiDB. Thêm 5 chỉ mục làm thông lượng ghi của TiDB C3 giảm 82,7\% (thêm đơn) và 64,8\% (cập nhật), so với 18,9\% và 20,2\% của MySQL, và phần lớn mức giảm này vẫn còn khi bỏ nhân bản.
+
+\input{sections/b4_han_che}
 
 \subsection*{Hướng phát triển}
 \addcontentsline{toc}{subsection}{Hướng phát triển}
 
-\begin{enumerate}
-  \item Chạy lại RQ1--RQ4 trên ít nhất ba node vật lý riêng, đo độ trễ mạng và I/O đĩa độc lập; xác nhận cấu hình CPU/RAM/cache bằng cùng hồ sơ.
-  \item Mở rộng quy mô lên 10 triệu và 30 triệu dòng, bổ sung số đo dung lượng sau nén trên đĩa, TiKV MVCC và compaction thay vì chỉ mô hình logic.
-  \item Chạy RQ2 với lưới độ chọn lọc dày hơn quanh 2--10\%, lưu thống kê optimizer để phân biệt chi phí ước lượng sai và chi phí cơ chế thực thi.
-  \item Thêm các workload hỗn hợp đọc--ghi và mức luồng khác nhau; dùng \code{run\_id}, raw artifact và thống kê multi-run để kiểm định độ tin cậy.
-  \item Với TiDB, đánh giá TiFlash cho truy vấn phân tích nhưng tách rõ chi phí giao dịch OLTP và lưu trữ HTAP; với MySQL, so thêm InnoDB Cluster hoặc sharding chỉ khi dữ liệu/tính sẵn sàng được thiết kế ngang hàng.
-\end{enumerate}
+Hướng tiếp theo là chạy lại RQ1--RQ4 trên ít nhất ba node vật lý để đo được độ trễ mạng; mở rộng lên 10 và 30 triệu dòng kèm số đo dung lượng sau nén trên đĩa; và thêm tải hỗn hợp đọc--ghi với nhiều mức luồng.
 
 \subsection*{Kiến thức và kỹ năng đạt được}
 \addcontentsline{toc}{subsection}{Kiến thức và kỹ năng đạt được}
 
-\textbf{TV1} hiểu cách liên kết mô hình lưu trữ, truy cập khóa chính, chỉ mục phụ và kết quả thực nghiệm; rèn kỹ năng tạo mô hình dung lượng, kiểm tra byte và đối chiếu B+Tree/LSM-Tree.
+\textbf{TV1} hiểu cách nối mô hình lưu trữ B+Tree và LSM-tree với số đo; rèn kỹ năng dựng mô hình dung lượng và kiểm tra tới từng byte.
 
-\textbf{TV2} nắm quy trình dựng cụm Docker, cấu hình tài nguyên, nạp dữ liệu, chạy benchmark ghi, trích cấu hình thực tế và xử lý các lượt đo bất thường; kỹ năng này giúp tách điều kiện benchmark khỏi suy diễn về hiệu năng.
+\textbf{TV2} nắm cách dựng cụm TiDB bằng Docker, cấu hình tài nguyên, chạy benchmark ghi và xử lý lượt đo bất thường; biết tách điều kiện đo khỏi suy diễn về hiệu năng.
 
-\textbf{TV3} hiểu cách phân tích \code{EXPLAIN ANALYZE}, mapping chỉ mục trên TiDB/MySQL, selectivity crossover và thống kê latency; rèn khả năng đọc số liệu, giữ raw artifact và không loại lượt đo chỉ vì kết quả trái giả thuyết.
+\textbf{TV3} biết đọc \code{EXPLAIN ANALYZE} trên hai hệ, phân tích độ chọn lọc và độ trễ; rèn thói quen giữ dữ liệu gốc và không loại lượt đo vì trái giả thuyết.

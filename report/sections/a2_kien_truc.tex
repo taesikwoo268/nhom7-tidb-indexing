@@ -14,8 +14,6 @@ Hình~\ref{fig:kien-truc} là cụm dùng trong đề tài theo hồ sơ XS: cô
 
 \hinh{tidb_kien_truc.png}{0.72}{Kiến trúc cụm TiDB dùng trong đề tài (cấu hình C3)}{fig:kien-truc}
 
-\textbf{Ảnh hưởng tới chỉ mục phụ.} Truy vấn qua chỉ mục không covering (\code{IndexLookUp}) phải trả chi phí cho hai lượt gọi từ TiDB server xuống TiKV, nên có phần chi phí cố định đáng kể ngay cả khi số dòng khớp nhỏ. Covering index (\code{IndexReader}) bỏ hẳn lượt thứ hai.
-
 \subsection{Ánh xạ bảng và chỉ mục sang Key-Value}
 
 \subsubsection{Dòng dữ liệu và chỉ mục}
@@ -35,21 +33,15 @@ Chỉ mục thường & \code{t\{TableID\}\_i\{IndexID\}\_\{giá trị cột\}\_
 
 InnoDB lưu cả dòng ở nút lá của B+Tree khóa chính (clustered index) và lưu mỗi chỉ mục phụ thành một B+Tree riêng chứa cặp (giá trị cột, khóa chính)~\cite{mysql_innodb}. Về logic, RowID gắn trong chỉ mục của TiDB tương đương với khóa chính trong chỉ mục phụ của InnoDB. Khác biệt nằm ở tổ chức vật lý: TiDB trải dòng và từng chỉ mục thành các dải khóa tách rời trong một không gian khóa chung.
 
-\textbf{Ảnh hưởng tới chỉ mục phụ.} Mỗi chỉ mục phụ là một dải khóa riêng và thêm một cặp KV cho mỗi dòng: chèn một vận đơn vào bảng có 5 chỉ mục phụ là ghi 6 cặp KV. Cập nhật một cột nằm trong chỉ mục buộc phải xóa mục chỉ mục cũ và ghi mục mới.
-
 \subsubsection{RocksDB và LSM-tree}
 Trong mỗi TiKV, các cặp KV được lưu bằng RocksDB, một hệ lưu trữ theo LSM-tree~\cite{rocksdb,lsmtree}. Mọi thay đổi được ghi tuần tự vào nhật ký WAL và bảng trong bộ nhớ (MemTable); khi MemTable đầy, dữ liệu được ghi xuống đĩa thành các file SST đã sắp xếp và không sửa. Tiến trình compaction chạy nền gộp các file SST qua các tầng, bỏ các phiên bản cũ và dấu xóa (tombstone). TiKV dùng ba column family~\cite{tikv_storage}: \code{default} chứa giá trị, \code{write} chứa thông tin phiên bản MVCC và commit, \code{lock} chứa khóa tạm của giao dịch.
 
 LSM-tree không phải đọc trang rồi sửa tại chỗ như B+Tree của InnoDB. Đổi lại, cùng một dữ liệu bị ghi nhiều lần qua WAL, flush và compaction (khuếch đại ghi), và phiên bản cũ cùng tombstone chưa dọn làm tăng dung lượng đĩa. Báo cáo không giả định trước bên nào rẻ hơn khi số chỉ mục tăng; câu hỏi này do RQ4 phân xử.
 
-\textbf{Ảnh hưởng tới chỉ mục phụ.} Mỗi cặp KV của chỉ mục đi qua toàn bộ chu trình WAL, MemTable, SST và compaction. Mỗi lần cập nhật cột trong chỉ mục để lại một phiên bản xóa cho mục cũ, chỉ được dọn sau GC và compaction. Điều này ảnh hưởng tới dung lượng (B.1) và chi phí ghi (RQ4).
-
 \subsection{Region và Multi-Raft}
 TiKV chia không gian khóa thành các đoạn liên tục \code{[StartKey, EndKey)} gọi là Region. Từ v8.4.0, kích thước Region mặc định là 256 MiB, thay cho 96 MiB trước đó~\cite{tidb_region_size}. Trên cụm v8.5.5 của đề tài, \code{SHOW CONFIG} cho thấy cả ba TiKV dùng giá trị mặc định: một Region được tách khi vượt 256 MiB hoặc 2.560.000 khóa (\code{coprocessor.region-split-size}, \code{coprocessor.region-split-keys}), và không lớn quá 384 MiB, tức gấp 1,5 lần ngưỡng tách.
 
-Mỗi Region có nhiều bản sao (peer) nằm trên các TiKV khác nhau, tạo thành một nhóm Raft~\cite{raft}; cụm có nhiều Region nên gọi là Multi-Raft. Đọc và ghi của Region mặc định đi qua leader, và một lệnh ghi chỉ được xác nhận khi đa số bản sao (quorum) đã ghi bền vào Raft log. Cả hai cấu hình của đề tài đều dùng 3 TiKV là ba container trên cùng một máy và một ổ đĩa, chỉ khác số bản sao (Bảng~\ref{tab:ban-sao}): C3 có 3 bản sao mỗi Region (quorum 2/3, chịu được mất một TiKV), C1 có 1 bản sao (không chịu lỗi). Cặp cấu hình này dùng ở RQ4 để tách chi phí nhân bản khỏi các chi phí khác của kiến trúc phân tán.
-
-\textbf{Ảnh hưởng tới chỉ mục phụ.} Dải khóa của chỉ mục tách khỏi dải khóa của dòng, nên chỉ mục và dòng có thể nằm ở các Region khác nhau ngay khi bảng còn nhỏ (demo ở Chương~\ref{sec:cai-dat}: 7 Region với bảng 20.000 dòng). Một giao dịch ghi có nhiều chỉ mục vì vậy thường chạm nhiều nhóm Raft, làm tăng chi phí đồng thuận ở C3; với khóa tăng dần, tải ghi còn dễ dồn vào một leader.
+Mỗi Region có nhiều bản sao (peer) nằm trên các TiKV khác nhau, tạo thành một nhóm Raft~\cite{raft}; cụm có nhiều Region nên gọi là Multi-Raft. Đọc và ghi của Region mặc định đi qua leader, và một lệnh ghi chỉ được xác nhận khi đa số bản sao (quorum) đã ghi bền vào Raft log. Hai cấu hình bản sao C3 và C1 của đề tài được định nghĩa ở Bảng~\ref{tab:ban-sao}.
 
 \subsection{Placement Driver, TSO và giao dịch Percolator}
 PD lưu bản đồ vị trí Region để cân bằng dữ liệu giữa các TiKV và cung cấp TSO (Timestamp Oracle), dịch vụ cấp dấu thời gian toàn cục tăng dần cho mọi giao dịch. Nhờ TSO, giao dịch trên nhiều TiKV có thứ tự nhất quán mà không phụ thuộc đồng hồ của từng máy.
@@ -60,22 +52,4 @@ TiDB thực hiện giao dịch nhiều dòng, nhiều Region theo mô hình Perc
   \item \textbf{Prewrite:} TiDB mặc định dùng giao dịch bi quan; từ v6.0, khóa bi quan được giữ trong bộ nhớ của leader Region để giảm ghi đĩa. Ở pha prewrite, TiDB kiểm tra xung đột, ghi khóa vào \code{lock} CF và dữ liệu vào \code{default} CF trên mọi Region chứa dòng và mục chỉ mục bị thay đổi, qua Raft.
   \item \textbf{Commit:} xin TSO cấp \code{commit\_ts}, ghi bản ghi commit vào \code{write} CF và xóa khóa trong \code{lock} CF. Nếu mọi khóa của giao dịch nằm trong một Region, TiDB có thể commit một pha (\code{tidb\_enable\_1pc}) để bỏ bớt chi phí 2PC~\cite{tidb_sysvars}.
 \end{itemize}
-Mức cô lập của TiDB là Snapshot Isolation, khai báo là \code{REPEATABLE READ} để tương thích MySQL (ngoài ra có \code{READ COMMITTED}). Cơ chế này khác về ngữ nghĩa với khóa khoảng (gap lock, next-key lock) của InnoDB.
 
-\textbf{Ảnh hưởng tới chỉ mục phụ.} Mỗi mục chỉ mục bị chèn hoặc sửa là thêm một khóa phải prewrite, commit và nhân bản qua Raft. Vì mục chỉ mục thường nằm ở Region khác với dòng, thêm chỉ mục có thể làm giao dịch vượt ra ngoài một Region, mất đường commit một pha và chịu đủ chi phí 2PC.
-
-\subsection{Kết luận chương}
-Tách tầng SQL và KV tạo ra khác biệt giữa \code{IndexLookUp} và \code{IndexReader}; ánh xạ dòng và chỉ mục thành cặp KV trên LSM-tree quyết định dung lượng và khuếch đại ghi; Region và Multi-Raft quyết định chi phí nhân bản (C3 so với C1); TSO và Percolator chi phối chi phí ghi nhiều khóa trong một giao dịch. Bảng~\ref{tab:co-che} nối các cơ chế này với câu hỏi nghiên cứu được kiểm chứng ở Phần 2.
-
-\begin{table}[!htp]
-\centering\bangfont
-\caption{Cơ chế của TiDB và câu hỏi nghiên cứu liên quan}\label{tab:co-che}
-\begin{tabular}{|L{3.4cm}|L{8.6cm}|C{2.4cm}|}
-\hline
-\dongdau \textbf{Cơ chế} & \textbf{Ảnh hưởng tới chỉ mục} & \textbf{Câu hỏi} \\ \hline
-IndexReader, IndexLookUp & \code{IndexLookUp} cần hai lượt gọi xuống TiKV (lấy RowID theo lô rồi đọc dòng); covering index dùng \code{IndexReader}, bỏ lượt thứ hai & RQ1, RQ2 \\ \hline
-Ánh xạ KV, LSM-tree & Mỗi chỉ mục là một dải khóa riêng; mỗi lần ghi hoặc sửa chỉ mục thêm cặp KV qua WAL, SST và compaction & B.1, RQ4 \\ \hline
-Region, Multi-Raft & Chỉ mục thường nằm ở Region khác với dòng; ghi nhiều chỉ mục chạm nhiều nhóm Raft (3 bản sao ở C3, 1 ở C1) & RQ4 (C1, C3) \\ \hline
-TSO, Percolator & Mỗi mục chỉ mục thêm một khóa qua prewrite và commit; dễ mất đường commit một pha & RQ1, RQ4 \\ \hline
-\end{tabular}
-\end{table}

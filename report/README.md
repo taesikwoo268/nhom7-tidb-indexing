@@ -10,7 +10,7 @@ Mỗi người chỉ sửa file của mình trong `sections/`. Không sửa `mai
 |---|---|---|
 | `00_mo_dau.tex` | Cam đoan, tóm tắt, phân công | TV1, cả nhóm sửa dòng của mình |
 | `00_viet_tat.tex` | Từ viết tắt | Cả nhóm |
-| `a1_du_lieu.tex`, `a0_tong_quan.tex`, `a2_kien_truc.tex` | Chương 1, dữ liệu, tổng quan, kiến trúc (A.1, A.2) | TV1 |
+| `a0_tong_quan.tex`, `a2_kien_truc.tex` | Chương 1, tổng quan và kiến trúc TiDB (A.1, A.2) | TV1 |
 | `a3_cai_dat.tex`, `a3_van_hanh.tex`, `a3_demo_co_ban.tex` | Chương 2, cài đặt, vận hành, demo cơ bản (A.3) | TV2 |
 | `a3_demo.tex` | Chương 2, demo bổ sung (A.3) | TV2 |
 | `p2_van_de_co_che.tex` | Chương 3, vấn đề, câu hỏi, mục tiêu, phạm vi, cơ chế | TV1 |
@@ -21,7 +21,7 @@ Mỗi người chỉ sửa file của mình trong `sections/`. Không sửa `mai
 | `b2_chi_phi_doc.tex` | Chương 5 (B.2) | TV3 |
 | `b3_chi_phi_ghi.tex` | Chương 6 (B.3) | TV2 |
 | `b4_tong_hop.tex` | Chương 7, giả thuyết và khuyến nghị (B.4) | TV1 |
-| `b4_han_che.tex` | Chương 7, hạn chế (B.4) | TV3 |
+| `b4_han_che.tex` | Kết luận, mục Hạn chế (B.4) | TV3 |
 | `ket_luan.tex` | Kết luận | TV1 |
 | `tai_lieu_tham_khao.tex` | Tài liệu tham khảo | Cả nhóm thêm, TV1 rà |
 
