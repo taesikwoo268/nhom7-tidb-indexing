@@ -45,8 +45,7 @@ LSM-tree không phải đọc trang rồi sửa tại chỗ như B+Tree của In
 \textbf{Ảnh hưởng tới chỉ mục phụ.} Mỗi cặp KV của chỉ mục đi qua toàn bộ chu trình WAL, MemTable, SST và compaction. Mỗi lần cập nhật cột trong chỉ mục để lại một phiên bản xóa cho mục cũ, chỉ được dọn sau GC và compaction. Điều này ảnh hưởng tới dung lượng (B.1) và chi phí ghi (RQ4).
 
 \subsection{Region và Multi-Raft}
-TiKV chia không gian khóa thành các đoạn liên tục \code{[StartKey, EndKey)} gọi là Region. Từ v8.4.0, kích thước Region mặc định là 256 MiB, thay cho 96 MiB trước đó~\cite{tidb_region_size}; cụm của đề tài không đổi tham số này.
-\ghichu{Xác nhận trên cụm v8.5.5 bằng \code{SHOW CONFIG WHERE name LIKE 'coprocessor.region-split\%'} ở lần bật cụm tới.}
+TiKV chia không gian khóa thành các đoạn liên tục \code{[StartKey, EndKey)} gọi là Region. Từ v8.4.0, kích thước Region mặc định là 256 MiB, thay cho 96 MiB trước đó~\cite{tidb_region_size}. Trên cụm v8.5.5 của đề tài, \code{SHOW CONFIG} cho thấy cả ba TiKV dùng giá trị mặc định: một Region được tách khi vượt 256 MiB hoặc 2.560.000 khóa (\code{coprocessor.region-split-size}, \code{coprocessor.region-split-keys}), và không lớn quá 384 MiB, tức gấp 1,5 lần ngưỡng tách.
 
 Mỗi Region có nhiều bản sao (peer) nằm trên các TiKV khác nhau, tạo thành một nhóm Raft~\cite{raft}; cụm có nhiều Region nên gọi là Multi-Raft. Đọc và ghi của Region mặc định đi qua leader, và một lệnh ghi chỉ được xác nhận khi đa số bản sao (quorum) đã ghi bền vào Raft log. Cả hai cấu hình của đề tài đều dùng 3 TiKV là ba container trên cùng một máy và một ổ đĩa, chỉ khác số bản sao (Bảng~\ref{tab:ban-sao}): C3 có 3 bản sao mỗi Region (quorum 2/3, chịu được mất một TiKV), C1 có 1 bản sao (không chịu lỗi). Cặp cấu hình này dùng ở RQ4 để tách chi phí nhân bản khỏi các chi phí khác của kiến trúc phân tán.
 
