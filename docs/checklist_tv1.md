@@ -16,7 +16,7 @@ Các mục đã đánh dấu là những gì có trên nhánh `main` ngày 24/11
 
 ## 24/11 · Môi trường và đối chiếu dữ liệu
 
-- [ ] Lấy `main` mới nhất và cài môi trường, rồi tạo nhánh riêng:
+- [x] Lấy `main` mới nhất và cài môi trường, rồi tạo nhánh riêng:
 
   ```powershell
   git switch main
@@ -26,15 +26,15 @@ Các mục đã đánh dấu là những gì có trên nhánh `main` ngày 24/11
   .venv\Scripts\python -m pip install -e ".[dev]"
   ```
 
-- [ ] Trong file `.env`, đặt `MACHINE_ID=M1` và `PROFILE=XS`. File mẫu ghi sẵn `M2` và `MYSQL_PORT=3307`, nên chép nguyên file mẫu sẽ làm CSV mang nhãn M2. Chỉ giữ `MYSQL_PORT=3307` nếu cổng 3306 đã bị chiếm. Không đẩy `.env` lên Git.
-- [ ] Trong `%UserProfile%\.wslconfig`, mục `[wsl2]`, đặt `memory=10GB` và `swap=4GB`, rồi chạy `wsl --shutdown` và mở lại Docker Desktop.
-- [ ] Chạy lệnh kiểm tra. Kết quả phải là `DAT`, `machine=M1`, `team_hash=fa4c12cdf33a`. Nếu hash khác, dừng lại và báo nhóm.
+- [x] Trong file `.env`, đặt `MACHINE_ID=M1` và `PROFILE=XS`. File mẫu ghi sẵn `M2` và `MYSQL_PORT=3307`, nên chép nguyên file mẫu sẽ làm CSV mang nhãn M2. Chỉ giữ `MYSQL_PORT=3307` nếu cổng 3306 đã bị chiếm. Không đẩy `.env` lên Git.
+- [x] Trong `%UserProfile%\.wslconfig`, mục `[wsl2]`, đặt `memory=10GB` và `swap=4GB`, rồi chạy `wsl --shutdown` và mở lại Docker Desktop.
+- [x] Chạy lệnh kiểm tra. Kết quả phải là `DAT`, `machine=M1`, `team_hash=fa4c12cdf33a`. Nếu hash khác, dừng lại và báo nhóm.
 
   ```powershell
   .venv\Scripts\python -m bench.cli check
   ```
 
-- [ ] Nạp 1 triệu dòng vào hai hệ và gửi TV2 dòng kết quả mà lệnh nạp in ra:
+- [x] Nạp 1 triệu dòng vào hai hệ và gửi TV2 dòng kết quả mà lệnh nạp in ra:
 
   ```powershell
   .\scripts\use_engine.ps1 -Engine mysql -Switch
@@ -43,14 +43,14 @@ Các mục đã đánh dấu là những gì có trên nhánh `main` ngày 24/11
   .\scripts\load.ps1 -Engine tidb -Rows 1000000
   ```
 
-- [ ] Đối chiếu với giá trị chuẩn (seed `20261116`; sinh lại bằng `bench/datagen.py` trên M2 ngày 24/11):
+- [x] Đối chiếu với giá trị chuẩn (seed `20261116`; sinh lại bằng `bench/datagen.py` trên M2 ngày 24/11):
 
   | Số dòng | `sum_cod` | SHA-256 của file TSV |
   |---|---|---|
   | 1.000.000 | `5000968738439` | `8ee11b63da2217d4b1d00137bd8e4f3ba647b9bed94a594468c990fe981f4827` |
   | 3.000.000 | `15001281300461` | `ca0b2a59cc831050aaf6f4d87bbcfe4367cb676bcd25512dd79a39336df2a560` |
 
-- [ ] Gửi TV2 thông tin M1 cho Bảng A.3.1. Chạy lệnh dưới đây, gửi kết quả kèm nội dung `.wslconfig`:
+- [x] Gửi TV2 thông tin M1 cho Bảng A.3.1. Chạy lệnh dưới đây, gửi kết quả kèm nội dung `.wslconfig`:
 
   ```powershell
   Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores,NumberOfLogicalProcessors
@@ -66,7 +66,7 @@ Các mục đã đánh dấu là những gì có trên nhánh `main` ngày 24/11
 Code do TV2 viết (`experiments/rq1_covering.py`, `experiments/rq1_summary.py`), mới chạy thử ở 1 triệu dòng trên M2. Quy mô 3 triệu dòng chưa ai chạy, nên phải chạy thử trước. Dùng lệnh dưới đây, không chép từ README, vì lệnh RQ1 ở đó bị ngắt dòng sai.
 
 - [x] Code đo, kiểm tra kế hoạch và tổng hợp RQ1 đã có trên `main`.
-- [ ] Mở **cửa sổ PowerShell mới** và chạy thử ở 3 triệu dòng:
+- [x] Mở **cửa sổ PowerShell mới** và chạy thử ở 3 triệu dòng:
 
   ```powershell
   .\scripts\rq1_official.ps1 -Rows 3000000 -Reps 1 -Params 20 -Output results/runs/rq1_trial.csv
@@ -80,21 +80,21 @@ Code do TV2 viết (`experiments/rq1_covering.py`, `experiments/rq1_summary.py`)
   ```
 
   Lệnh đầu xem được MySQL, PD và ba TiKV. Container TiDB server được tạo lại khi kết thúc nên mất cờ OOM; nếu nó bị OOM thì script đã dừng với lỗi mất kết nối. Khi có OOM, gửi TV2 log, không tự sửa cấu hình.
-- [ ] Chạy chính thức (5 vòng, 200 tham số). Bị ngắt thì chạy lại đúng lệnh này:
+- [x] Chạy chính thức (5 vòng, 200 tham số). Bị ngắt thì chạy lại đúng lệnh này:
 
   ```powershell
   .\scripts\rq1_official.ps1 -Rows 3000000
   ```
 
-- [ ] Kiểm tra `results/rq1_M1.csv` có 170 dòng, 85 dòng mỗi hệ. Nếu script bỏ qua một mức R thì ghi lại lý do. TiDB phải có `replica_config=C3`.
-- [ ] Tạo bảng tổng hợp, mô hình `t = a + b×R` và hình:
+- [x] Kiểm tra `results/rq1_M1.csv` có 170 dòng, 85 dòng mỗi hệ. Nếu script bỏ qua một mức R thì ghi lại lý do. TiDB phải có `replica_config=C3`.
+- [x] Tạo bảng tổng hợp, mô hình `t = a + b×R` và hình:
 
   ```powershell
   .venv\Scripts\python -m experiments.rq1_summary results/rq1_M1.csv
   ```
 
-- [ ] Ghi lại mọi lượt bất thường (máy chạy việc khác, container khởi động lại, đĩa chưa lắng). Không xóa lượt nào.
-- [ ] Commit và mở PR kết quả, rồi báo TV3 để viết B.2 và báo TV2 kiểm tra số:
+- [x] Ghi lại mọi lượt bất thường (máy chạy việc khác, container khởi động lại, đĩa chưa lắng). Không xóa lượt nào.
+- [x] Commit và mở PR kết quả, rồi báo TV3 để viết B.2 và báo TV2 kiểm tra số:
 
   ```powershell
   git add results/rq1_M1.csv results/rq1_M1_summary.csv results/rq1_M1_fit.csv results/fig/rq1_M1_covering.png
@@ -107,15 +107,15 @@ Code do TV2 viết (`experiments/rq1_covering.py`, `experiments/rq1_summary.py`)
 ## 24–25/11 · Task 2, 3, 5 — Mô hình và số đo dung lượng B.1
 
 - [x] `bench/datagen.py` và `bench/schema.py` đã có trên `main`, dùng chung cho ba máy.
-- [ ] Viết `bench/storage_model.py` và `tests/test_storage_model.py`. Mô hình InnoDB có hai chế độ lấp đầy (tạo index sau khi nạp; chèn dần), `DATETIME` tính 5 B. Giữ phép kiểm tra hồi quy với `sbtest1` theo Task 5.
-- [ ] Hiệu chỉnh `C_nén` và `α_LSM` trước khi áp dụng cho `shipments`. Ở giai đoạn 1, mô hình cho 1,88 GiB mỗi bản sao còn số đo khoảng 3,2 GiB dữ liệu logic. Nếu không tìm được nguyên nhân, ghi rõ phần chênh, không chỉnh hệ số cho khớp.
-- [ ] Viết `experiments/b1_storage.py` với tham số hệ và số dòng, ghi `results/b1_storage_M1.csv`. Mỗi dòng có `run_id`, `machine`, `profile`, hệ, phiên bản, `rows`, bộ index, `replica_config`, dung lượng đo, dung lượng mô hình, thời gian tạo từng index.
-- [ ] MySQL: chạy `ANALYZE TABLE`, đặt `information_schema_stats_expiry=0`, rồi lấy dung lượng bảng và từng index.
-- [ ] TiDB: đo ở C3. Gọi `assert_replicas(conn, 3)` trước khi đo, lấy `APPROXIMATE_SIZE` từ `information_schema.TIKV_REGION_STATUS` và đối chiếu với dung lượng thư mục dữ liệu TiKV. Không dùng `index_length` của `information_schema.tables` làm dung lượng vật lý, vì đó là ước tính từ thống kê.
-- [ ] Ghi rõ với mỗi số TiDB: trước hay sau nén, một bản sao hay toàn cụm (cụm chia 3 chỉ là xấp xỉ), có gồm phiên bản MVCC chưa dọn không. Một Region có thể chứa cả bảng và index, nên kiểm tra trước khi tách dung lượng từng index.
-- [ ] Chạy thử ở 1.000 dòng, commit code, chạy lại `check`, rồi mới đo.
-- [ ] Đo ở **1 triệu dòng**: hai hệ, 0 và 5 index (`RQ4_INDEX_SETS[0]` và `[5]`).
-- [ ] Đo ở **3 triệu dòng**: hai hệ, 0 và 5 index. Đặt database trước khi nạp:
+- [x] Viết `bench/storage_model.py` và `tests/test_storage_model.py`. Mô hình InnoDB có hai chế độ lấp đầy (tạo index sau khi nạp; chèn dần), `DATETIME` tính 5 B. Giữ phép kiểm tra hồi quy với `sbtest1` theo Task 5.
+- [x] Hiệu chỉnh `C_nén` và `α_LSM` trước khi áp dụng cho `shipments`. Ở giai đoạn 1, mô hình cho 1,88 GiB mỗi bản sao còn số đo khoảng 3,2 GiB dữ liệu logic. Nếu không tìm được nguyên nhân, ghi rõ phần chênh, không chỉnh hệ số cho khớp.
+- [x] Viết `experiments/b1_storage.py` với tham số hệ và số dòng, ghi `results/b1_storage_M1.csv`. Mỗi dòng có `run_id`, `machine`, `profile`, hệ, phiên bản, `rows`, bộ index, `replica_config`, dung lượng đo, dung lượng mô hình, thời gian tạo từng index.
+- [x] MySQL: chạy `ANALYZE TABLE`, đặt `information_schema_stats_expiry=0`, rồi lấy dung lượng bảng và từng index.
+- [x] TiDB: đo ở C3. Gọi `assert_replicas(conn, 3)` trước khi đo, lấy `APPROXIMATE_SIZE` từ `information_schema.TIKV_REGION_STATUS` và đối chiếu với dung lượng thư mục dữ liệu TiKV. Không dùng `index_length` của `information_schema.tables` làm dung lượng vật lý, vì đó là ước tính từ thống kê.
+- [x] Ghi rõ với mỗi số TiDB: trước hay sau nén, một bản sao hay toàn cụm (cụm chia 3 chỉ là xấp xỉ), có gồm phiên bản MVCC chưa dọn không. Một Region có thể chứa cả bảng và index, nên kiểm tra trước khi tách dung lượng từng index.
+- [x] Chạy thử ở 1.000 dòng, commit code, chạy lại `check`, rồi mới đo.
+- [x] Đo ở **1 triệu dòng**: hai hệ, 0 và 5 index (`RQ4_INDEX_SETS[0]` và `[5]`).
+- [x] Đo ở **3 triệu dòng**: hai hệ, 0 và 5 index. Đặt database trước khi nạp:
 
   ```powershell
   $env:PROFILE = "XS"
@@ -124,10 +124,10 @@ Code do TV2 viết (`experiments/rq1_covering.py`, `experiments/rq1_summary.py`)
   .\scripts\load.ps1 -Engine mysql -Rows 3000000
   ```
 
-- [ ] Ghi CPU, RAM và byte ghi đĩa **trước, trong và sau** `CREATE INDEX` ở 3 triệu dòng, dùng `bench/resources.py`.
-- [ ] Đo thêm dung lượng `idx_sender_created` và `idx_sender_cov` trên cả hai hệ. Đây là phần dung lượng trong nhận xét 3 của thầy.
-- [ ] Vẽ `results/fig/b1_model_vs_measured.png`, dùng màu của `rq1_summary.py`: MySQL `#2a78d6`, TiDB `#eb6834`.
-- [ ] Commit CSV bằng `-f`, vì `.gitignore` chỉ cho qua `rq4_official*` và `rq1*`:
+- [ ] Ghi CPU, RAM và byte ghi đĩa **trước, trong và sau** `CREATE INDEX` ở 3 triệu dòng, dùng `bench/resources.py`. Code đã hỗ trợ các cột bộ nhớ mới; cần chạy lại để có giá trị RAM thực trước/trong/sau.
+- [x] Đo thêm dung lượng `idx_sender_created` và `idx_sender_cov` trên cả hai hệ. Đã có trong `results/b1_storage_M2.csv` ở 1 và 3 triệu dòng.
+- [x] Vẽ `results/fig/b1_model_vs_measured.png`, dùng màu của `rq1_summary.py`: MySQL `#2a78d6`, TiDB `#eb6834`.
+- [x] Commit CSV bằng `-f`, vì `.gitignore` chỉ cho qua `rq4_official*` và `rq1*`. `results/b1_storage_M2.csv`, `b1_model.csv` và `b1_summary.csv` đang được Git theo dõi.
 
   ```powershell
   git add -f results/b1_storage_M1.csv
@@ -136,28 +136,28 @@ Code do TV2 viết (`experiments/rq1_covering.py`, `experiments/rq1_summary.py`)
   git push
   ```
 
-- [ ] Quy mô 10 triệu và 100 triệu dòng chỉ ghi số mô hình, vì nhóm dùng hồ sơ XS. RQ3 đã do TV2 đo và viết (`report/sections/b1_rq3.tex`), TV1 không phải làm.
+- [x] Quy mô 10 triệu và 100 triệu dòng chỉ ghi số mô hình, vì nhóm dùng hồ sơ XS. RQ3 đã do TV2 đo và viết (`report/sections/b1_rq3.tex`), TV1 không phải làm.
 
 ## 25/11 · Viết A.1, A.2, B.1
 
 Mỗi người viết mục của mình trong file riêng để tránh xung đột; bạn nối bằng `\input{}` khi ghép. B.1 đặt ở `report/sections/b1_dung_luong.tex`. Khung và phân công file nằm trong `report/README.md`.
 
-- [ ] **A.1** — Viết theo bài toán vận đơn. Bỏ các câu khẳng định chưa đo trong `01_phan_a.tex`, ví dụ "mở rộng ngang vô hạn" (dòng 37), "giải quyết triệt để" (dòng 30), `RTO ≤ 10s` (dòng 42). Dòng 39 ghi 4 phẩm chất nhưng chỉ liệt kê 3.
-- [ ] **Chương 2, tổng quan** (`a0_tong_quan.tex`) — Tổng quan TiDB khoảng nửa trang và bảng thành phần chính. Viết tổng quát, chi tiết dẫn sang kho mã (đầu Chương 3).
-- [ ] **Chương 4, vấn đề và cơ chế** (`p2_van_de_co_che.tex`) — Vấn đề đã đăng ký; cơ chế đọc và ghi qua chỉ mục phụ trên hai hệ; covering index.
-- [ ] **A.2** — Mỗi trụ cột nêu ảnh hưởng tới index. Sửa kích thước Region theo `SHOW CONFIG WHERE name LIKE '%region-split-size%'` trên v8.5.5. Bỏ "3–8 giây": giai đoạn 1 ghi nhận 10 giây QPS bằng 0.
-- [ ] **A.2** — Quorum là đa số peer của một Region: C3 cần 2/3, chịu mất 1 store; C1 cần 1/1, không chịu mất store nào. Sửa câu "3 node TiKV độc lập vật lý" (dòng 156): ba TiKV là ba container trên một máy và một ổ đĩa. TiDB không hỗ trợ SERIALIZABLE.
-- [ ] **B.1** — Thay toàn bộ phần `sbtest1` (`02_phan_b.tex` dòng 9–258) bằng mô hình và số đo `shipments`. Các số giai đoạn 1 ở phần này không được giữ nếu không có log.
-- [ ] **B.1** — Bảng đối chiếu thô, MySQL mô hình và đo, TiDB mô hình và đo, kèm tỉ lệ đo trên mô hình. Nêu cả chỗ mô hình sai.
+- [x] **A.1** — Viết theo bài toán vận đơn. Bỏ các câu khẳng định chưa đo trong `01_phan_a.tex`, ví dụ "mở rộng ngang vô hạn" (dòng 37), "giải quyết triệt để" (dòng 30), `RTO ≤ 10s` (dòng 42). Dòng 39 ghi 4 phẩm chất nhưng chỉ liệt kê 3.
+- [x] **Chương 2, tổng quan** (`a0_tong_quan.tex`) — Tổng quan TiDB khoảng nửa trang và bảng thành phần chính. Viết tổng quát, chi tiết dẫn sang kho mã (đầu Chương 3).
+- [x] **Chương 4, vấn đề và cơ chế** (`p2_van_de_co_che.tex`) — Vấn đề đã đăng ký; cơ chế đọc và ghi qua chỉ mục phụ trên hai hệ; covering index.
+- [x] **A.2** — Mỗi trụ cột nêu ảnh hưởng tới index. Sửa kích thước Region theo `SHOW CONFIG WHERE name LIKE '%region-split-size%'` trên v8.5.5. Bỏ "3–8 giây": giai đoạn 1 ghi nhận 10 giây QPS bằng 0.
+- [x] **A.2** — Quorum là đa số peer của một Region: C3 cần 2/3, chịu mất 1 store; C1 cần 1/1, không chịu mất store nào. Sửa câu "3 node TiKV độc lập vật lý" (dòng 156): ba TiKV là ba container trên một máy và một ổ đĩa. TiDB không hỗ trợ SERIALIZABLE.
+- [x] **B.1** — Thay toàn bộ phần `sbtest1` (`02_phan_b.tex` dòng 9–258) bằng mô hình và số đo `shipments`. Các số giai đoạn 1 ở phần này không được giữ nếu không có log.
+- [x] **B.1** — Bảng đối chiếu thô, MySQL mô hình và đo, TiDB mô hình và đo, kèm tỉ lệ đo trên mô hình. Nêu cả chỗ mô hình sai.
 
 ## 25–26/11 · B.4, ghép báo cáo và slide
 
-- [ ] **B.4** — Bảng giả thuyết RQ1, RQ2, RQ4: xác nhận, bác bỏ hoặc một phần, kèm số chính và tên CSV. Chỉ điền khi CSV chính thức đã ở trên `main`.
-- [ ] **B.4** — Khuyến nghị index cho bài toán vận đơn trên từng hệ, ghép lợi ích đọc (RQ1), chi phí ghi (RQ4) và dung lượng (B.1) của covering. TV3 viết phần hạn chế.
-- [ ] Viết lại `03_ket_luan.tex`. Bỏ các kết luận trái số đo, ví dụ "TiDB áp đảo hoàn toàn" và "3–8 giây" (dòng 24), "LSM-Tree giải quyết triệt để" (dòng 23).
+- [x] **B.4** — Bảng giả thuyết RQ1, RQ2, RQ4: xác nhận, bác bỏ hoặc một phần, kèm số chính và tên CSV. Chỉ điền khi CSV chính thức đã ở trên `main`.
+- [x] **B.4** — Khuyến nghị index cho bài toán vận đơn trên từng hệ, ghép lợi ích đọc (RQ1), chi phí ghi (RQ4) và dung lượng (B.1) của covering. TV3 viết phần hạn chế.
+- [x] Viết lại `03_ket_luan.tex`. Bỏ các kết luận trái số đo, ví dụ "TiDB áp đảo hoàn toàn" và "3–8 giây" (dòng 24), "LSM-Tree giải quyết triệt để" (dòng 23).
 - [ ] Sửa `04_phu_luc.tex`: thay compose v8.1.0 / MySQL 8.0 bằng cấu hình XS (TiDB v8.5.5, MySQL 8.4.11), câu lệnh `sbtest1` bằng `shipments`, và bảng phân công cũ.
 - [ ] Nối các file mục vào `main.tex`, thêm hình còn thiếu, biên dịch XeLaTeX hai lần, không còn `??` và khung hình trống. M2 chưa cài XeLaTeX, nên dùng máy của bạn hoặc Overleaf.
-- [ ] Kiểm tra ba nhận xét của thầy đã được trả lời: tách covering và độ chọn lọc khỏi chi phí gọi KV; số TiKV, bản sao, quorum, chịu lỗi; truy vấn có và không covering với kế hoạch, độ trễ, chi phí ghi, dung lượng.
+- [x] Kiểm tra ba nhận xét của thầy đã được trả lời: tách covering và độ chọn lọc khỏi chi phí gọi KV; số TiKV, bản sao, quorum, chịu lỗi; truy vấn có và không covering với kế hoạch, độ trễ, chi phí ghi, dung lượng.
 - [ ] **26/11** — Làm slide. Failover chỉ là demo phụ.
 
 ## 27/11 · Nộp và thuyết trình

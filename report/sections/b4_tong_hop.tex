@@ -8,7 +8,7 @@
 \begin{tabular}{|C{1.4cm}|L{3.8cm}|L{3.4cm}|L{4.0cm}|L{2.2cm}|}
 \hline
 \dongdau \textbf{Câu hỏi} & \textbf{Giả thuyết} & \textbf{Kết luận (xác nhận, bác bỏ, một phần)} & \textbf{Số liệu chính} & \textbf{Nguồn} \\ \hline
-B.1 & TiDB/KV dùng ít dung lượng trên một bản sao nhờ nén; 10 triệu dòng vẫn nằm trong giới hạn kiểm tra & Một phần; mô hình khớp ở 1 và 3 triệu, nhưng bộ 5 ở 10 triệu chỉ là ước tính & Bộ 5 ở 10 triệu: MySQL 2.649 GiB theo mô hình; TiDB 5.598 GiB theo mô hình cho một bản sao & \path{results/b1_summary.csv} \\ \hline
+B.1 & TiDB/KV dùng ít dung lượng trên một bản sao nhờ nén; 10 triệu dòng vẫn nằm trong giới hạn kiểm tra & Một phần; mô hình khớp ở 1 và 3 triệu, nhưng bộ 5 ở 10 triệu chỉ là ước tính & Bộ 5 ở 10 triệu: MySQL 2,59 GiB theo mô hình; TiDB 5,47 GiB theo mô hình cho một bản sao & \path{results/b1_summary.csv} \\ \hline
 RQ1 & R nhỏ: covering lợi rõ trên TiDB; R lớn: lợi ích của hai hệ gần nhau & Một phần; R nhỏ đúng, R lớn MySQL lợi hơn & M2, R=10: MySQL 1,08, TiDB 2,01; R=10.000: MySQL 5,91, TiDB 3,31 & \path{results/rq1_M2_summary.csv} \\ \hline
 RQ2 & Tồn tại một crossover chung và điểm optimizer cũng gần crossover & Bác bỏ; điểm và hành vi khác nhau ở hai hệ & MySQL crossover 6,9\%, chuyển plan 10--25\%; TiDB 3,2\%, chuyển plan/lai khoảng 2--5\% & \path{results/rq2_M3_summary.csv} \\ \hline
 RQ3 & Khóa chuỗi làm chỉ mục phụ lớn và nonclustered key làm tra cứu chậm hơn & Xác nhận một phần & Khóa mã làm idx\_sender\_created tăng 27,4\% ở MySQL và 39,5\% ở TiDB; nonclustered TiDB không làm chỉ mục lớn hơn nhưng thêm một lượt gọi & \path{results/rq3_size_M2_summary.csv}, \path{results/rq3_M2_summary.csv} \\ \hline

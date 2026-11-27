@@ -1,7 +1,7 @@
 import pytest
 
 from experiments.b1_model import compact_int, mc, pages_bytes, row_sizes, write_cf
-from experiments.b1_storage import FLOOR, ORDER, SET5, parse_ctl_size, region_inside
+from experiments.b1_storage import FIELDS, FLOOR, ORDER, SET5, parse_ctl_size, region_inside
 
 ROW = ["1", "VN696703683626", "16", "87", "130", "5", "9641779", "315", "147626", "0925344764", "953 duong Nguyen Trai, phuong Trung Van, quan Nam Tu Liem, Ha Noi", "\\N", "2026-05-01 00:00:00", "2026-05-01 00:00:00"]
 
@@ -10,6 +10,9 @@ def test_index_order_builds_set5_then_the_covering_index():
     assert SET5 == ["idx_code", "idx_sender_created", "idx_hub_status", "idx_cod", "idx_status"]
     assert ORDER[-1] == "idx_sender_cov"
     assert set(FLOOR) == set(ORDER)
+    assert "memory_before_mib" in FIELDS
+    assert "memory_peak_mib" in FIELDS
+    assert "memory_after_mib" in FIELDS
 
 
 def test_memcomparable_length_counts_started_groups():
