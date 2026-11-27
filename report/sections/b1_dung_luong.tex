@@ -1,4 +1,5 @@
 % Mục B.1. Phụ trách: TV1.
+% Số liệu: results/b1_storage_M2.csv (đo), results/b1_model.csv (mô hình), results/b1_summary.csv.
 \phutrach{TV1 -- mục B.1}
 
 \subsection{Dữ liệu và lược đồ}
@@ -39,57 +40,99 @@ sender\_cov & Chỉ \code{idx\_sender\_cov} (sender\_id, created\_at, status, co
 \end{tabular}
 \end{table}
 
+Trong dữ liệu, mã vận đơn luôn dài 14 ký tự, số điện thoại 10 ký tự, địa chỉ khoảng 60 ký tự, và khoảng 40\% đơn không có ghi chú (\code{note} là NULL). Mọi chuỗi đều là ký tự ASCII, nên mỗi ký tự chiếm 1 byte trên cả hai hệ.
+
 \subsection{Mô hình dung lượng của InnoDB}
-\ghichu{Dòng thô, phần phụ mỗi dòng, hệ số lấp đầy khi tạo chỉ mục sau khi nạp và khi chèn dần. \code{DATETIME} 5 B. Thay phần \code{sbtest1} cũ.}
+Mô hình tính dung lượng của từng bản ghi theo định dạng DYNAMIC của InnoDB~\cite{mysql_innodb}, rồi cộng lại cho mọi dòng của file dữ liệu. Một bản ghi của cây khóa chính gồm 5 B đầu bản ghi, 1 B độ dài cho mỗi cột \code{VARCHAR} không NULL (mọi giá trị ở đây đều ngắn hơn 128 B), 1 B đánh dấu NULL, 6 B mã giao dịch và 7 B con trỏ hoàn tác ẩn, cùng các cột: số nguyên theo đúng kiểu (8, 4, 2 hoặc 1 B), \code{DATETIME} 5 B và chuỗi theo độ dài thật. Một bản ghi của chỉ mục phụ chỉ gồm 5 B đầu bản ghi, các cột khóa và khóa chính 8 B, nên dài từ 14 B (\code{idx\_status}) đến 28 B (\code{idx\_code}).
+
+Bản ghi được xếp vào trang 16 KiB, mỗi trang mất 128 B cho phần đầu và cuối trang, cộng khoảng 2 B thư mục trang cho mỗi 6 bản ghi. Trang của cây khóa chính được lấp bằng các lệnh chèn theo \code{id} tăng dần nên chừa trống 1/16; trang của chỉ mục phụ được dựng bằng cách sắp xếp (\code{innodb\_fill\_factor=100}) nên được lấp đầy. Mô hình bỏ qua các trang không phải lá, vốn chỉ chiếm khoảng 1\%.
 
 \subsection{Mô hình dung lượng của TiDB/TiKV}
-\ghichu{Dòng KV, mục chỉ mục KV, hệ số nén và khuếch đại LSM-tree đã hiệu chỉnh. Ghi rõ cách hiệu chỉnh và phần chênh không giải thích được.}
+Mô hình mã hóa từng dòng và từng mục chỉ mục đúng như TiDB ghi xuống TiKV (Bảng~\ref{tab:anh-xa-kv}), và tính kích thước logic của một bản sao, trước khi nén. Một khóa trong TiKV gồm 1 B tiền tố, khóa của TiDB được mã hóa để so sánh được theo byte (cứ 8 B dữ liệu thêm 1 B đánh dấu), và 8 B dấu thời gian MVCC~\cite{tikv_storage}. Giá trị không quá 255 B được lưu ngay trong column family \code{write}, kèm 1 B loại, 9 B \code{start\_ts} và 2 B tiền tố; giá trị dài hơn được chuyển sang column family \code{default}, và khóa phải lặp lại ở đó.
+
+Giá trị của một dòng dùng định dạng dòng thế hệ 2: 6 B đầu, 1 B mã cột cho mỗi cột, 2 B vị trí cho mỗi cột không NULL, số nguyên được thu gọn còn 1, 2, 4 hoặc 8 B, \code{DATETIME} 8 B và chuỗi giữ nguyên. Trong khóa của chỉ mục, mọi số nguyên và \code{DATETIME} đều chiếm 9 B, bất kể kiểu khai báo. Mục của chỉ mục thường chứa handle của dòng trong khóa và có giá trị 1 B; mục của chỉ mục UNIQUE được giả định lưu handle 8 B trong giá trị.
 
 \subsection{Phương pháp đo}
-\ghichu{MySQL và TiDB (C3) đo bằng gì; trước hay sau nén; một bản sao hay toàn cụm; có gồm phiên bản MVCC chưa dọn không. Không dùng ước tính thống kê làm dung lượng vật lý. Nguồn: \path{experiments/b1_storage.py}.}
+Số đo lấy trên máy M2, hồ sơ XS, cấu hình C3. Mỗi quy mô dùng một bảng mới trong database riêng: nạp dữ liệu, kiểm tra số dòng và tổng \code{cod\_amount}, rồi tạo lần lượt từng chỉ mục của bộ 5 và cuối cùng là \code{idx\_sender\_cov}. Dung lượng của mỗi chỉ mục được đọc ngay sau khi tạo.
+
+Trên MySQL, dung lượng lấy từ \code{mysql.innodb\_index\_stats} sau \code{ANALYZE TABLE}, theo hai con số: số trang đã cấp phát cho chỉ mục (dung lượng thật trong file dữ liệu) và số trang lá đang dùng (để so với mô hình).
+
+Trên TiDB, nhóm không dùng thống kê của PD hay \code{TABLE\_STORAGE\_STATS}, vì khi chạy thử các số này chỉ được cập nhật khi Region có thay đổi nên bị cũ. Thay vào đó, dòng và từng chỉ mục được tách thành các Region riêng; chương trình kiểm tra mọi Region có dữ liệu chỉ chứa khóa của đúng đối tượng cần đo, rồi đọc kích thước từng Region trên store \code{tikv1} bằng \code{tikv-ctl size}. Con số này là kích thước logic của các cặp khóa--giá trị trong file SST, cho một bản sao, trước khi nén. Vì dòng được nạp bằng giao dịch thông thường, một phần có thể còn nằm trong bộ nhớ, nên \code{tikv1} được compaction trước khi đo; sau compaction, mỗi dòng chỉ còn một phiên bản MVCC. Chỉ mục được TiDB dựng bằng cách nạp thẳng file SST nên không gặp vấn đề này. Dung lượng toàn cụm C3 xấp xỉ gấp ba con số một bản sao; dung lượng sau nén trên đĩa không được đo.
 
 \subsection{Đối chiếu mô hình và số đo}
 \begin{table}[!htp]
 \centering\bangnho
-\caption{Dung lượng theo mô hình và theo số đo (MiB)}\label{tab:dung-luong}
-\begin{tabular}{|L{2.3cm}|C{1.2cm}|C{1.6cm}|C{1.6cm}|C{1.9cm}|C{1.9cm}|C{1.5cm}|C{1.5cm}|}
+\caption{Dung lượng theo mô hình và theo số đo (MiB, một bản sao)}\label{tab:dung-luong}
+\begin{tabular}{|L{2.3cm}|C{1.1cm}|C{1.5cm}|C{1.9cm}|C{1.6cm}|C{1.5cm}|C{1.5cm}|C{1.5cm}|}
 \hline
-\dongdau \textbf{Quy mô, bộ chỉ mục} & \textbf{Thô} & \textbf{MySQL mô hình} & \textbf{MySQL đo} & \textbf{TiDB mô hình (1 bản sao)} & \textbf{TiDB C3 đo (toàn cụm)} & \textbf{MySQL đo / mô hình} & \textbf{TiDB đo / mô hình} \\ \hline
-1 triệu, 0 & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-1 triệu, 5 & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-3 triệu, 0 & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-3 triệu, 5 & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco & \chuaco \\ \hline
-10 triệu, 5 (mô hình) & \chuaco & \chuaco & --- & \chuaco & --- & --- & --- \\ \hline
+\dongdau \textbf{Quy mô, bộ chỉ mục} & \textbf{Thô} & \textbf{MySQL mô hình} & \textbf{MySQL đo: cấp phát (trang lá)} & \textbf{MySQL trang lá / mô hình} & \textbf{TiDB mô hình} & \textbf{TiDB đo} & \textbf{TiDB đo / mô hình} \\ \hline
+1 triệu, 0 & 136,3 & 170,0 & 171,7 (171,3) & 1,007 & 216,5 & 216,2 & 0,998 \\ \hline
+1 triệu, 5 & 136,3 & 264,9 & 283,5 (267,1) & 1,008 & 559,9 & 582,4 & 1,040 \\ \hline
+3 triệu, 0 & 408,8 & 510,1 & 516,0 (513,8) & 1,007 & 649,6 & 648,5 & 0,998 \\ \hline
+3 triệu, 5 & 408,8 & 794,6 & 847,1 (801,1) & 1,008 & 1.679,6 & 1.747,1 & 1,040 \\ \hline
+10 triệu, 5 (mô hình) & 1.362,8 & 2.648,6 & --- & --- & 5.598,6 & --- & --- \\ \hline
 \end{tabular}
-\par\vspace{3pt}{\noindent\small\itshape Nguồn: results/b1\_storage\_M1.csv. Số đo trên máy M1.\par}
+\par\vspace{3pt}{\noindent\small\itshape ``Thô'' là tổng kích thước các cột theo kiểu của MySQL, không kể phần phụ. Máy M2, cấu hình C3.\par}
 \end{table}
-\ghichu{Khi so với mô hình một bản sao của TiDB, chia số toàn cụm cho 3 và ghi đó là xấp xỉ.}
 
-\hinhcho{results/fig/b1\_model\_vs\_measured.png}{Dung lượng theo mô hình và theo số đo}{fig:b1}
+Với MySQL, mô hình gần như trùng với số trang lá đo được: lệch 0,7\% với phần dữ liệu và 0,7--1,2\% với từng chỉ mục, ở cả hai quy mô (Bảng~\ref{tab:dung-luong}). Dung lượng cấp phát thì lớn hơn: chỉ mục phụ chiếm thêm 16--20\% so với mô hình, vì InnoDB cấp trang theo từng nhóm và giữ sẵn một phần chưa dùng. Ở bộ 5 chỉ mục, phần chênh này làm tổng dung lượng cấp phát lớn hơn mô hình khoảng 7\%.
+
+Với TiDB, mô hình khớp số đo ở phần dữ liệu (lệch 0,2\%) và ở năm chỉ mục thường (đúng tới từng byte cho mỗi mục). Riêng \code{idx\_code}, chỉ mục UNIQUE duy nhất, đo được 98,0 B mỗi mục trong khi mô hình cho 74,0 B: giá trị của mục dài khoảng 32 B chứ không phải 8 B như giả định. Nhóm chưa giải mã giá trị này nên không biết 24 B dư ra gồm những gì; đây là phần chênh duy nhất của mô hình và là lý do tổng bộ 5 của TiDB lớn hơn mô hình 4\%.
+
+Bảng~\ref{tab:muc-chi-muc} so kích thước một mục chỉ mục trên hai hệ. Mục của TiDB lớn hơn MySQL 3,4 đến 4,8 lần. Phần lớn chênh lệch là chi phí cố định của mỗi cặp khóa--giá trị: tiền tố bảng và chỉ mục, byte đánh dấu của mã hóa so sánh được, 8 B dấu thời gian và 13 B phần đầu giá trị. Vì mọi số nguyên trong khóa đều chiếm 9 B, \code{idx\_hub\_status} trên hai cột \code{SMALLINT} và \code{TINYINT} có mục lớn đúng bằng \code{idx\_sender\_created}; trên MySQL, mục của nó nhỏ hơn 6 B.
+
+\begin{table}[!htp]
+\centering\bangfont
+\caption{Kích thước một mục chỉ mục (B)}\label{tab:muc-chi-muc}
+\begin{tabular}{|L{4.2cm}|C{2.6cm}|C{2.6cm}|C{2.6cm}|C{2.4cm}|}
+\hline
+\dongdau \textbf{Chỉ mục} & \textbf{MySQL, bản ghi (mô hình)} & \textbf{TiDB mô hình} & \textbf{TiDB đo} & \textbf{TiDB đo / MySQL} \\ \hline
+\code{idx\_code} (UNIQUE) & 28 & 74 & 98 & 3,5 \\ \hline
+\code{idx\_sender\_created} & 22 & 76 & 76 & 3,5 \\ \hline
+\code{idx\_hub\_status} & 16 & 76 & 76 & 4,8 \\ \hline
+\code{idx\_cod} & 17 & 67 & 67 & 3,9 \\ \hline
+\code{idx\_status} & 14 & 67 & 67 & 4,8 \\ \hline
+\code{idx\_sender\_cov} & 27 & 103 & 103 & 3,8 \\ \hline
+\end{tabular}
+\par\vspace{3pt}{\noindent\small\itshape Bản ghi MySQL chưa tính phần thư mục trang và phần trống của trang. Số đo TiDB là dung lượng chỉ mục chia số dòng, giống nhau ở 1 và 3 triệu dòng.\par}
+\end{table}
+
+Ở quy mô 10 triệu dòng, mô hình cho bộ 5 chỉ mục khoảng 2,6 GiB trên MySQL và 5,5 GiB cho một bản sao trên TiDB, tức khoảng 16,4 GiB logic cho cả cụm C3 trước khi nén. Đây chỉ là số ngoại suy từ mô hình, không phải số đo.
 
 \subsection{Chi phí tạo chỉ mục}
 \begin{table}[!htp]
-\centering\bangfont
-\caption{Thời gian và tài nguyên khi tạo chỉ mục ở 3 triệu dòng}\label{tab:tao-chi-muc}
-\begin{tabular}{|L{3.8cm}|C{2.0cm}|C{2.4cm}|C{2.4cm}|C{3.2cm}|}
+\centering\bangnho
+\caption{Chi phí tạo từng chỉ mục ở 3 triệu dòng}\label{tab:tao-chi-muc}
+\begin{tabular}{|L{3.4cm}|C{1.5cm}|C{1.6cm}|C{1.8cm}|C{1.5cm}|C{1.6cm}|C{1.8cm}|}
 \hline
-\dongdau \textbf{Chỉ mục} & \textbf{Hệ} & \textbf{Thời gian (s)} & \textbf{CPU (\%)} & \textbf{Byte ghi đĩa (MiB)} \\ \hline
-\chuaco & MySQL & \chuaco & \chuaco & \chuaco \\ \hline
-\chuaco & TiDB C3 & \chuaco & \chuaco & \chuaco \\ \hline
+\dongdau \textbf{Chỉ mục} & \textbf{MySQL (s)} & \textbf{MySQL (CPU)} & \textbf{MySQL ghi (MiB)} & \textbf{TiDB (s)} & \textbf{TiDB (CPU)} & \textbf{TiDB ghi (MiB)} \\ \hline
+\code{idx\_code} & 4,8 & 1,51 & 962 & 27,0 & 1,23 & 618 \\ \hline
+\code{idx\_sender\_created} & 2,9 & 1,20 & 731 & 16,0 & 1,69 & 148 \\ \hline
+\code{idx\_hub\_status} & 2,6 & 1,36 & 501 & 14,8 & 1,72 & 84 \\ \hline
+\code{idx\_cod} & 2,6 & 1,22 & 544 & 12,3 & 1,69 & 123 \\ \hline
+\code{idx\_status} & 2,3 & 1,28 & 429 & 11,8 & 1,64 & 40 \\ \hline
+\code{idx\_sender\_cov} & 4,9 & 0,90 & 918 & 17,8 & 1,57 & 295 \\ \hline
 \end{tabular}
+\par\vspace{3pt}{\noindent\small\itshape CPU: số CPU dùng trung bình trong lúc tạo (ngân sách mỗi hệ là 4). Ghi: byte ghi đĩa của các container cơ sở dữ liệu, đo một lần cho mỗi chỉ mục.\par}
 \end{table}
+
+Ở 3 triệu dòng, MySQL tạo mỗi chỉ mục trong 2,3--4,9 giây, còn TiDB cần 11,8--27,0 giây, tức chậm hơn 3,6 đến 5,7 lần (Bảng~\ref{tab:tao-chi-muc}). TiDB dùng 1,2--1,7 CPU trên ngân sách 4, nên tốc độ tạo chỉ mục không bị giới hạn bởi tổng CPU của cụm. Lượng byte ghi đĩa của MySQL lớn hơn nhiều lần dung lượng của chỉ mục; nhóm chưa tách phần này thành file sắp xếp tạm, redo log và trang dữ liệu. Byte ghi của TiDB là byte đã nén trên đĩa của cả ba bản sao, nên nhỏ hơn dung lượng logic trong Bảng~\ref{tab:dung-luong}. Riêng \code{idx\_code} ghi nhiều hơn hẳn các chỉ mục khác của TiDB, có thể vì đây là chỉ mục được tạo đầu tiên trên bảng; nhóm chưa kiểm tra nguyên nhân. Mỗi chỉ mục chỉ được tạo một lần, nên các con số này chỉ cho biết độ lớn.
 
 \subsection{Dung lượng của covering index}
 \begin{table}[!htp]
 \centering\bangfont
-\caption{Dung lượng chỉ mục có và không covering}\label{tab:dl-covering}
-\begin{tabular}{|L{4.6cm}|C{3.2cm}|C{3.2cm}|C{2.8cm}|}
+\caption{Dung lượng chỉ mục có và không covering (MiB, một bản sao)}\label{tab:dl-covering}
+\begin{tabular}{|L{4.2cm}|C{2.0cm}|C{3.0cm}|C{3.0cm}|C{2.2cm}|}
 \hline
-\dongdau \textbf{Chỉ mục} & \textbf{MySQL (MiB)} & \textbf{TiDB C3 (MiB)} & \textbf{Số dòng} \\ \hline
-\code{idx\_sender\_created} & \chuaco & \chuaco & \chuaco \\ \hline
-\code{idx\_sender\_cov} & \chuaco & \chuaco & \chuaco \\ \hline
+\dongdau \textbf{Chỉ mục} & \textbf{Số dòng} & \textbf{MySQL: cấp phát (trang lá)} & \textbf{TiDB} & \textbf{Byte mỗi mục, MySQL / TiDB} \\ \hline
+\code{idx\_sender\_created} & 1 triệu & 25,6 (21,7) & 72,5 & 22 / 76 \\ \hline
+\code{idx\_sender\_cov} & 1 triệu & 30,6 (26,5) & 98,2 & 27 / 103 \\ \hline
+\code{idx\_sender\_created} & 3 triệu & 74,6 (64,9) & 217,4 & 22 / 76 \\ \hline
+\code{idx\_sender\_cov} & 3 triệu & 91,7 (79,5) & 294,7 & 27 / 103 \\ \hline
 \end{tabular}
 \end{table}
 
+Thêm hai cột \code{status} và \code{cod\_amount} để chỉ mục trở thành covering làm dung lượng tăng khoảng 22\% trên MySQL (theo trang lá) và 36\% trên TiDB, giống nhau ở cả hai quy mô (Bảng~\ref{tab:dl-covering}). Về tuyệt đối, ở 3 triệu dòng, phần thêm là 14,6 MiB trên MySQL và 77,3 MiB cho mỗi bản sao trên TiDB. Mỗi cột số nguyên thêm vào khóa tốn 4 hoặc 1 B trên MySQL, nhưng 9 B trên TiDB, cộng với phần mở rộng của mã hóa so sánh được.
+
 \subsection{Kết luận chương}
-\ghichu{Mô hình đúng tới đâu, sai ở đâu và vì sao.}
+Mô hình dựa trên định dạng lưu trữ dự đoán được dung lượng của cả hai hệ khá sát. Với MySQL, mô hình trùng với số trang lá trong khoảng 1,2\%, nhưng dung lượng cấp phát thật của chỉ mục phụ lớn hơn 16--20\%. Với TiDB, mô hình khớp tới từng byte cho dữ liệu và chỉ mục thường, và chỉ sai ở chỉ mục UNIQUE, nơi giá trị của mục dài hơn giả định 24 B mà nhóm chưa giải thích được. Trên cùng dữ liệu, mỗi mục chỉ mục của TiDB lớn hơn MySQL 3,4 đến 4,8 lần, và cả cụm C3 còn lưu ba bản sao, nên chi phí dung lượng của mỗi chỉ mục phụ trên TiDB cao hơn rõ rệt. Các số này là kích thước logic trước khi nén; dung lượng sau nén trên đĩa của TiDB chưa được đo.

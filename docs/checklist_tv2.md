@@ -81,6 +81,7 @@ Code RQ1 cho TV1 và TV3:
 - [ ] **25/11** — Hỏi tiến độ TV1 (B.1) và TV3 (RQ1 1 triệu dòng, RQ2, B.2).
 - [x] **26/11** — RQ3 do TV2 nhận vì đã có trong đề cương đăng ký (mục 2.3). Đo trên M2, 1 triệu dòng, 3 biến thể TiDB, 2 biến thể MySQL (`results/rq3_size_M2.csv`, `results/rq3_M2.csv`, bản tổng hợp `*_summary.csv`). Viết `report/sections/b1_rq3.tex`; thêm dòng RQ3 vào Bảng 1.1, bảng kịch bản và đoạn điều chỉnh so với đề cương ở Chương 1.
 - [ ] Nhắn TV1: RQ3 đã đo xong, TV1 không phải làm.
+- [x] **27/11** — Đo B.1 trên M2 thay TV1 (1 và 3 triệu dòng, hai hệ; `results/b1_storage_M2.csv`, mô hình `results/b1_model.csv`, đối chiếu `results/b1_summary.csv`) và viết `b1_dung_luong.tex`. Trong báo cáo, B.1 vẫn ghi phụ trách TV1 theo quyết định của nhóm; bảng ba máy và bảng kịch bản ghi đúng máy đo là M2.
 - [x] **26/11** — Đọc chéo B.2 (bản PR #11): mọi số trong bảng covering M1, M2, chi phí gọi KV, đường chuẩn và mô hình $a + bR$ khớp CSV.
 - [ ] Góp ý TV3: `b4_han_che.tex` ghi cụm TiDB khoảng 5,25 GiB, hồ sơ XS thực tế là 5,5 GiB (5.632 MiB).
 - [ ] **26/11** — Đối chiếu từng con số trong B.1 với CSV của TV1.
