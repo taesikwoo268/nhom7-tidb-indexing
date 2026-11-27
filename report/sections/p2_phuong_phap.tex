@@ -27,7 +27,7 @@ M3 & fa4c12cdf33a & 5000968738439 & 15001281300461 \\ \hline
 
 \textbf{Trạng thái trước khi đo.} Sau khi tạo chỉ mục, chương trình chạy \code{ANALYZE TABLE}; trên TiDB, lệnh này lấy 2.048 mẫu để không vượt giới hạn RAM. Với TiDB, số bản sao của mọi Region được kiểm tra lại. Sau đó chương trình chờ lượng ghi đĩa nền xuống dưới 2 MB/s trong hai cửa sổ 10 giây liên tiếp, tối đa 10 phút. Nếu hết 10 phút mà đĩa vẫn chưa lắng, lượt đó bị bỏ và phải chạy lại.
 
-\textbf{Chống nhiễu theo thời gian.} Các lượt được chia thành vòng, mỗi vòng đo mọi cấu hình một lần theo thứ tự xáo bằng hạt giống cố định. Nhờ vậy, nếu hiệu năng của máy trôi dần theo thời gian, sự trôi đó không bị nhầm thành ảnh hưởng của chỉ mục.
+\textbf{Chống nhiễu theo thời gian.} Các lượt được chia thành vòng, mỗi vòng đo mọi cấu hình một lần theo một thứ tự ngẫu nhiên với seed cố định. Nhờ vậy, nếu hiệu năng của máy trôi dần theo thời gian, sự trôi đó không bị nhầm thành ảnh hưởng của chỉ mục.
 
 \textbf{Truy vết.} Mỗi lượt đo là một dòng CSV, ghi mã lượt, máy, hồ sơ, phiên bản, cấu hình bản sao, bộ nhớ đệm, tổng kiểm tra dữ liệu và mã cấu hình. Khi chạy tiếp sau một lần bị ngắt, chương trình từ chối ghi chung vào file cũ nếu mã cấu hình đã thay đổi.
 

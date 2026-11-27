@@ -38,7 +38,7 @@ Q2, Q2R & A / B & A: \code{IndexAndRow(range)}; B: \code{CoveringIndex} & A: \co
 Q3 & A / B & A: \code{IndexAndRow(ref)}; B: \code{CoveringIndex} & A: \code{IndexLookUp}; B: \code{IndexReader} \\ \hline
 \end{tabular}
 \end{table}
-Các đoạn mã dưới đây trích từ tệp \code{EXPLAIN ANALYZE} của lượt đo trên M3 (thư mục \path{results/raw}, lần lặp 1, hồ sơ XS, 1 triệu dòng). Mỗi tệp chứa 10 truy vấn; ta lấy truy vấn đầu (\code{sender\_id=71} cho Q2, \code{dest\_hub\_id=149} cho Q3). Với TiDB, trích rút gọn: bỏ các cột bộ nhớ và đĩa, giữ các bộ đếm chính (\code{cop\_task}, \code{proc\_keys}, \code{tot\_proc}, \code{tot\_wait}, \code{rpc\_info}); ký hiệu dấu khung đổi sang ASCII và đơn vị \(\mu\)s viết là \code{us}. Phần cắt bỏ đánh dấu \code{[...]}.
+Hai đoạn mã dưới đây (Q2) trích từ tệp \code{EXPLAIN ANALYZE} của lượt đo trên M3 (thư mục \path{results/raw}, lần lặp 1, hồ sơ XS, 1 triệu dòng). Mỗi tệp chứa 10 truy vấn; ta lấy truy vấn đầu (\code{sender\_id=71} cho Q2, \code{dest\_hub\_id=149} cho Q3). Với TiDB, trích rút gọn: bỏ các cột bộ nhớ và đĩa, giữ các bộ đếm chính (\code{cop\_task}, \code{proc\_keys}, \code{tot\_proc}, \code{tot\_wait}, \code{rpc\_info}); ký hiệu dấu khung đổi sang ASCII và đơn vị \(\mu\)s viết là \code{us}. Phần cắt bỏ đánh dấu \code{[...]}.
 
 {\hyphenpenalty=0 \exhyphenpenalty=0 \needspace{6\baselineskip}
 \begin{lstlisting}[basicstyle=\ttfamily\fontsize{7.5}{9.5}\selectfont, caption={Q2 trên MySQL, thiết kế A (\code{idx\_sender\_created}) và B (\code{idx\_sender\_cov})}, label={lst:plan-q2-mysql}]
@@ -65,34 +65,6 @@ Projection_7          20  root       time:559.6us, loops:2
    +-IndexReader_18    20  root       time:550.7us, cop_task:{num:1, max:530.1us, proc_keys:20, tot_proc:135.6us, tot_wait:48.3us, copr_cache:disabled}, rpc_info:{Cop:{num_rpc:1, total_time:514.8us}}
      +-Limit_17        20  cop[tikv]  [...]
        +-IndexRangeScan_16  20  cop[tikv]  table:shipments, index:idx_sender_cov(sender_id, created_at, status, cod_amount)  range:[71 2026-08-01 00:00:00,71 +inf], keep order:true, desc
-\end{lstlisting}}
-
-{\hyphenpenalty=0 \exhyphenpenalty=0 \needspace{6\baselineskip}
-\begin{lstlisting}[basicstyle=\ttfamily\fontsize{7.5}{9.5}\selectfont, caption={Q3 trên MySQL, thiết kế A (\code{idx\_hub}) và B (\code{idx\_hub\_status})}, label={lst:plan-q3-mysql}]
--- A (khong covering)
--> Table scan on <temporary>  (actual time=7.15..7.15 rows=6 loops=1)
-    -> Aggregate using temporary table  (actual time=7.14..7.14 rows=6 loops=1)
-        -> Index lookup on shipments using idx_hub (dest_hub_id=149)  (cost=1751 rows=5003) (actual time=0.704..6.58 rows=5003 loops=1)
--- B (covering)
--> Group aggregate: count(0)  (cost=1008 rows=994) (actual time=0.0409..0.608 rows=6 loops=1)
-    -> Covering index lookup on shipments using idx_hub_status (dest_hub_id=149)  (cost=508 rows=5003) (actual time=0.0295..0.457 rows=5003 loops=1)
-\end{lstlisting}}
-
-{\hyphenpenalty=0 \exhyphenpenalty=0 \needspace{6\baselineskip}
-\begin{lstlisting}[basicstyle=\ttfamily\fontsize{7.5}{9.5}\selectfont, caption={Q3 trên TiDB, thiết kế A và B (cột: toán tử, actRows, task, thông tin thực thi)}, label={lst:plan-q3-tidb}]
--- A (khong covering)
-Projection_5          6     root       time:88.3ms, loops:5
- +-HashAgg_11          6     root       time:88.3ms, loops:5
-   +-IndexLookUp_12    42    root       time:88.1ms, index_task:{total_time:2.21ms}, table_task:{total_time:85.8ms, num:1, concurrency:5}, next:{wait_index:3.07ms, wait_table_lookup_resp:85ms}
-     |-IndexRangeScan_9(Build)  5003  cop[tikv]  table:shipments, index:idx_hub(dest_hub_id)  time:2.09ms, cop_task:{num:1, proc_keys:5003, tot_proc:1.49ms, tot_wait:60.3us}, range:[149,149]
-     +-HashAgg_7(Probe)  42    cop[tikv]  time:85ms, cop_task:{num:7, max:84.6ms, min:3.52ms, avg:40.4ms, tot_proc:253.3ms, tot_wait:20.9ms, copr_cache:disabled}, rpc_info:{Cop:{num_rpc:7, total_time:283ms}}
-       +-TableRowIDScan_10  5003  cop[tikv]  table:shipments
--- B (covering)
-Projection_5          6     root       time:2.27ms, loops:5
- +-HashAgg_12          6     root       time:2.26ms, loops:5
-   +-IndexReader_13    6     root       time:2.19ms, cop_task:{num:1, max:2.14ms, proc_keys:5003, tot_proc:1.44ms, tot_wait:73.4us, copr_cache:disabled}, rpc_info:{Cop:{num_rpc:1, total_time:2.1ms}}
-     +-HashAgg_6       6     cop[tikv]  [...]
-       +-IndexRangeScan_11  5003  cop[tikv]  table:shipments, index:idx_hub_status(dest_hub_id, status)  range:[149,149], keep order:false
 \end{lstlisting}}
 
 Các kế hoạch cho thấy cơ chế đằng sau Bảng~\ref{tab:ke-hoach}, trong một truy vấn mẫu (chưa phải thống kê của cả 5 lượt):
@@ -203,24 +175,7 @@ Q3, R=15.000 & A & 18,0 & 18,0 & 30.079 & 465,57 & 257,73 & 22,93 \\ \hline
 Trên TiDB, thiết kế không covering cần nhiều cop task và RPC hơn: Q2 dùng 7,5 cop task và 4 RPC, trong khi thiết kế covering chỉ dùng 1 cop task và 1 RPC. Với $R = 10$, phần ``còn lại'' chiếm 58\% thời gian RPC của thiết kế A, còn với $R = 10.000$ chỉ 11\% vì thời gian xử lý ở TiKV chiếm phần lớn. Đây là bằng chứng cho chi phí cố định ở $R$ nhỏ và chi phí mỗi dòng ở $R$ lớn, nhưng phần còn lại chỉ là xấp xỉ nên không được viết là ``chi phí mạng''. Thời gian RPC và xử lý cộng dồn qua các tác vụ song song, nên có thể lớn hơn độ trễ đo được (ví dụ Q2R, $R = 10.000$, thiết kế A: RPC 118,8 ms so với p50 44,3 ms). Riêng Q3 thiết kế A, TiDB ghi nhận 1.086 lần đọc block ngoài bộ nhớ đệm trên M2 và 20 lần trên M1, trong khi \code{Innodb\_buffer\_pool\_reads} của MySQL bằng 0; vì vậy một phần chênh lệch ở Q3 có thể đến từ việc đọc đĩa chứ không chỉ từ chi phí gọi KV.
 
 \subsection{RQ1: ảnh hưởng của quy mô và của máy}
-Bảng~\ref{tab:covering-m1} là phép đo lặp lại ở cùng quy mô trên M1. Hai máy cho cùng một dạng: ở $R = 100$, tỉ số là 1,41 (MySQL) và 2,15 (TiDB) trên M1, so với 1,56 và 2,48 trên M2; ở $R = 10.000$ là 5,65 và 2,83 trên M1, so với 5,91 và 3,31 trên M2. Điểm khác biệt là Q3: trên M1, MySQL lợi hơn (12,09 so với 9,11), còn trên M2 hai hệ bằng nhau; vì vậy không kết luận hệ nào lợi hơn ở Q3. M1 cũng nhiễu hơn: đường chuẩn \code{SELECT 1} của TiDB là 1,366 ms trên M1 so với 0,571 ms trên M2, và phép khớp của MySQL thiết kế B có $R^2$ chỉ 0,74. Vì hai máy khác nhau, chỉ so các tỉ số, không so độ trễ tuyệt đối, và không gộp hai máy vào một đường khớp.
-
-\begin{table}[!htp]
-\centering\bangnho
-\caption[Lợi ích covering, 3 triệu dòng (M1)]{Độ trễ p50 và lợi ích covering $t(A)/t(B)$ trong từng hệ, 3 triệu dòng (M1, đối chiếu)}\label{tab:covering-m1}
-\begin{tabular}{|C{1.5cm}|C{1.4cm}|C{1.8cm}|C{1.8cm}|C{1.8cm}|C{1.8cm}|C{1.6cm}|C{1.6cm}|}
-\hline
-\dongdau \textbf{Truy vấn} & \textbf{R} & \textbf{MySQL A (ms)} & \textbf{MySQL B (ms)} & \textbf{TiDB A (ms)} & \textbf{TiDB B (ms)} & \textbf{Lợi ích MySQL} & \textbf{Lợi ích TiDB} \\ \hline
-Q1 (A2) & 1 & 0,480 & 0,610 & 5,358 & 3,998 & 0,79 & 1,34 \\ \hline
-Q2 & 20 & 0,586 & 0,688 & 7,892 & 4,081 & 0,85 & 1,93 \\ \hline
-Q2R & 10 & 0,730 & 0,690 & 7,946 & 5,161 & 1,06 & 1,54 \\ \hline
-Q2R & 100 & 0,887 & 0,627 & 8,421 & 3,918 & 1,41 & 2,15 \\ \hline
-Q2R & 1.000 & 3,798 & 1,165 & 14,359 & 8,563 & 3,26 & 1,68 \\ \hline
-Q2R & 10.000 & 26,785 & 4,737 & 80,010 & 28,240 & 5,65 & 2,83 \\ \hline
-Q3 & 15.000 & 29,560 & 2,445 & 109,196 & 11,980 & 12,09 & 9,11 \\ \hline
-\end{tabular}
-\par\vspace{3pt}{\noindent\small\itshape Nguồn: results/rq1\_M1\_summary.csv. Chỉ so lợi ích trong từng hệ.\par}
-\end{table}
+Phép đo được lặp lại ở cùng quy mô trên M1 (\path{results/rq1_M1_summary.csv}). Hai máy cho cùng một dạng: ở $R = 100$, tỉ số là 1,41 (MySQL) và 2,15 (TiDB) trên M1, so với 1,56 và 2,48 trên M2; ở $R = 10.000$ là 5,65 và 2,83 trên M1, so với 5,91 và 3,31 trên M2. Điểm khác biệt là Q3: trên M1, MySQL lợi hơn (12,09 so với 9,11), còn trên M2 hai hệ bằng nhau; vì vậy không kết luận hệ nào lợi hơn ở Q3. M1 cũng nhiễu hơn: đường chuẩn \code{SELECT 1} của TiDB là 1,366 ms trên M1 so với 0,571 ms trên M2, và phép khớp của MySQL thiết kế B có $R^2$ chỉ 0,74. Vì hai máy khác nhau, chỉ so các tỉ số, không so độ trễ tuyệt đối, và không gộp hai máy vào một đường khớp.
 
 Trên M3 (1 triệu dòng), $a_A / a_B$ là 1,04 ở MySQL và 1,53 ở TiDB, còn $b_A / b_B$ là 4,62 và 3,97; so với M2 (3 triệu dòng), tỉ số $a_A / a_B$ của TiDB thấp hơn (1,53 so với 2,07) và tỉ số $b_A / b_B$ của MySQL thấp hơn (4,62 so với 6,89). Phép khớp của TiDB thiết kế A ở M3 kém ($R^2 = 0{,}82$, phần dư lớn nhất 46\%) vì điểm $R = 10.000$ dao động mạnh giữa các lượt (42,8 đến 91,1 ms). Vì M3 khác M2 cả về máy lẫn về số dòng, số liệu này không tách được ảnh hưởng của quy mô khỏi ảnh hưởng của máy; chỉ có thể nói dạng kết quả (TiDB lợi hơn ở $R$ nhỏ, MySQL lợi hơn ở $R$ vừa) lặp lại trên cả ba máy.
 
@@ -232,7 +187,7 @@ Các tỉ số ở trên chỉ nói về phía đọc. Chi phí đi kèm của c
 \subsubsection{Thiết kế}
 Câu hỏi là: khi truy vấn lấy một khoảng giá trị của \code{cod\_amount}, tỉ lệ dòng khớp bao nhiêu thì việc tra qua chỉ mục \code{idx\_cod} rồi quay về bảng bắt đầu chậm hơn quét cả bảng, và optimizer của mỗi hệ có đổi phương án đúng chỗ đó hay không. Nhóm không đặt trước một điểm giao nhau chung cho hai hệ.
 
-Truy vấn có dạng \code{SELECT id, tracking\_code, status, cod\_amount, created\_at FROM shipments WHERE cod\_amount BETWEEN lo AND hi}, chạy ở ba chế độ: \emph{index} (ép dùng \code{idx\_cod} bằng \code{FORCE INDEX}), \emph{scan} (loại chỉ mục bằng \code{IGNORE INDEX}) và \emph{auto} (không gợi ý, để optimizer chọn). Có 10 mức độ chọn lọc: 0,001; 0,01; 0,1; 0,5; 1; 2; 5; 10; 25 và 50\% số dòng. Khoảng \code{[lo, hi]} của từng mức được tính từ hạt giống 20261116 theo phân phối thực của cột, nên số dòng khớp trung bình $R$ nằm sát mục tiêu, từ 30 dòng (0,001\%) đến khoảng 1,5 triệu dòng (50\%); cột $R$ ở Bảng~\ref{tab:rq2-p50} là số dòng thực đo. Từ mức 2\% trở xuống, mỗi lượt chạy 20 khoảng khác nhau; từ mức 5\% trở lên chạy 3 khoảng vì mỗi truy vấn đã lâu. Mỗi ô chạy 5 lượt, tổng $2 \times 10 \times 3 \times 5 = 300$ lượt trên M3, hồ sơ XS, bảng 3 triệu dòng; trước mỗi lượt chương trình kiểm tra kế hoạch thực thi (đúng toán tử chỉ mục hoặc quét bảng) và số dòng trả về giữa ba chế độ. Các giá trị trong bảng là trung vị p50 của 5 lượt. Chỉ so hai hệ theo hình dạng đường cong và điểm giao nhau; không so độ trễ tuyệt đối với M1 hoặc M2.
+Truy vấn có dạng \code{SELECT id, tracking\_code, status, cod\_amount, created\_at FROM shipments WHERE cod\_amount BETWEEN lo AND hi}, chạy ở ba chế độ: \emph{index} (ép dùng \code{idx\_cod} bằng \code{FORCE INDEX}), \emph{scan} (loại chỉ mục bằng \code{IGNORE INDEX}) và \emph{auto} (không gợi ý, để optimizer chọn). Có 10 mức độ chọn lọc: 0,001; 0,01; 0,1; 0,5; 1; 2; 5; 10; 25 và 50\% số dòng. Khoảng \code{[lo, hi]} của từng mức được tính từ seed 20261116 theo phân phối thực của cột, nên số dòng khớp trung bình $R$ nằm sát mục tiêu, từ 30 dòng (0,001\%) đến khoảng 1,5 triệu dòng (50\%); cột $R$ ở Bảng~\ref{tab:rq2-p50} là số dòng thực đo. Từ mức 2\% trở xuống, mỗi lượt chạy 20 khoảng khác nhau; từ mức 5\% trở lên chạy 3 khoảng vì mỗi truy vấn đã lâu. Mỗi ô chạy 5 lượt, tổng $2 \times 10 \times 3 \times 5 = 300$ lượt trên M3, hồ sơ XS, bảng 3 triệu dòng; trước mỗi lượt chương trình kiểm tra kế hoạch thực thi (đúng toán tử chỉ mục hoặc quét bảng) và số dòng trả về giữa ba chế độ. Các giá trị trong bảng là trung vị p50 của 5 lượt. Chỉ so hai hệ theo hình dạng đường cong và điểm giao nhau; không so độ trễ tuyệt đối với M1 hoặc M2.
 
 \subsubsection{Kết quả}
 \begin{table}[!htp]

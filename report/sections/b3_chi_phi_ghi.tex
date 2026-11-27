@@ -37,7 +37,7 @@ W2: khi \code{status} đổi & 0 & 0 & 1 & 2 & 0 & 1 \\ \hline
 \end{tabular}
 \end{table}
 
-Mỗi lượt đo dùng một bảng mới. Chương trình chép 1 triệu dòng từ bảng nền, kiểm tra số dòng và tổng \code{cod\_amount}, tạo chỉ mục, chạy \code{ANALYZE TABLE}, kiểm tra số bản sao của mọi Region (với TiDB), rồi chờ lượng ghi đĩa nền xuống dưới 2 MB/s trong hai cửa sổ 10 giây liên tiếp mới bắt đầu chạy sysbench~\cite{sysbench}. Đo xong, số dòng của bảng phải khớp với số giao dịch đã commit. Đầu mỗi vòng, hệ được khởi động lại, và thứ tự các lượt trong vòng được xáo theo một hạt giống cố định. Trên TiDB, ba vòng C3 chạy trước ba vòng C1.
+Mỗi lượt đo dùng một bảng mới. Chương trình chép 1 triệu dòng từ bảng nền, kiểm tra số dòng và tổng \code{cod\_amount}, tạo chỉ mục, chạy \code{ANALYZE TABLE}, kiểm tra số bản sao của mọi Region (với TiDB), rồi chờ lượng ghi đĩa nền xuống dưới 2 MB/s trong hai cửa sổ 10 giây liên tiếp mới bắt đầu chạy sysbench~\cite{sysbench}. Đo xong, số dòng của bảng phải khớp với số giao dịch đã commit. Đầu mỗi vòng, hệ được khởi động lại, và thứ tự các lượt trong vòng được xáo ngẫu nhiên với seed cố định, nên chạy lại vẫn ra đúng thứ tự đó. Trên TiDB, ba vòng C3 chạy trước ba vòng C1.
 
 TiDB và MySQL được đo ở hai đợt khác nhau, trên cùng máy và cùng mã cấu hình. Ở đợt đo MySQL dùng trong chương này, database được tạo với collation \code{utf8mb4\_bin} để khớp với TiDB. Đợt đo MySQL trước đó dùng \code{utf8mb4\_unicode\_ci} và được đem ra so ở Mục~\ref{sec:rq4-collation}. Việc lấy đợt \code{utf8mb4\_bin} làm số chính được nhóm quyết định trước khi đo, không phải sau khi thấy kết quả.
 
