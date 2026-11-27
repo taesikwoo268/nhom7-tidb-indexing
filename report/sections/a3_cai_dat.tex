@@ -40,13 +40,9 @@ sysbench (RQ4) & 2,0 & 512 & --- \\ \hline
 \end{tabular}
 \end{table}
 
-Có vài lựa chọn cấu hình ảnh hưởng tới cách đọc kết quả ở Phần 2. Trước hết, tổng RAM của hai hệ không bằng nhau: cụm TiDB được 5,5 GiB, MySQL chỉ có 2 GiB. Nhóm chọn cân bằng bộ nhớ đệm dữ liệu thay vì tổng RAM, vì cụm TiDB có năm tiến trình và tiến trình nào cũng cần một phần bộ nhớ riêng. Buffer pool của MySQL được đặt 750M; MySQL làm tròn theo kích thước chunk thành 788.529.152 B, tức 752 MiB.
+Hai hệ có cùng tổng 4 CPU và bộ nhớ đệm dữ liệu gần bằng nhau, nhưng tổng RAM khác nhau: cụm TiDB được 5,5 GiB, MySQL 2 GiB, vì cụm TiDB có năm tiến trình và tiến trình nào cũng cần bộ nhớ riêng. MySQL là một tiến trình nên dùng được cả 4 CPU, còn mỗi TiKV bị giới hạn ở 0,8 CPU kể cả khi hai TiKV kia rảnh; Chương~\ref{sec:ghi} cho thấy giới hạn này có ảnh hưởng thật. Buffer pool đặt 750M được MySQL làm tròn thành 752 MiB.
 
-CPU cũng được chia theo hai cách khác nhau. MySQL là một tiến trình nên dùng được cả 4 CPU, còn TiDB phải chia 4 CPU cho năm container. Vì vậy một TiKV không thể dùng quá 0,8 CPU, kể cả khi hai TiKV kia đang rảnh. Chương~\ref{sec:ghi} sẽ cho thấy giới hạn này có ảnh hưởng thật tới kết quả.
-
-Về độ bền, MySQL đặt \code{innodb\_flush\_log\_at\_trx\_commit=1} và tắt binlog, còn TiDB giữ cấu hình ghi Raft log mặc định. Mỗi TiKV có block cache 250 MiB, \code{memory-usage-limit} 1.000 MiB và \code{write-buffer-size} 32 MiB cho hai column family chính. Nhóm dùng image TiKV chính thức nhưng loại bỏ phần thông tin debug, phần mã thực thi giữ nguyên. Trên M2, nhờ vậy bộ nhớ một tiến trình TiKV chiếm khi cụm còn rỗng giảm từ khoảng 1,9 GB xuống khoảng 0,16 GB.
-
-Cuối cùng là collation. Lược đồ không chỉ định collation nên MySQL dùng \code{utf8mb4\_unicode\_ci} (đặt trong file cấu hình), còn TiDB dùng \code{utf8mb4\_bin}; trong các truy vấn và chỉ mục của đề tài, chỉ \code{tracking\_code} là cột chuỗi. Mục~\ref{sec:rq4-collation} cho thấy khác biệt này không vượt mức nhiễu ở RQ4; RQ1 vẫn dùng collation mặc định nên ở truy vấn Q1 chỉ so tỉ số trong từng hệ.
+MySQL đặt \code{innodb\_flush\_log\_at\_trx\_commit=1} và tắt binlog; TiDB giữ cấu hình Raft log mặc định, mỗi TiKV có \code{memory-usage-limit} 1.000 MiB. Image TiKV chính thức được loại phần thông tin debug, mã thực thi giữ nguyên; nhờ vậy bộ nhớ một TiKV chiếm khi cụm rỗng giảm từ khoảng 1,9 GB xuống 0,16 GB. Về collation, MySQL dùng \code{utf8mb4\_unicode\_ci} còn TiDB dùng \code{utf8mb4\_bin}; chỉ \code{tracking\_code} là cột chuỗi. Mục~\ref{sec:rq4-collation} cho thấy khác biệt này không vượt mức nhiễu ở RQ4; RQ1 vẫn dùng collation mặc định nên ở Q1 chỉ so tỉ số trong từng hệ.
 
 \subsection{Số node, số bản sao, quorum và khả năng chịu lỗi}
 
@@ -63,11 +59,9 @@ C1 & 3 & 1 & 1 trên 1 & Không & Tách chi phí nhân bản ở RQ4, bộ 0 và
 \end{tabular}
 \end{table}
 
-Ở C3, mỗi Region có ba peer nằm trên ba store khác nhau. Một lệnh ghi được commit khi 2 trong 3 peer đã ghi Raft log~\cite{raft}, nên nếu mất một store, các Region vẫn còn đủ đa số để bầu leader mới và tiếp tục phục vụ. Ở C1, mỗi Region chỉ có một peer, quorum là 1 trên 1: store chứa peer đó dừng thì Region cũng dừng. MySQL trong đề tài chạy một node và không có bản sao.
+Ở C3, một lệnh ghi được commit khi 2 trong 3 peer đã ghi Raft log~\cite{raft}, nên mất một store thì các Region vẫn đủ đa số để bầu leader mới; ở C1, store chứa peer duy nhất dừng thì Region cũng dừng. MySQL chạy một node, không có bản sao. Một TiKV duy nhất không thể tạo cấu hình 3 bản sao vì các peer của một Region phải nằm trên các store khác nhau. Ba TiKV ở đây là ba container trên một máy và một ổ đĩa, nên ``chịu mất một store'' chỉ có nghĩa là chịu mất một tiến trình; PD và TiDB server chỉ có một node nên vẫn là điểm lỗi đơn.
 
-Khả năng chịu lỗi của C3 cần được hiểu đúng phạm vi. Ba TiKV là ba container trên cùng một máy và một ổ đĩa, nên ``chịu mất một store'' ở đây chỉ có nghĩa là chịu mất một tiến trình, không phải mất một máy hay một ổ đĩa. Cụm cũng chỉ có một PD và một TiDB server, nên hai thành phần này vẫn là điểm lỗi đơn. Ngoài ra, không thể dựng cấu hình 3 bản sao với một TiKV, vì các peer của một Region phải nằm trên các store khác nhau; còn với hai TiKV, quorum là 2 trên 2 nên cũng không chịu được mất store nào.
-
-Trước mỗi lượt đo TiDB, chương trình kiểm tra ba điều: \code{max-replicas} đúng giá trị cần đo, đủ 3 store ở trạng thái \code{Up}, và mọi Region có đúng số peer. Thiếu một điều kiện là chương trình dừng. Khi chuyển giữa C3 và C1, chương trình chờ tới lúc không còn peer nào đang chờ tạo hoặc bị hỏng rồi mới đo.
+Trước mỗi lượt đo TiDB, chương trình kiểm tra \code{max-replicas}, đủ 3 store ở trạng thái \code{Up} và mọi Region có đúng số peer; thiếu một điều kiện là chương trình dừng.
 
 \subsection{Các bước cài đặt}
 
@@ -83,39 +77,6 @@ Việc cài đặt gồm năm bước. Vì mọi cấu hình đều nằm trong 
 
 \subsection{Minh chứng cài đặt}
 
-Đoạn log dưới đây trích từ lần nạp dữ liệu cho RQ4 trên M2, kèm phiên bản TiDB và trạng thái ba store lấy trên cùng máy trong lúc chạy demo. Hai hệ cùng nạp 1 triệu dòng, cho cùng tổng \code{cod\_amount} và cùng mã SHA-256 của file nguồn. MySQL báo phiên bản 8.4.11; TiDB báo chuỗi phiên bản tương thích MySQL 8.0.11, kèm phiên bản thật là v8.5.5.
+Hình~\ref{fig:minh-chung-cai-dat} là ảnh chụp terminal trên M2 khi bật cụm TiDB: lệnh kiểm tra cho \code{team\_hash} chung của nhóm và kết quả \code{DAT}, năm container của cụm đang chạy, phiên bản v8.5.5 và ba store ở trạng thái Up với \code{max-replicas} bằng 3. Log nạp dữ liệu cho thấy hai hệ cùng nạp 1 triệu dòng với cùng tổng \code{cod\_amount} (5000968738439) và cùng mã SHA-256 của file nguồn; MySQL báo phiên bản 8.4.11, còn TiDB báo chuỗi phiên bản tương thích MySQL 8.0.11 kèm phiên bản thật v8.5.5.
 
-\begin{lstlisting}[caption={Kiểm tra, nạp dữ liệu, phiên bản TiDB và trạng thái ba store trên M2 (trích)}]
-machine=M2 profile=XS docker=18 CPU/9.7 GiB ac_power=True commit=317f0a6
-team_hash=fa4c12cdf33a
-DAT
-mysql SELECT 1 = 1; version=8.4.11; port=3307
-mysql: rows=1000000 sum_cod=5000968738439 seed=20261116
-  sha256=8ee11b63da2217d4b1d00137bd8e4f3ba647b9bed94a594468c990fe981f4827
-tidb SELECT 1 = 1; version=8.0.11-TiDB-v8.5.5; port=4000
-tidb: rows=1000000 sum_cod=5000968738439 seed=20261116
--- tidb: cung sha256 nhu tren
-
-Release Version: v8.5.5
-Edition: Community
-Store: tikv
-
-store_id | address     | store_state_name
-1        | tikv1:20160 | Up
-2        | tikv2:20160 | Up
-3        | tikv3:20160 | Up
-\end{lstlisting}
-
-\begin{lstlisting}[caption={SHOW CREATE TABLE shipments: những dòng khác nhau giữa hai hệ}]
--- MySQL 8.4.11
-`tracking_code` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
-PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-
--- TiDB v8.5.5
-`tracking_code` varchar(20) NOT NULL,
-PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
-\end{lstlisting}
-
-Hai hệ có cùng tên cột và kiểu dữ liệu; chỗ khác duy nhất là collation, lặp lại ở mọi cột chuỗi. TiDB vẫn in \code{ENGINE=InnoDB} chỉ để tương thích cú pháp, còn dữ liệu thật nằm trong TiKV (dòng \code{Store: tikv} ở trên).
+\hinh{minh_chung_cai_dat.png}{0.8}{Ảnh chụp terminal trên M2: kiểm tra cấu hình, các container đang chạy, phiên bản TiDB và trạng thái ba store}{fig:minh-chung-cai-dat}
